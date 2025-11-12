@@ -1,10 +1,16 @@
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import jwt from '@fastify/jwt';
+import env from './config/env';
+import { registerRoutes } from './routes';
+
 export function buildApp() {
   const app = Fastify({ logger: true });
 
   app.register(cors, { origin: true });
   app.register(jwt, { secret: env.jwtSecret });
 
-  app.decorate('authenticate', async (request, reply) => {
+  app.decorate('authenticate', async function (request, reply) {
     try {
       await request.jwtVerify();
     } catch (error) {

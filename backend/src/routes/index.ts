@@ -1,3 +1,18 @@
+import { FastifyInstance } from 'fastify';
+import { lookupsRoutes } from './lookups';
+import { airportsRoutes } from './airports';
+import { locationsRoutes } from './locations';
+import { speciesRoutes } from './species';
+import { movementsRoutes } from './movements';
+import { sightingsRoutes } from './sightings';
+import { strikesRoutes } from './strikes';
+import { controlActionsRoutes } from './controlActions';
+import { attractorsRoutes } from './attractors';
+import { kpisRoutes } from './kpis';
+import { reportsRoutes } from './reports';
+import { teamsRoutes } from './teams';
+import { authRoutes } from './auth';
+
 export async function registerRoutes(app: FastifyInstance) {
   await app.register(authRoutes);
 
