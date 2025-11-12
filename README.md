@@ -33,6 +33,25 @@ fauna/
 - Docker / Docker Desktop (para subir DB rapidamente)
 - Yarn ou npm
 
+### Instalar Node.js + npm rapidamente
+
+- **Windows (PowerShell / Windows Terminal):**
+  ```powershell
+  winget install OpenJS.NodeJS.LTS
+  ```
+- **macOS (Homebrew):**
+  ```bash
+  brew install node@18
+  echo 'export PATH="/opt/homebrew/opt/node@18/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+  ```
+- **Ubuntu/Debian:**
+  ```bash
+  curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+  sudo apt-get install -y nodejs build-essential
+  ```
+
+Depois confirme com `node -v` e `npm -v`. O Vue/Vite já vem como dependência do projeto, não é necessário instalar nada globalmente.
+
 ## 4. Banco via Docker (PostgreSQL 15 + PostGIS)
 
 O arquivo `Dockerfile.postgres` usa a imagem `postgis/postgis:15-3.4` e cria um banco `fauna` com usuario `fauna_admin` e senha `fauna_secret`. O script SQL e copiado para `/docker-entrypoint-initdb.d/01_wildlife_full_package.sql` e executado automaticamente no primeiro start. Workflow completo:
@@ -52,13 +71,30 @@ docker exec -i fauna-db \
 
 O backend ja esta configurado (ver `.env`) para conectar em `localhost:5432` com essas credenciais expostas pelo container.
 
-## 5. Preparar banco manualmente (alternativa)
+## 5. Instalar dependencias do backend e frontend
+
+As pastas `backend/` e `frontend/` possuem `package.json` separados. Rode os comandos abaixo uma única vez (ou após atualizar dependências) para instalar tudo que o Node precisa.
+
+```bash
+# Backend
+cd backend
+cp .env.example .env    # ajusta variaveis se necessario
+npm install
+
+# Frontend (novo terminal ou volte para a raiz antes)
+cd ../frontend
+npm install
+```
+
+Após instalar, use `npm run dev` dentro de cada pasta para subir os servidores em modo desenvolvimento.
+
+## 6. Preparar banco manualmente (alternativa)
 
 1. Criar banco `fauna` (ou outro nome e ajustar `.env`).
 2. Aplicar o pacote: `psql -d fauna -f wildlife_full_package.sql`.
 3. Confirmar que os schemas `wildlife` e `wildlife_kpi` foram criados e as funcoes PostGIS estao disponiveis.
 
-## 6. Backend (Fastify)
+## 7. Backend (Fastify)
 
 ```bash
 cd backend
@@ -69,7 +105,7 @@ npm run dev            # hot-reload em http://localhost:3333
 
 Scripts: `npm run build` gera `dist/`, `npm start` sobe em modo producao.
 
-## 7. Frontend (Vue 3)
+## 8. Frontend (Vue 3)
 
 ```bash
 cd frontend
@@ -79,7 +115,7 @@ npm run dev            # http://localhost:5173 (proxy para /api)
 
 Variavel opcional `VITE_API_URL` pode apontar para outro host; caso vazio utiliza o proxy local.
 
-## 8. Endpoints principais
+## 9. Endpoints principais
 
 | Metodo | Rota | Descricao |
 | ------ | ---- | --------- |
@@ -99,7 +135,7 @@ Variavel opcional `VITE_API_URL` pode apontar para outro host; caso vazio utiliz
 
 Todos os retornos utilizam textos em portugues e seguem validacao com Zod.
 
-## 9. Telas e fluxos de UI
+## 10. Telas e fluxos de UI
 
 1. **Painel**: filtros de periodo, cards SR/10k por aeroporto, lista de taxa com dano e grafico Pareto (Chart.js).
 2. **Movimentos**: tabela paginada + formulario rapido de cadastro.
@@ -111,14 +147,14 @@ Todos os retornos utilizam textos em portugues e seguem validacao com Zod.
 
 Cada modulo possui sua rota no Vue Router, evitando concentrar todos os CRUDs em uma unica pagina conforme solicitado.
 
-## 10. Relatorios e KPIs
+## 11. Relatorios e KPIs
 
 - `GET /api/kpis/resumo`: combina `v_movements_daily`, `v_strikes_daily`, `v_sightings_effort_daily` e massa por especie para entregar SR/10k, taxa de dano, TAH, severidade, identificacao e massa real por 1M movimentos.
 - `POST /api/kpis/did`: chama `wildlife_kpi.kpi_did_sr10k` para comparar locais controle vs tratamento.
 - `POST /api/kpis/ba-espacial`: utiliza `wildlife_kpi.kpi_ba_spatial` e retorna SR, limites e taxa de avistamentos antes/depois por buffer.
 - `GET /api/relatorios/*`: replicas das views `rpt_*` com periodo dinamico.
 
-## 11. Testes e proximos passos
+## 12. Testes e proximos passos
 
 - Adicionar testes automatizados (Vitest para Vue e supertest para Fastify) validando principais fluxos.
 - Implementar autenticacao/perfis para auditar alteracoes.
