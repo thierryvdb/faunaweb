@@ -1,9 +1,9 @@
-<template>
+﻿<template>
   <div class="page">
     <form class="card" @submit.prevent="entrar">
       <h3>Acessar</h3>
       <label>
-        Usuário
+        UsuÃƒÂ¡rio
         <input v-model="user" required />
       </label>
       <label>
@@ -16,7 +16,7 @@
   </div>
 </template>
 
-<script setup lang=\"ts\">
+<script setup lang="ts">
 import { ref } from 'vue';
 import { ApiService } from '@/services/api';
 
@@ -69,3 +69,4 @@ async function confirmarAeroporto() {
 label { display:flex; flex-direction: column; gap: .25rem; font-size: .9rem; }
 input { padding: .5rem .6rem; border: 1px solid #cbd5e1; border-radius: 8px; }
 </style>
+
