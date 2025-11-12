@@ -72,13 +72,15 @@ api.interceptors.response.use(
   }
 );
 
+export const ApiService = {
+  // Auth & session
   async switchAirport(airportId: number) {
     const { data } = await api.post('/api/auth/switch-airport', { airport_id: airportId });
     if (data?.token) setToken(data.token);
     const user = getUser<any>() || {};
     setUser({ ...user, aeroporto: data?.aeroporto?.name, aeroporto_id: data?.aeroporto?.id });
     return data;
-  },  // Auth
+  },
   async login(username: string, password: string) {
     const { data } = await api.post('/api/auth/login', { username, password });
     if (data?.token) setToken(data.token);
