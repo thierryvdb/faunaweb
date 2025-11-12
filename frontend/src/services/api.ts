@@ -44,6 +44,10 @@ export const ApiService = {
     const { data } = await api.get('/api/atrativos', { params });
     return data;
   },
+  async getAtrativosPorAeroporto(airportId: number) {
+    const { data } = await api.get('/api/atrativos', { params: { airportId } });
+    return data;
+  },
   async getLocaisPorAeroporto(airportId: number) {
     const { data } = await api.get(`/api/aeroportos/${airportId}/locais`);
     return data;

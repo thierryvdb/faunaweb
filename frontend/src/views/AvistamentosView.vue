@@ -30,6 +30,11 @@
           </template>
           <template #acoes="{ linha }">
             <button class="btn btn-secondary" @click="editar(linha)">Editar</button>
+          </template>          <template #periodo_label="{ linha }">
+            {{ lookups.periodos_dia?.find((p: any) => p.id === linha.time_period_id)?.name ?? '-' }}
+          </template>
+          <template #inside_label="{ linha }">
+            {{ linha.inside_aerodrome == null ? '-' : (linha.inside_aerodrome ? 'Sim' : 'NÃ£o') }}
           </template>
         </DataTable>
       </LoadingState>
@@ -63,10 +68,63 @@
           <input type="time" v-model="novo.time_local" required />
         </label>
         <label>
+          PerÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­odo
+          <select v-model.number="novo.time_period_id">
+            <option :value="undefined">Selecione</option>
+            <option v-for="p in lookups.periodos_dia" :key="p.id" :value="p.id">{{ p.name }}</option>
+          </select>
+        </label>
+        <label>
+          Latitude
+          <input type="number" step="0.000001" v-model.number="novo.latitude_dec" />
+        </label>
+        <label>
+          Longitude
+          <input type="number" step="0.000001" v-model.number="novo.longitude_dec" />
+        </label>
+        <label>
+          Quadrante
+          <select v-model="novo.quadrant">
+            <option :value="undefined">Selecione</option>
+            <option value="N">N</option>
+            <option value="NE">NE</option>
+            <option value="E">E</option>
+            <option value="SE">SE</option>
+            <option value="S">S</option>
+            <option value="SW">SW</option>
+            <option value="W">W</option>
+            <option value="NW">NW</option>
+            <option value="Centro">Centro</option>
+          </select>
+        </label>
+        <label>
+          Altura da fauna (AGL, m)
+          <input type="number" min="0" step="1" v-model.number="novo.fauna_height_agl_m" />
+        </label>
+        <label>
+          Dentro do aerÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³dromo
+          <input type="checkbox" v-model="novo.inside_aerodrome" />
+        </label>
+        <label>
           Equipe
           <select v-model="equipeSelecionada">
             <option value="">Selecione</option>
             <option v-for="eq in equipes" :key="eq.id" :value="eq.id">{{ eq.name }}</option>
+          </select>
+        </label>
+        <label>
+          Notas de gestÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o de risco
+          <textarea v-model="novo.risk_mgmt_notes" rows="2"></textarea>
+        </label>
+        <label>
+          AÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes tomadas
+          <textarea v-model="novo.actions_taken" rows="2"></textarea>
+        </label>
+        <label>
+          Atrativo relacionado
+          <select v-model.number="novo.related_attractor_id">
+            <option :value="undefined">Nenhum</option>
+            <option v-for="a in atrativos" :key="a.id" :value="a.id">{{ a.description || ('Atrativo #' + a.id) }}</option>
           </select>
         </label>
         <label>
@@ -89,6 +147,11 @@ const colunas = [
   { titulo: 'Data', campo: 'date_br' },
   { titulo: 'Hora', campo: 'time_local' },
   { titulo: 'Local', campo: 'location_nome' },
+  { titulo: 'Período', campo: 'periodo_label' },
+  { titulo: 'Quadrante', campo: 'quadrant' },
+  { titulo: 'Dentro do AD', campo: 'inside_label' },
+  { titulo: 'AGL (m)', campo: 'fauna_height_agl_m' },
+  { titulo: 'Atrativo', campo: 'related_attractor_desc' },
   { titulo: 'Equipe', campo: 'observer_team' },
   { titulo: 'Notas', campo: 'notes' },
   { titulo: 'Ações', campo: 'acoes' }
@@ -98,7 +161,9 @@ const filtros = ref<{ airportId?: number; inicio?: string; fim?: string }>({});
 const lista = ref<any[]>([]);
 const aeroportos = ref<any[]>([]);
 const locais = ref<any[]>([]);
+const atrativos = ref<any[]>([]);
 const equipes = ref<any[]>([]);
+const lookups = ref<any>({ periodos_dia: [] });
 const carregando = ref(false);
 const erro = ref<string | null>(null);
 const novo = ref({
@@ -106,6 +171,15 @@ const novo = ref({
   location_id: '' as any,
   date_utc: '',
   time_local: '',
+  time_period_id: undefined as any,
+  latitude_dec: undefined as any,
+  longitude_dec: undefined as any,
+  quadrant: undefined as any,
+  fauna_height_agl_m: undefined as any,
+  inside_aerodrome: false,
+  risk_mgmt_notes: '',
+  related_attractor_id: undefined as any,
+  actions_taken: '',
   observer_team: '',
   notes: ''
 });
@@ -133,10 +207,12 @@ async function carregarLocaisEquipes() {
     locais.value = [];
     equipes.value = [];
     equipeSelecionada.value = '';
+    atrativos.value = [];
     return;
   }
   locais.value = await ApiService.getLocaisPorAeroporto(novo.value.airport_id);
   equipes.value = await ApiService.getEquipesPorAeroporto(novo.value.airport_id);
+  atrativos.value = await ApiService.getAtrativosPorAeroporto(novo.value.airport_id);
   if (novo.value.observer_team) {
     const match = equipes.value.find((eq: any) => eq.name === novo.value.observer_team);
     equipeSelecionada.value = match ? match.id : '';
@@ -167,7 +243,7 @@ async function salvar() {
 
 function cancelarEdicao() {
   editandoId.value = null;
-  novo.value = { airport_id: '' as any, location_id: '' as any, date_utc: '', time_local: '', observer_team: '', notes: '' };
+  novo.value = { airport_id: '' as any, location_id: '' as any, date_utc: '', time_local: '', time_period_id: undefined as any, latitude_dec: undefined as any, longitude_dec: undefined as any, quadrant: undefined as any, fauna_height_agl_m: undefined as any, inside_aerodrome: false, risk_mgmt_notes: '', related_attractor_id: undefined as any, actions_taken: '', observer_team: '', notes: '' };
   equipeSelecionada.value = '';
   locais.value = [];
   equipes.value = [];
@@ -180,6 +256,15 @@ async function editar(avistamento: any) {
     location_id: avistamento.location_id,
     date_utc: avistamento.date_utc?.slice(0, 10) ?? '',
     time_local: avistamento.time_local ?? '',
+    time_period_id: avistamento.time_period_id,
+    latitude_dec: avistamento.latitude_dec,
+    longitude_dec: avistamento.longitude_dec,
+    quadrant: avistamento.quadrant,
+    fauna_height_agl_m: avistamento.fauna_height_agl_m,
+    inside_aerodrome: !!avistamento.inside_aerodrome,
+    risk_mgmt_notes: avistamento.risk_mgmt_notes ?? '',
+    related_attractor_id: avistamento.related_attractor_id,
+    actions_taken: avistamento.actions_taken ?? '',
     observer_team: avistamento.observer_team ?? '',
     notes: avistamento.notes ?? ''
   } as any;
@@ -198,6 +283,7 @@ watch(
 onMounted(async () => {
   const cad = await ApiService.getCadastros();
   aeroportos.value = cad.aeroportos;
+  lookups.value = cad.lookups;
   carregar();
 });
 </script>
