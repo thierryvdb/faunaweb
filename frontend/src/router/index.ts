@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+﻿import { createRouter, createWebHistory } from 'vue-router';
 import DashboardView from '@/views/DashboardView.vue';
 import MovimentosView from '@/views/MovimentosView.vue';
 import AvistamentosView from '@/views/AvistamentosView.vue';
@@ -9,7 +9,7 @@ import CadastrosView from '@/views/CadastrosView.vue';
 
 const router = createRouter({
   history: createWebHistory(),
-  routes: [
+  routes: [\n    { path: '/login', component: () => import('@/views/LoginView.vue') },
     { path: '/', component: DashboardView },
     { path: '/movimentos', component: MovimentosView },
     { path: '/avistamentos', component: AvistamentosView },
@@ -21,3 +21,6 @@ const router = createRouter({
 });
 
 export default router;
+
+
+\nrouter.beforeEach((to, from, next) => {\n  const token = localStorage.getItem('fauna_token');\n  if (to.path !== '/login' && !token) {\n    next('/login');\n  } else {\n    next();\n  }\n});\n\n

@@ -7,7 +7,85 @@ export const api = axios.create({
   timeout: 10000
 });
 
+// Token helpers
+const TOKEN_KEY = 'fauna_token';
+const USER_KEY = 'fauna_user';
+function getToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+function setToken(token: string) {
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch {}
+}
+function clearToken() {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+  } catch {}
+}
+
+function setUser(user: any) {
+  try {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  } catch {}
+}
+
+function getUser<T = any>(): T | null {
+  try {
+    const v = localStorage.getItem(USER_KEY);
+    return v ? (JSON.parse(v) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearUser() {
+  try {
+    localStorage.removeItem(USER_KEY);
+  } catch {}
+}
+
+// Attach Authorization header if token exists
+api.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) {
+    config.headers = config.headers ?? {};
+    (config.headers as any).Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Redirect to /login on 401
+api.interceptors.response.use(
+  (resp) => resp,
+  (err) => {
+    if (err?.response?.status === 401 && !location.pathname.startsWith('/login')) {
+      clearToken();
+      clearUser();
+      location.href = '/login';
+    }
+    return Promise.reject(err);
+  }
+);
+
 export const ApiService = {
+  // Auth
+  async login(username: string, password: string) {
+    const { data } = await api.post('/api/auth/login', { username, password });
+    if (data?.token) setToken(data.token);
+    if (data?.usuario) setUser(data.usuario);
+    return data;
+  },
+  getToken,
+  setToken,
+  clearToken,
+  getUser,
+  setUser,
+  clearUser,
   async getKpisResumo(params?: Record<string, any>) {
     const { data } = await api.get('/api/kpis/resumo', { params });
     return data;

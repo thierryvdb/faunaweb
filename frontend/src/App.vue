@@ -1,5 +1,6 @@
-<template>
-  <div class="layout">
+﻿<template>
+  <RouterView v-if="isLogin" />
+  <div v-else class="layout">
     <aside class="menu">
       <div class="logo">Fauna Safety</div>
       <nav>
@@ -17,18 +18,22 @@
     <main class="conteudo">
       <header class="topo">
         <h1>{{ tituloPagina }}</h1>
-        <p>Monitoramento integrado de fauna, riscos e KPIs aeroportuarios.</p>
+        <div class="acoes-topo">Olá, {{ usuario?.nome }} — {{ usuario?.aeroporto || "" }} <button class="btn btn-secondary" @click="sair">Sair</button>
+        </div>
+        <p>Monitoramento integrado de fauna, riscos e KPIs aeroportuÃ¡rios.</p>
       </header>
       <section class="miolo">
         <RouterView />
       </section>
     </main>
   </div>
+  
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
+import { ApiService } from '@/services/api';
 
 const links = [
   { to: '/', label: 'Painel' },
@@ -41,6 +46,7 @@ const links = [
 ];
 
 const route = useRoute();
+const isLogin = computed(() => route.path === '/login');
 const titulos: Record<string, string> = {
   '/': 'Visao geral',
   '/movimentos': 'Movimentos operacionais',
@@ -52,6 +58,15 @@ const titulos: Record<string, string> = {
 };
 
 const tituloPagina = computed(() => titulos[route.path] ?? 'Painel');
+
+function sair() {
+  ApiService.clearToken();
+  ApiService.clearUser();
+  window.location.href = '/login';
+}
+
+type Usuario = { id: number; nome: string; aeroporto?: string; aeroporto_id?: number };
+const usuario = computed(() => ApiService.getUser<Usuario>());
 </script>
 
 <style scoped>
@@ -94,7 +109,11 @@ const tituloPagina = computed(() => titulos[route.path] ?? 'Painel');
 
 .topo {
   margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
+.acoes-topo { margin-left: auto; }
 
 .miolo {
   display: flex;
@@ -117,3 +136,5 @@ const tituloPagina = computed(() => titulos[route.path] ?? 'Painel');
   }
 }
 </style>
+
+
