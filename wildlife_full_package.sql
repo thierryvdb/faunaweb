@@ -64,11 +64,12 @@ CREATE TABLE IF NOT EXISTS dim_species (
   group_id        SMALLINT NOT NULL REFERENCES lu_taxon_group(group_id),
   mass_id         SMALLINT REFERENCES lu_mass_class(mass_id),
   mass_grams      NUMERIC(10,2) CHECK (mass_grams IS NULL OR mass_grams > 0),
-  notes           TEXT,
-  UNIQUE (LOWER(common_name), COALESCE(LOWER(scientific_name), ''))
+  notes           TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_species_common ON dim_species (LOWER(common_name));
 CREATE INDEX IF NOT EXISTS idx_species_scient ON dim_species (LOWER(scientific_name));
+CREATE UNIQUE INDEX IF NOT EXISTS idx_species_unique_names
+  ON dim_species (LOWER(common_name), COALESCE(LOWER(scientific_name), ''));
 
 -- Facts
 CREATE TABLE IF NOT EXISTS fact_movement (
