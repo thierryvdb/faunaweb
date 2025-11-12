@@ -54,13 +54,15 @@ export async function reportsRoutes(app: FastifyInstance) {
        ORDER BY eventos_com_dano DESC NULLS LAST`,
       [filtros.airportId ?? null, inicio, fim]
     );
-    return {
-      periodo: { inicio, fim },
-      dados: rows.map((row) => ({
+    const dados = rows.map((row) => {
+      const total = Number(row.eventos_total ?? 0);
+      const comDano = Number(row.eventos_com_dano ?? 0);
+      return {
         ...row,
-        pct_com_dano: row.eventos_total > 0 ? Number((row.eventos_com_dano / row.eventos_total) * 100).toFixed(2) : null
-      }))
-    };
+        pct_com_dano: total > 0 ? Number((comDano / total) * 100).toFixed(2) : null
+      };
+    });
+    return { periodo: { inicio, fim }, dados };
   });
 
   app.get('/api/relatorios/ba-janela', async (request) => {
