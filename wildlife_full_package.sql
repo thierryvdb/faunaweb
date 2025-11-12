@@ -655,13 +655,13 @@ k_pos_c AS (
   GROUP BY w.action_id
 )
 SELECT w.action_id, w.airport_id, w.loc_t AS treat_location_id, w.d AS dt_acao,
-       (SELECT (k/e)*10000 FROM k_pre_t kt JOIN exp_pre e USING (action_id)) AS sr_pre_treat,
-       (SELECT (k/e)*10000 FROM k_pos_t kt JOIN exp_pos e USING (action_id)) AS sr_pos_treat,
-       (SELECT (k/e)*10000 FROM k_pre_c kc JOIN exp_pre e USING (action_id)) AS sr_pre_ctrl,
-       (SELECT (k/e)*10000 FROM k_pos_c kc JOIN exp_pos e USING (action_id)) AS sr_pos_ctrl,
-       ((SELECT (k/e)*10000 FROM k_pos_t kt JOIN exp_pos e USING (action_id))
-       - (SELECT (k/e)*10000 FROM k_pre_t kt JOIN exp_pre e USING (action_id))
-       - ((SELECT (k/e)*10000 FROM k_pos_c kc JOIN exp_pos e USING (action_id)) - (SELECT (k/e)*10000 FROM k_pre_c kc JOIN exp_pre e USING (action_id)))) AS did
+       (SELECT (kt.k / NULLIF(e.e_pre,0))*10000 FROM k_pre_t kt JOIN exp_pre e USING (action_id)) AS sr_pre_treat,
+       (SELECT (kt.k / NULLIF(e.e_pos,0))*10000 FROM k_pos_t kt JOIN exp_pos e USING (action_id)) AS sr_pos_treat,
+       (SELECT (kc.k / NULLIF(e.e_pre,0))*10000 FROM k_pre_c kc JOIN exp_pre e USING (action_id)) AS sr_pre_ctrl,
+       (SELECT (kc.k / NULLIF(e.e_pos,0))*10000 FROM k_pos_c kc JOIN exp_pos e USING (action_id)) AS sr_pos_ctrl,
+       ((SELECT (kt.k / NULLIF(e.e_pos,0))*10000 FROM k_pos_t kt JOIN exp_pos e USING (action_id))
+       - (SELECT (kt.k / NULLIF(e.e_pre,0))*10000 FROM k_pre_t kt JOIN exp_pre e USING (action_id))
+       - ((SELECT (kc.k / NULLIF(e.e_pos,0))*10000 FROM k_pos_c kc JOIN exp_pos e USING (action_id)) - (SELECT (kc.k / NULLIF(e.e_pre,0))*10000 FROM k_pre_c kc JOIN exp_pre e USING (action_id)))) AS did
 FROM win w;
 $$;
 
