@@ -29,28 +29,38 @@ fauna/
 
 ## 3. Pre-requisitos
 
-- Node.js >= 18
+- Node.js >= 20 (testado com Node 24.x)
 - Docker / Docker Desktop (para subir DB rapidamente)
 - Yarn ou npm
 
-### Instalar Node.js + npm rapidamente
+### Instalar Node.js 24 + npm rapidamente
 
 - **Windows (PowerShell / Windows Terminal):**
   ```powershell
-  winget install OpenJS.NodeJS.LTS
+  winget install CoreyButler.NVMforWindows -s winget
+  nvm install 24.0.0
+  nvm use 24.0.0
   ```
-- **macOS (Homebrew):**
+- **macOS (Homebrew + NVM):**
   ```bash
-  brew install node@18
-  echo 'export PATH="/opt/homebrew/opt/node@18/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+  brew install nvm
+  mkdir -p ~/.nvm
+  echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.zshrc
+  echo '[ -s "$(brew --prefix nvm)/nvm.sh" ] && \ . "$(brew --prefix nvm)/nvm.sh"' >> ~/.zshrc
+  source ~/.zshrc
+  nvm install 24
+  nvm use 24
   ```
-- **Ubuntu/Debian:**
+- **Ubuntu/Debian (NVM):**
   ```bash
-  curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-  sudo apt-get install -y nodejs build-essential
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+  source ~/.nvm/nvm.sh
+  nvm install 24
+  nvm use 24
+  sudo apt-get install -y build-essential
   ```
 
-Depois confirme com `node -v` e `npm -v`. O Vue/Vite já vem como dependência do projeto, não é necessário instalar nada globalmente.
+Depois confirme com `node -v` e `npm -v`. O Vue/Vite já vem como dependência do projeto, então não é necessário instalar nada globalmente.
 
 ## 4. Banco via Docker (PostgreSQL 15 + PostGIS)
 
@@ -75,13 +85,28 @@ O backend ja esta configurado (ver `.env`) para conectar em `localhost:5432` com
 
 As pastas `backend/` e `frontend/` possuem `package.json` separados. Rode os comandos abaixo uma única vez (ou após atualizar dependências) para instalar tudo que o Node precisa.
 
+#### Windows (PowerShell)
+
+```powershell
+# Backend
+cd backend
+Copy-Item .env.example .env
+npm install
+
+# Frontend
+cd ..\frontend
+npm install
+```
+
+#### Linux/macOS (Bash)
+
 ```bash
 # Backend
 cd backend
-cp .env.example .env    # ajusta variaveis se necessario
+cp .env.example .env
 npm install
 
-# Frontend (novo terminal ou volte para a raiz antes)
+# Frontend
 cd ../frontend
 npm install
 ```
@@ -96,21 +121,42 @@ Após instalar, use `npm run dev` dentro de cada pasta para subir os servidores 
 
 ## 7. Backend (Fastify)
 
+**Windows:**
+
+```powershell
+cd backend
+Copy-Item .env.example .env
+npm install
+npm run dev    # http://localhost:3333
+```
+
+**Linux/macOS:**
+
 ```bash
 cd backend
-cp .env.example .env   # ja aponta para o container Docker
-npm install            # ou yarn
-npm run dev            # hot-reload em http://localhost:3333
+cp .env.example .env
+npm install
+npm run dev
 ```
 
 Scripts: `npm run build` gera `dist/`, `npm start` sobe em modo producao.
 
 ## 8. Frontend (Vue 3)
 
+**Windows:**
+
+```powershell
+cd frontend
+npm install
+npm run dev   # http://localhost:5173
+```
+
+**Linux/macOS:**
+
 ```bash
 cd frontend
 npm install
-npm run dev            # http://localhost:5173 (proxy para /api)
+npm run dev
 ```
 
 Variavel opcional `VITE_API_URL` pode apontar para outro host; caso vazio utiliza o proxy local.
