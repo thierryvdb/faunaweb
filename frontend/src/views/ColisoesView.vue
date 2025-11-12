@@ -2,7 +2,7 @@
   <div class="grid" style="grid-template-columns: 3fr 2fr; gap: 1.5rem; flex-wrap: wrap;">
     <div class="card">
       <header class="cabecalho">
-        <h3>ColisÃµes registradas</h3>
+        <h3>ColisÃƒÂµes registradas</h3>
         <button class="btn btn-secondary" @click="carregar">Atualizar</button>
       </header>
       <div class="filtros">
@@ -23,7 +23,7 @@
         <button class="btn btn-primary" @click="carregar">Filtrar</button>
       </div>
       <LoadingState :carregando="carregando" :erro="erro">
-        <DataTable :colunas="colunas" :dados="lista" vazio="Sem ColisÃµes">
+        <DataTable :colunas="colunas" :dados="lista" vazio="Sem ColisÃƒÂµes">
           <template #date_br="{ valor }">
             {{ valor ?? '-' }}
           </template>
@@ -39,23 +39,23 @@
           <template #acoes="{ linha }">
             <button class="btn btn-secondary" @click="editar(linha)">Editar</button>
           </template>          <template #evento_label="{ linha }">
-            {{ linha ? (linha.event_type === 'colisÃ£o_outro_animal' ? 'ColisÃƒÂ£o (outro animal)' : (linha.event_type === 'quase_colisÃ£o' ? 'Quase-colisÃƒÂ£o' : 'ColisÃƒÂ£o (ave)')) : '-' }}
+            {{ linha ? (linha.event_type === 'colisÃƒÂ£o_outro_animal' ? 'ColisÃƒÆ’Ã‚Â£o (outro animal)' : (linha.event_type === 'quase_colisÃƒÂ£o' ? 'Quase-colisÃƒÆ’Ã‚Â£o' : 'ColisÃƒÆ’Ã‚Â£o (ave)')) : '-' }}
           </template>
           <template #periodo_label="{ linha }">
             {{ lookups.periodos_dia.find((p: any) => p.id === linha.time_period_id)?.name ?? '-' }}
           </template>
           <template #pilot_alerted_label="{ linha }">
-            {{ linha.pilot_alerted == null ? '-' : (linha.pilot_alerted ? 'Sim' : 'NÃƒÂ£o') }}
+            {{ linha.pilot_alerted == null ? '-' : (linha.pilot_alerted ? 'Sim' : 'NÃƒÆ’Ã‚Â£o') }}
           </template>
           <template #near_miss_label="{ linha }">
-            {{ linha.near_miss == null ? '-' : (linha.near_miss ? 'Sim' : 'NÃƒÂ£o') }}
+            {{ linha.near_miss == null ? '-' : (linha.near_miss ? 'Sim' : 'NÃƒÆ’Ã‚Â£o') }}
           </template>
         </DataTable>
       </LoadingState>
     </div>
     <div class="card">
       <header class="cabecalho">
-        <h3>{{ editandoId ? 'Editar colisÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o' : 'Registrar colisÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o' }}</h3>
+        <h3>{{ editandoId ? 'Editar colisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o' : 'Registrar colisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o' }}</h3>
         <button v-if="editandoId" class="btn btn-secondary" type="button" @click="cancelarEdicao">Cancelar</button>
       </header>
       <form class="form" @submit.prevent="salvar">
@@ -105,7 +105,7 @@
           </select>
         </label>
         <label>
-          PerÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­odo
+          PerÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­odo
           <select v-model.number="novo.time_period_id">
             <option :value="undefined">Selecione</option>
             <option v-for="p in lookups.periodos_dia" :key="p.id" :value="p.id">{{ p.name }}</option>
@@ -114,9 +114,9 @@
         <label>
           Tipo de evento
           <select v-model="novo.event_type">
-            <option value="colisÃ£o_ave">ColisÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o com ave</option>
-            <option value="colisÃ£o_outro_animal">ColisÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o com outro animal</option>
-            <option value="quase_colisÃ£o">Quase-colisÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o</option>
+            <option value="colisÃƒÂ£o_ave">ColisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o com ave</option>
+            <option value="colisÃƒÂ£o_outro_animal">ColisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o com outro animal</option>
+            <option value="quase_colisÃƒÂ£o">Quase-colisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o</option>
           </select>
         </label>
         <label>
@@ -141,16 +141,16 @@
           </select>
         </label>
         <label>
-          PrecipitaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o
+          PrecipitaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
           <select v-model.number="novo.precip_id">
             <option :value="undefined">Selecione</option>
             <option v-for="p in lookups.precipitacao" :key="p.id" :value="p.id">{{ p.name }}</option>
           </select>
         </label>
         <label>
-          EspÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©cie
+          EspÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©cie
           <select v-model.number="novo.species_id">
-            <option :value="undefined">NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o identificada</option>
+            <option :value="undefined">NÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o identificada</option>
             <option v-for="e in especies" :key="e.id" :value="e.id">{{ e.common_name }}</option>
           </select>
         </label>
@@ -159,13 +159,13 @@
           <input type="number" min="1" v-model.number="novo.quantity" />
         </label>
         <label>
-          ConfianÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§a na identificaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o
+          ConfianÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§a na identificaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
           <select v-model="novo.id_confidence">
             <option :value="undefined">Selecione</option>
             <option value="Alta">Alta</option>
-            <option value="Media">MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©dia</option>
+            <option value="Media">MÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©dia</option>
             <option value="Baixa">Baixa</option>
-            <option value="Nao_identificada">NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o identificada</option>
+            <option value="Nao_identificada">NÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o identificada</option>
           </select>
         </label>
         <label>
@@ -184,11 +184,11 @@
           <input type="number" min="0" step="1" v-model.number="novo.aircraft_speed_kt" />
         </label>
         <label>
-          ConsequÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncia operacional
+          ConsequÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âªncia operacional
           <input type="text" v-model="novo.operational_consequence" />
         </label>
         <label>
-          Danos visÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­veis (notas)
+          Danos visÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­veis (notas)
           <input type="text" v-model="novo.visible_damage_notes" />
         </label>
         <label>
@@ -202,11 +202,11 @@
           <input type="checkbox" v-model="novo.pilot_alerted" />
         </label>
         <label>
-          Quase-colisÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o
+          Quase-colisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
           <input type="checkbox" v-model="novo.near_miss" />
         </label>
         <label>
-          MatrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cula da aeronave
+          MatrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­cula da aeronave
           <input type="text" v-model="novo.aircraft_registration" />
         </label>
         <label>
@@ -225,11 +225,11 @@
           <input type="text" v-model="novo.investigated_by" />
         </label>
         <label>
-          CarcaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§a encontrada
+          CarcaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§a encontrada
           <input type="checkbox" v-model="novo.carcass_found" />
         </label>
         <label>
-          AÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes tomadas
+          AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes tomadas
           <textarea rows="2" v-model="novo.actions_taken"></textarea>
         </label>
         <label>
@@ -237,7 +237,7 @@
           <input type="url" v-model="novo.photo_url" />
         </label>
         <label>
-          Dentro do aerÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³dromo
+          Dentro do aerÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³dromo
           <input type="checkbox" v-model="novo.inside_aerodrome" />
         </label>
         <label>
@@ -248,7 +248,7 @@
           </select>
         </label>
         <label>
-          Notas de gestÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o de risco
+          Notas de gestÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o de risco
           <textarea rows="2" v-model="novo.risk_mgmt_notes"></textarea>
         </label>
         <label>
@@ -291,14 +291,14 @@ const colunas = [
   { titulo: 'Hora', campo: 'time_local' },
   { titulo: 'Local', campo: 'location_nome' },
   { titulo: 'Evento', campo: 'evento_label' },
-  { titulo: 'PerÃ­odo', campo: 'periodo_label' },
+  { titulo: 'PerÃƒÂ­odo', campo: 'periodo_label' },
   { titulo: 'Fase', campo: 'fase_nome' },
   { titulo: 'Dano', campo: 'dano_nome' },
   { titulo: 'Piloto alertado', campo: 'pilot_alerted_label' },
-  { titulo: 'Quase-colisÃ£o', campo: 'near_miss_label' },
+  { titulo: 'Quase-colisÃƒÂ£o', campo: 'near_miss_label' },
   { titulo: 'Atrativo', campo: 'related_attractor_desc' },
   { titulo: 'Notas', campo: 'notes' },
-  { titulo: 'AÃ§Ãµes', campo: 'acoes' }
+  { titulo: 'AÃƒÂ§ÃƒÂµes', campo: 'acoes' }
 ];
 
 const filtros = ref<{ airportId?: number; fase?: number }>({});
@@ -316,7 +316,7 @@ const novo = ref({
   date_utc: '',
   time_local: '',
   time_period_id: undefined as any,
-  event_type: 'colisÃ£o_ave',
+  event_type: 'colisÃƒÂ£o_ave',
   latitude_dec: undefined as any,
   longitude_dec: undefined as any,
   quadrant: undefined as any,
@@ -357,11 +357,11 @@ async function carregar() {
   carregando.value = true;
   erro.value = null;
   try {
-    const dados = await ApiService.getColisÃµes(filtros.value);
+    const dados = await ApiService.getColisoes(filtros.value);
     const mapEvento = (tipo: string | undefined) => {
-      if (tipo === 'colisÃ£o_outro_animal') return 'ColisÃƒÆ’Ã‚Â£o (outro animal)';
-      if (tipo === 'quase_colisÃ£o') return 'Quase-colisÃƒÆ’Ã‚Â£o';
-      return 'ColisÃƒÆ’Ã‚Â£o (ave)';
+      if (tipo === 'colisao_outro_animal') return 'ColisÃ£o (outro animal)';
+      if (tipo === 'quase_colisao') return 'Quase-colisÃ£o';
+      return 'ColisÃ£o (ave)';
     };
     lista.value = dados.map((item: any) => ({
       ...item,
@@ -372,8 +372,12 @@ async function carregar() {
       periodo_label: lookups.value.periodos_dia.find((p: any) => p.id === item.time_period_id)?.name ?? null,
       pilot_alerted_label: item.pilot_alerted == null ? null : (item.pilot_alerted ? 'Sim' : 'NÃ£o'),
       near_miss_label: item.near_miss == null ? null : (item.near_miss ? 'Sim' : 'NÃ£o')
-  } as any;
-  await carregarLocais();
+    }));
+  } catch (e: any) {
+    erro.value = e?.message ?? 'Falha ao buscar colisoes';
+  } finally {
+    carregando.value = false;
+  }
 }
 
 watch(
@@ -418,5 +422,6 @@ textarea {
   border-radius: 8px;
 }
 </style>
+
 
 
