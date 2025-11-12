@@ -461,6 +461,12 @@ onMounted(async () => {
   aeroportos.value = cad.aeroportos;
   especies.value = cad.especies;
   lookups.value = cad.lookups;
+  const user = ApiService.getUser<any>();
+  if (user?.aeroporto_id) {
+    novo.value.airport_id = user.aeroporto_id;
+    filtros.value.airportId = user.aeroporto_id;
+    await carregarLocais();
+  }
   carregar();
 });
 </script>
