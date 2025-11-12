@@ -2,7 +2,7 @@
   <div class="grid" style="grid-template-columns: 3fr 2fr; gap: 1.5rem; flex-wrap: wrap;">
     <div class="card">
       <header class="cabecalho">
-        <h3>Acoes de controle</h3>
+        <h3>Ações de controle</h3>
         <button class="btn btn-secondary" @click="carregar">Atualizar</button>
       </header>
       <div class="filtros">
@@ -16,7 +16,7 @@
         <button class="btn btn-primary" @click="carregar">Filtrar</button>
       </div>
       <LoadingState :carregando="carregando" :erro="erro">
-        <DataTable :colunas="colunas" :dados="lista" vazio="Sem acoes">
+        <DataTable :colunas="colunas" :dados="lista" vazio="Sem ações">
           <template #date_br="{ valor }">{{ valor ?? '-' }}</template>
           <template #tipo_nome="{ valor }">{{ valor ?? '-' }}</template>
           <template #acoes="{ linha }">
@@ -28,7 +28,7 @@
     <div class="stack">
       <div class="card">
         <header class="cabecalho">
-          <h3>{{ editandoId ? 'Editar acao' : 'Registrar acao' }}</h3>
+          <h3>{{ editandoId ? 'Editar ação' : 'Registrar ação' }}</h3>
           <button v-if="editandoId" class="btn btn-secondary" type="button" @click="cancelarEdicao">Cancelar</button>
         </header>
         <form class="form" @submit.prevent="salvar">
@@ -51,21 +51,21 @@
             </select>
           </label>
           <label>
-            Duracao (min)
+            Duração (min)
             <input type="number" v-model.number="nova.duration_min" min="0" />
           </label>
           <label>
-            Observacoes
+            Observações
             <textarea rows="2" v-model="nova.result_notes"></textarea>
           </label>
           <button class="btn btn-primary" type="submit">{{ editandoId ? 'Atualizar' : 'Salvar' }}</button>
         </form>
       </div>
       <div class="card">
-        <h3>Avaliacao rapida (BA espacial)</h3>
+        <h3>Avaliação rápida (BA espacial)</h3>
         <form class="form" @submit.prevent="rodarBa">
           <label>
-            ID da acao
+            ID da ação
             <input type="number" v-model.number="metrica.action_id" required />
           </label>
           <label>
@@ -79,9 +79,9 @@
           <button class="btn btn-secondary" type="submit">Calcular</button>
         </form>
         <div v-if="resultadoBa" class="resultado">
-          <p><strong>SR pre:</strong> {{ resultadoBa.sr10k_pre ?? 'â€”' }}</p>
-          <p><strong>SR pos:</strong> {{ resultadoBa.sr10k_pos ?? 'â€”' }}</p>
-          <p><strong>RR:</strong> {{ resultadoBa.rr ?? 'â€”' }}</p>
+          <p><strong>SR pré:</strong> {{ resultadoBa.sr10k_pre ?? '-' }}</p>
+          <p><strong>SR pós:</strong> {{ resultadoBa.sr10k_pos ?? '-' }}</p>
+          <p><strong>RR:</strong> {{ resultadoBa.rr ?? '-' }}</p>
         </div>
       </div>
     </div>
@@ -89,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import DataTable from '@/components/DataTable.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { ApiService, api } from '@/services/api';
@@ -97,9 +97,9 @@ import { ApiService, api } from '@/services/api';
 const colunas = [
   { titulo: 'Data', campo: 'date_br' },
   { titulo: 'Tipo', campo: 'tipo_nome' },
-  { titulo: 'Duracao', campo: 'duration_min' },
-  { titulo: 'Observacoes', campo: 'result_notes' },
-  { titulo: 'AÃ§Ãµes', campo: 'acoes' }
+  { titulo: 'Duração', campo: 'duration_min' },
+  { titulo: 'Observações', campo: 'result_notes' },
+  { titulo: 'Ações', campo: 'acoes' }
 ];
 
 const filtros = ref<{ airportId?: number }>({});
@@ -124,7 +124,7 @@ async function carregar() {
       tipo_nome: lookups.value.tipos_acao.find((t: any) => t.id === acao.action_type_id)?.name ?? '-'
     }));
   } catch (e: any) {
-    erro.value = e?.message ?? 'Falha ao buscar acoes';
+    erro.value = e?.message ?? 'Falha ao buscar ações';
   } finally {
     carregando.value = false;
   }
@@ -183,6 +183,22 @@ watch(
   }
 );
 
+onMounted(async () => {
+  try {
+    const cad = await ApiService.getCadastros();
+    aeroportos.value = cad.aeroportos ?? [];
+    lookups.value = cad.lookups ?? { tipos_acao: [] };
+    const user = ApiService.getUser<any>();
+    if (user?.aeroporto_id) {
+      nova.value.airport_id = user.aeroporto_id;
+      filtros.value.airportId = user.aeroporto_id;
+    }
+    await carregar();
+  } catch (e: any) {
+    erro.value = e?.message ?? 'Falha ao carregar dados';
+  }
+});
+</script>
 
 <style scoped>
 .cabecalho {

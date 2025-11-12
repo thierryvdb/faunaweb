@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import DataTable from '@/components/DataTable.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { ApiService, api } from '@/services/api';
@@ -106,7 +106,36 @@ async function salvar() {
   }
 }
 
-(\n  () => novo.value.airport_id,\n  async () => {\n    if (novo.value.airport_id) {\n      try {\n        const user = ApiService.getUser<any>();\n        if (user?.aeroporto_id && user.aeroporto_id !== novo.value.airport_id) {\n          await ApiService.switchAirport(Number(novo.value.airport_id));\n        }\n      } catch {}\n    }\n  }\n);\r\n
+watch(
+  () => novo.value.airport_id,
+  async () => {
+    if (novo.value.airport_id) {
+      try {
+        const user = ApiService.getUser<any>();
+        if (user?.aeroporto_id && user.aeroporto_id !== novo.value.airport_id) {
+          await ApiService.switchAirport(Number(novo.value.airport_id));
+        }
+      } catch {}
+    }
+  }
+);
+
+onMounted(async () => {
+  try {
+    const cad = await ApiService.getCadastros();
+    aeroportos.value = cad.aeroportos ?? [];
+    const user = ApiService.getUser<any>();
+    if (user?.aeroporto_id) {
+      novo.value.airport_id = user.aeroporto_id;
+      filtros.value.airportId = user.aeroporto_id;
+    }
+    await carregar();
+  } catch (e: any) {
+    erro.value = e?.message ?? 'Falha ao carregar dados';
+  }
+});
+
+</script>
 
 <style scoped>
 .cabecalho {

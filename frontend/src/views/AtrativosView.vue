@@ -60,7 +60,7 @@
           </select>
         </label>
         <label>
-          Descricao
+          Descrição
           <textarea v-model="novo.description" rows="3"></textarea>
         </label>
         <button class="btn btn-primary" type="submit">Salvar</button>
@@ -70,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import DataTable from '@/components/DataTable.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { ApiService, api } from '@/services/api';
@@ -79,8 +79,8 @@ const colunas = [
   { titulo: 'Data', campo: 'date_br' },
   { titulo: 'Tipo', campo: 'tipo_nome' },
   { titulo: 'Status', campo: 'status' },
-  { titulo: 'Descricao', campo: 'description' },
-  { titulo: 'AÃƒÂ§ÃƒÂµes', campo: 'acoes' }
+  { titulo: 'Descrição', campo: 'description' },
+  { titulo: 'Ações', campo: 'acoes' }
 ];
 
 const filtros = ref<{ status?: string }>({});
@@ -159,6 +159,21 @@ watch(
   }
 );
 
+onMounted(async () => {
+  try {
+    const cad = await ApiService.getCadastros();
+    aeroportos.value = cad.aeroportos ?? [];
+    lookups.value = cad.lookups ?? { tipos_atrativo: [] };
+    const user = ApiService.getUser<any>();
+    if (user?.aeroporto_id) {
+      novo.value.airport_id = user.aeroporto_id;
+    }
+    await carregar();
+  } catch (e: any) {
+    erro.value = e?.message ?? 'Falha ao carregar dados';
+  }
+});
+</script>
 
 <style scoped>
 .cabecalho {
