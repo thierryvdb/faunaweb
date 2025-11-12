@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS dim_team (
   name        TEXT NOT NULL,
   description TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
   -- Unique constraint cannot include expressions; use a unique index below
   -- UNIQUE (airport_id, LOWER(name))
 );
