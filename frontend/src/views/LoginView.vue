@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="page">
     <form class="card" @submit.prevent="entrar">
       <h3>Acessar</h3>
@@ -16,7 +16,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang=\"ts\">
 import { ref } from 'vue';
 import { ApiService } from '@/services/api';
 
@@ -24,15 +24,38 @@ const user = ref('');
 const pass = ref('');
 const carregando = ref(false);
 const erro = ref<string | null>(null);
+const aeroportos = ref<any[]>([]);
+const selecionado = ref<string | number>('');
+const etapa = ref<'login' | 'escolha'>('login');
 
 async function entrar() {
   carregando.value = true;
   erro.value = null;
   try {
-    await ApiService.login(user.value, pass.value);
+    const resp = await ApiService.login(user.value, pass.value);
+    const lista = resp?.aeroportos_permitidos ?? [];
+    if (lista.length > 1) {
+      aeroportos.value = lista;
+      selecionado.value = lista[0]?.id ?? '';
+      etapa.value = 'escolha';
+      return;
+    }
     window.location.href = '/';
   } catch (e: any) {
     erro.value = e?.response?.data?.mensagem || 'Falha no login';
+  } finally {
+    carregando.value = false;
+  }
+}
+
+async function confirmarAeroporto() {
+  if (!selecionado.value) return;
+  carregando.value = true;
+  try {
+    await ApiService.switchAirport(Number(selecionado.value));
+    window.location.href = '/';
+  } catch (e: any) {
+    erro.value = e?.response?.data?.mensagem || 'Falha ao definir aeroporto';
   } finally {
     carregando.value = false;
   }

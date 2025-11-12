@@ -13,6 +13,10 @@ const corpo = z.object({
 export async function locationsRoutes(app: FastifyInstance) {
   app.get('/api/aeroportos/:airportId/locais', async (request) => {
     const { airportId } = paramsAero.parse(request.params);
+    const userAirportId = (request as any).user.airport_id as number;
+    if (airportId !== userAirportId) {
+      return [];
+    }
     const { rows } = await db.query(
       `SELECT location_id AS id, code, runway_ref, description
        FROM wildlife.dim_location
@@ -25,6 +29,10 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.post('/api/aeroportos/:airportId/locais', async (request, reply) => {
     const { airportId } = paramsAero.parse(request.params);
+    const userAirportId = (request as any).user.airport_id as number;
+    if (airportId !== userAirportId) {
+      return reply.code(403).send({ mensagem: 'Acesso negado' });
+    }
     const body = corpo.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.dim_location (airport_id, code, runway_ref, description)
@@ -37,6 +45,10 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.put('/api/aeroportos/:airportId/locais/:locationId', async (request, reply) => {
     const { airportId, locationId } = paramsLoc.parse(request.params);
+    const userAirportId = (request as any).user.airport_id as number;
+    if (airportId !== userAirportId) {
+      return reply.code(403).send({ mensagem: 'Acesso negado' });
+    }
     const body = corpo.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
     if (!pares.length) {
@@ -59,6 +71,10 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.delete('/api/aeroportos/:airportId/locais/:locationId', async (request, reply) => {
     const { airportId, locationId } = paramsLoc.parse(request.params);
+    const userAirportId = (request as any).user.airport_id as number;
+    if (airportId !== userAirportId) {
+      return reply.code(403).send({ mensagem: 'Acesso negado' });
+    }
     await db.query('DELETE FROM wildlife.dim_location WHERE location_id=$1 AND airport_id=$2', [locationId, airportId]);
     return reply.code(204).send();
   });

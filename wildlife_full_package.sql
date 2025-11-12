@@ -1151,6 +1151,18 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- Multi-airport permissions: link users to airports (many-to-many)
+CREATE TABLE IF NOT EXISTS app_user_airport (
+  user_id    BIGINT NOT NULL REFERENCES app_user(user_id) ON DELETE CASCADE,
+  airport_id BIGINT NOT NULL REFERENCES airport(airport_id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, airport_id)
+);
+
+-- Seed permissions for existing users based on their current airport
+INSERT INTO app_user_airport (user_id, airport_id)
+SELECT u.user_id, u.airport_id FROM app_user u
+ON CONFLICT DO NOTHING;
+
 ALTER TABLE IF EXISTS fact_strike
   ADD COLUMN IF NOT EXISTS time_period_id SMALLINT REFERENCES lu_time_period(period_id),
   ADD COLUMN IF NOT EXISTS event_type TEXT NOT NULL DEFAULT 'colisao_ave';

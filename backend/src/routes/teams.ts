@@ -12,6 +12,10 @@ const bodySchema = z.object({
 export async function teamsRoutes(app: FastifyInstance) {
   app.get('/api/aeroportos/:airportId/equipes', async (request) => {
     const { airportId } = params.parse(request.params);
+    const userAirportId = (request as any).user.airport_id as number;
+    if (airportId !== userAirportId) {
+      return [];
+    }
     const { rows } = await db.query(
       `SELECT team_id AS id, name, description
        FROM wildlife.dim_team WHERE airport_id=$1 ORDER BY name`,
@@ -22,6 +26,10 @@ export async function teamsRoutes(app: FastifyInstance) {
 
   app.post('/api/aeroportos/:airportId/equipes', async (request, reply) => {
     const { airportId } = params.parse(request.params);
+    const userAirportId = (request as any).user.airport_id as number;
+    if (airportId !== userAirportId) {
+      return reply.code(403).send({ mensagem: 'Acesso negado' });
+    }
     const body = bodySchema.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.dim_team (airport_id, name, description)
@@ -34,6 +42,10 @@ export async function teamsRoutes(app: FastifyInstance) {
 
   app.put('/api/aeroportos/:airportId/equipes/:teamId', async (request, reply) => {
     const { airportId, teamId } = paramsWithTeam.parse(request.params);
+    const userAirportId = (request as any).user.airport_id as number;
+    if (airportId !== userAirportId) {
+      return reply.code(403).send({ mensagem: 'Acesso negado' });
+    }
     const body = bodySchema.parse(request.body);
     const { rows } = await db.query(
       `UPDATE wildlife.dim_team SET name=$1, description=$2, updated_at=now()
@@ -49,6 +61,10 @@ export async function teamsRoutes(app: FastifyInstance) {
 
   app.delete('/api/aeroportos/:airportId/equipes/:teamId', async (request, reply) => {
     const { airportId, teamId } = paramsWithTeam.parse(request.params);
+    const userAirportId = (request as any).user.airport_id as number;
+    if (airportId !== userAirportId) {
+      return reply.code(403).send({ mensagem: 'Acesso negado' });
+    }
     await db.query('DELETE FROM wildlife.dim_team WHERE team_id=$1 AND airport_id=$2', [teamId, airportId]);
     return reply.code(204).send();
   });

@@ -16,7 +16,7 @@ export async function kpisRoutes(app: FastifyInstance) {
     const fimPadrao = new Date(agora.getFullYear(), 11, 31).toISOString().slice(0, 10);
     const inicio = filtros.inicio ?? inicioPadrao;
     const fim = filtros.fim ?? fimPadrao;
-    const { rows } = await db.query(
+    const userAirportId = (request as any).user?.airport_id as number | undefined;\n    const selectedAirport = filtros.airportId ?? userAirportId ?? null;\n    const { rows } = await db.query(
       `WITH periodo AS (
          SELECT $1::date AS ini, $2::date AS fim
        ),
@@ -67,7 +67,7 @@ export async function kpisRoutes(app: FastifyInstance) {
        LEFT JOIN mass ON mass.airport_id = a.airport_id
        WHERE $3::bigint IS NULL OR a.airport_id = $3
        ORDER BY a.name`,
-      [inicio, fim, filtros.airportId ?? null]
+      [inicio, fim, selectedAirport]
     );
 
     const aeroportos = rows.map((row) => {
@@ -112,7 +112,7 @@ export async function kpisRoutes(app: FastifyInstance) {
       janela_dias: z.coerce.number().optional().default(30)
     });
     const body = schema.parse(request.body);
-    const { rows } = await db.query(
+    const userAirportId = (request as any).user?.airport_id as number | undefined;\n    const selectedAirport = filtros.airportId ?? userAirportId ?? null;\n    const { rows } = await db.query(
       'SELECT * FROM wildlife_kpi.kpi_did_sr10k($1, $2::bigint[], $3)',
       [body.action_id, body.control_locations, body.janela_dias]
     );
@@ -126,7 +126,7 @@ export async function kpisRoutes(app: FastifyInstance) {
       janela_dias: z.coerce.number().optional().default(30)
     });
     const body = schema.parse(request.body);
-    const { rows } = await db.query(
+    const userAirportId = (request as any).user?.airport_id as number | undefined;\n    const selectedAirport = filtros.airportId ?? userAirportId ?? null;\n    const { rows } = await db.query(
       'SELECT * FROM wildlife_kpi.kpi_ba_spatial($1, $2, $3)',
       [body.action_id, body.raio_m, body.janela_dias]
     );

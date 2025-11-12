@@ -18,20 +18,22 @@ const paramsSchema = z.object({ id: z.coerce.number() });
 
 export async function airportsRoutes(app: FastifyInstance) {
   app.get('/api/aeroportos', async (request) => {
-    const busca = (request.query as { busca?: string })?.busca;
-    const where = busca ? 'WHERE LOWER(name) LIKE $1 OR LOWER(city) LIKE $1 OR LOWER(icao_code) LIKE $1' : '';
-    const params = busca ? [`%${busca.toLowerCase()}%`] : [];
+    const userAirportId = (request as any).user.airport_id as number;
     const { rows } = await db.query(
       `SELECT airport_id AS id, icao_code, iata_code, name, city, state, country, latitude_dec, longitude_dec, elevation_ft
-       FROM wildlife.airport ${where}
+       FROM wildlife.airport WHERE airport_id=$1
        ORDER BY name`,
-      params
+      [userAirportId]
     );
     return rows;
   });
 
   app.get('/api/aeroportos/:id', async (request, reply) => {
     const { id } = paramsSchema.parse(request.params);
+    const userAirportId = (request as any).user.airport_id as number;
+    if (id !== userAirportId) {
+      return reply.code(403).send({ mensagem: 'Acesso negado a este aeroporto' });
+    }
     const { rows } = await db.query(
       'SELECT airport_id AS id, icao_code, iata_code, name, city, state, country, latitude_dec, longitude_dec, elevation_ft FROM wildlife.airport WHERE airport_id=$1',
       [id]
