@@ -75,10 +75,13 @@ CREATE TABLE IF NOT EXISTS dim_team (
   description TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (airport_id, LOWER(name))
+  -- Unique constraint cannot include expressions; use a unique index below
+  -- UNIQUE (airport_id, LOWER(name))
 );
 
 CREATE INDEX IF NOT EXISTS idx_team_airport ON dim_team (airport_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_team_airport_name_lower
+  ON dim_team (airport_id, LOWER(name));
 
 
 CREATE TABLE IF NOT EXISTS dim_species (
