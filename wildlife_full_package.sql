@@ -336,14 +336,14 @@ LEFT JOIN wildlife.lu_damage_class d ON d.damage_id = s.damage_id
 GROUP BY s.airport_id, s.date_utc;
 
 CREATE OR REPLACE VIEW v_sightings_effort_daily AS
-SELECT si.airport_id, s.date_utc AS day,
+SELECT s.airport_id, s.date_utc AS day,
        COUNT(si.sighting_item_id)::bigint AS avistamentos_itens,
        COALESCE(SUM(s.effort_hours),0)::numeric(10,2)  AS horas_patrulha,
        COALESCE(SUM(s.effort_km),0)::numeric(10,2)     AS km_patrulha,
        COALESCE(SUM(s.effort_area_ha),0)::numeric(10,2)AS area_amostrada_ha
 FROM wildlife.fact_sighting_item si
 JOIN wildlife.fact_sighting s ON s.sighting_id = si.sighting_id
-GROUP BY si.airport_id, s.date_utc;
+GROUP BY s.airport_id, s.date_utc;
 
 CREATE OR REPLACE VIEW v_movements_monthly AS
 SELECT airport_id, date_trunc('month', day)::date AS mes, SUM(movements)::bigint AS movements
