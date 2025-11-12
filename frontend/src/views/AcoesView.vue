@@ -16,12 +16,21 @@
         <button class="btn btn-primary" @click="carregar">Filtrar</button>
       </div>
       <LoadingState :carregando="carregando" :erro="erro">
-        <DataTable :colunas="colunas" :dados="lista" vazio="Sem acoes" />
+        <DataTable :colunas="colunas" :dados="lista" vazio="Sem acoes">
+          <template #date_br="{ valor }">{{ valor ?? '-' }}</template>
+          <template #tipo_nome="{ valor }">{{ valor ?? '-' }}</template>
+          <template #acoes="{ linha }">
+            <button class="btn btn-secondary" @click="editar(linha)">Editar</button>
+          </template>
+        </DataTable>
       </LoadingState>
     </div>
     <div class="stack">
       <div class="card">
-        <h3>Registrar acao</h3>
+        <header class="cabecalho">
+          <h3>{{ editandoId ? 'Editar acao' : 'Registrar acao' }}</h3>
+          <button v-if="editandoId" class="btn btn-secondary" type="button" @click="cancelarEdicao">Cancelar</button>
+        </header>
         <form class="form" @submit.prevent="salvar">
           <label>
             Aeroporto
@@ -32,7 +41,7 @@
           </label>
           <label>
             Data
-            <input type="date" v-model="nova.date_utc" required />
+            <input type="date" lang="pt-BR" v-model="nova.date_utc" required />
           </label>
           <label>
             Tipo
@@ -45,7 +54,11 @@
             Duracao (min)
             <input type="number" v-model.number="nova.duration_min" min="0" />
           </label>
-          <button class="btn btn-primary" type="submit">Salvar</button>
+          <label>
+            Observacoes
+            <textarea rows="2" v-model="nova.result_notes"></textarea>
+          </label>
+          <button class="btn btn-primary" type="submit">{{ editandoId ? 'Atualizar' : 'Salvar' }}</button>
         </form>
       </div>
       <div class="card">
@@ -82,10 +95,11 @@ import LoadingState from '@/components/LoadingState.vue';
 import { ApiService, api } from '@/services/api';
 
 const colunas = [
-  { titulo: 'Data', campo: 'date_utc' },
-  { titulo: 'Tipo', campo: 'action_type_id' },
+  { titulo: 'Data', campo: 'date_br' },
+  { titulo: 'Tipo', campo: 'tipo_nome' },
   { titulo: 'Duracao', campo: 'duration_min' },
-  { titulo: 'Observacoes', campo: 'result_notes' }
+  { titulo: 'Observacoes', campo: 'result_notes' },
+  { titulo: 'Ações', campo: 'acoes' }
 ];
 
 const filtros = ref<{ airportId?: number }>({});
@@ -94,15 +108,21 @@ const aeroportos = ref<any[]>([]);
 const lookups = ref<any>({ tipos_acao: [] });
 const carregando = ref(false);
 const erro = ref<string | null>(null);
-const nova = ref({ airport_id: '' as any, date_utc: '', action_type_id: undefined as any, duration_min: 0 });
+const nova = ref({ airport_id: '' as any, date_utc: '', action_type_id: undefined as any, duration_min: 0, result_notes: '' });
 const metrica = ref({ action_id: undefined as any, raio_m: 500, janela_dias: 30 });
 const resultadoBa = ref<any | null>(null);
+const editandoId = ref<number | null>(null);
 
 async function carregar() {
   carregando.value = true;
   erro.value = null;
   try {
-    lista.value = await ApiService.getAcoes(filtros.value);
+    const dados = await ApiService.getAcoes(filtros.value);
+    lista.value = dados.map((acao: any) => ({
+      ...acao,
+      date_br: acao.date_utc ? new Date(acao.date_utc).toLocaleDateString('pt-BR') : null,
+      tipo_nome: lookups.value.tipos_acao.find((t: any) => t.id === acao.action_type_id)?.name ?? '-'
+    }));
   } catch (e: any) {
     erro.value = e?.message ?? 'Falha ao buscar acoes';
   } finally {
@@ -112,12 +132,32 @@ async function carregar() {
 
 async function salvar() {
   try {
-    await api.post('/api/acoes-controle', nova.value);
-    carregar();
-    nova.value = { airport_id: '' as any, date_utc: '', action_type_id: undefined as any, duration_min: 0 };
+    if (editandoId.value) {
+      await api.put(`/api/acoes-controle/${editandoId.value}`, nova.value);
+    } else {
+      await api.post('/api/acoes-controle', nova.value);
+    }
+    await carregar();
+    cancelarEdicao();
   } catch (e: any) {
     alert(e?.message ?? 'Erro ao salvar');
   }
+}
+
+function cancelarEdicao() {
+  editandoId.value = null;
+  nova.value = { airport_id: '' as any, date_utc: '', action_type_id: undefined as any, duration_min: 0, result_notes: '' };
+}
+
+function editar(acao: any) {
+  editandoId.value = acao.id;
+  nova.value = {
+    airport_id: acao.airport_id,
+    date_utc: acao.date_utc ? acao.date_utc.slice(0, 10) : '',
+    action_type_id: acao.action_type_id,
+    duration_min: acao.duration_min ?? 0,
+    result_notes: acao.result_notes ?? ''
+  } as any;
 }
 
 async function rodarBa() {

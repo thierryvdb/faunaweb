@@ -16,11 +16,11 @@
           </label>
           <label>
             Inicio
-            <input type="date" v-model="filtros.inicio" />
+            <input type="date" lang="pt-BR" v-model="filtros.inicio" />
           </label>
           <label>
             Fim
-            <input type="date" v-model="filtros.fim" />
+            <input type="date" lang="pt-BR" v-model="filtros.fim" />
           </label>
           <button class="btn btn-primary" @click="carregar">Filtrar</button>
         </div>
@@ -41,7 +41,7 @@
         </label>
         <label>
           Data
-          <input type="date" v-model="novo.date_utc" required />
+          <input type="date" lang="pt-BR" v-model="novo.date_utc" required />
         </label>
         <label>
           Tipo
@@ -67,7 +67,7 @@ import LoadingState from '@/components/LoadingState.vue';
 import { ApiService, api } from '@/services/api';
 
 const colunas = [
-  { titulo: 'Data', campo: 'date_utc' },
+  { titulo: 'Data', campo: 'date_br' },
   { titulo: 'Tipo', campo: 'movement_type' },
   { titulo: 'Pista', campo: 'runway' },
   { titulo: 'Movimentos/dia', campo: 'movements_in_day' }
@@ -84,7 +84,11 @@ async function carregar() {
   carregando.value = true;
   erro.value = null;
   try {
-    lista.value = await ApiService.getMovimentos(filtros.value);
+    const dados = await ApiService.getMovimentos(filtros.value);
+    lista.value = dados.map((mov: any) => ({
+      ...mov,
+      date_br: mov.date_utc ? new Date(mov.date_utc).toLocaleDateString('pt-BR') : null
+    }));
   } catch (e: any) {
     erro.value = e?.message ?? 'Falha ao buscar movimentos';
   } finally {

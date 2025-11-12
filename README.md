@@ -7,7 +7,7 @@ Aplicacao full-stack para operar o banco `wildlife` (PostgreSQL 12+ com PostGIS)
 Resumo dos objetos principais do pacote SQL:
 
 - **Tabelas maestras** (`airport`, `lu_*`) armazenam aeroportos, fases de voo, classes de dano, metodos de deteccao e demais dominios (`wildlife_full_package.sql:13-44`).
-- **Dimensoes**: `dim_location` vincula pontos/areas operacionais (`wildlife_full_package.sql:47-57`) e `dim_species` guarda atributos biologicos e massa para calculos de severidade (`wildlife_full_package.sql:58-71`).
+- **Dimensoes**: `dim_location` vincula pontos/areas operacionais (`wildlife_full_package.sql:47-57`), `dim_team` guarda as equipes de fauna vinculadas a cada aeroporto, e `dim_species` registra atributos biologicos com massa para calculos de severidade (`wildlife_full_package.sql:58-80`).
 - **Fatos operacionais**: `fact_movement`, `fact_sighting`, `fact_sighting_item`, `fact_strike`, `fact_control_action` e `fact_attractor` cobrem movimentos, patrulhas, avistamentos, colisoes, acoes de controle e atrativos (`wildlife_full_package.sql:72-187`). Todos possuem `updated_at` com trigger `set_updated_at` (`wildlife_full_package.sql:201-216`).
 - **Seeds** populam dominios padrao, aeroporto SBPS, locais e especies iniciais (`wildlife_full_package.sql:221-303`).
 - **Views de agregacao** (`params_default_period`, `v_*`) montam diarios/mensais e bases para KPIs (`wildlife_full_package.sql:316-368`).
@@ -168,6 +168,7 @@ Variavel opcional `VITE_API_URL` pode apontar para outro host; caso vazio utiliz
 | GET | `/api/lookups` | Dominios padrao para formularios |
 | CRUD | `/api/aeroportos`, `/api/aeroportos/:id` | Cadastro de aeroportos |
 | CRUD | `/api/aeroportos/:airportId/locais` | Locais operacionais |
+| CRUD | `/api/aeroportos/:airportId/equipes` | Equipes de fauna por aeroporto |
 | CRUD | `/api/especies` | Dimensao de especies |
 | CRUD | `/api/movimentos` | Movimentos diarios |
 | CRUD | `/api/avistamentos` | Avistamentos + itens |
@@ -185,11 +186,11 @@ Todos os retornos utilizam textos em portugues e seguem validacao com Zod.
 
 1. **Painel**: filtros de periodo, cards SR/10k por aeroporto, lista de taxa com dano e grafico Pareto (Chart.js).
 2. **Movimentos**: tabela paginada + formulario rapido de cadastro.
-3. **Avistamentos**: filtro por aeroporto/data, CRUD e integracao com itens.
+3. **Avistamentos**: filtro por aeroporto/data, CRUD e integracao com itens; formulário usa selects para locais/equipes cadastrados e permite editar registros diretamente na tabela.
 4. **Colisoes**: filtro por fase, formulario para evidenciar fase/dano.
 5. **Acoes de Controle**: cadastro e painel rapido de BA espacial (chama `/api/kpis/ba-espacial`).
 6. **Atrativos**: status (ativo/mitigando/resolvido) com formulario dedicado.
-7. **Cadastros**: manutencao basica de aeroportos, especies e agora locais operacionais (incluindo selecao por aeroporto e remoção dos registros), garantindo que avistamentos/colisoes usem IDs válidos.
+7. **Cadastros**: manutencao basica de aeroportos, especies, locais operacionais e equipes (CRUD completo por aeroporto), garantindo que avistamentos/colisoes usem IDs válidos.
 
 Cada modulo possui sua rota no Vue Router, evitando concentrar todos os CRUDs em uma unica pagina conforme solicitado.
 

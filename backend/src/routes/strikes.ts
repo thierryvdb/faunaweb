@@ -60,10 +60,13 @@ export async function strikesRoutes(app: FastifyInstance) {
     const offset = (filtros.pagina - 1) * filtros.limite;
     valores.push(filtros.limite, offset);
     const { rows } = await db.query(
-      `SELECT strike_id AS id, airport_id, date_utc, time_local, location_id, latitude_dec, longitude_dec, phase_id, species_id,
-              id_confidence, quantity, damage_id, ingestion, effect_id, part_id, time_out_hours, cost_brl, sample_collected,
-              severity_weight, source_ref, notes
-       FROM wildlife.fact_strike
+      `SELECT s.strike_id AS id, s.airport_id, s.date_utc, s.time_local, s.location_id,
+              COALESCE(l.code, CONCAT('ID ', s.location_id::text)) AS location_nome,
+              s.latitude_dec, s.longitude_dec, s.phase_id, s.species_id,
+              s.id_confidence, s.quantity, s.damage_id, s.ingestion, s.effect_id, s.part_id, s.time_out_hours,
+              s.cost_brl, s.sample_collected, s.severity_weight, s.source_ref, s.notes
+       FROM wildlife.fact_strike s
+       LEFT JOIN wildlife.dim_location l ON l.location_id = s.location_id
        ${where}
        ORDER BY date_utc DESC, time_local DESC
        LIMIT $${valores.length - 1} OFFSET $${valores.length}`,

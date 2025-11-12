@@ -2,11 +2,11 @@
   <form class="filtro" @submit.prevent="onSubmit">
     <label>
       Inicio
-      <input type="date" v-model="local.inicio" />
+      <input type="date" lang="pt-BR" v-model="local.inicio" />
     </label>
     <label>
       Fim
-      <input type="date" v-model="local.fim" />
+      <input type="date" lang="pt-BR" v-model="local.fim" />
     </label>
     <button class="btn btn-primary" type="submit">Aplicar</button>
   </form>

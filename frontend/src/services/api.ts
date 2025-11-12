@@ -48,6 +48,10 @@ export const ApiService = {
     const { data } = await api.get(`/api/aeroportos/${airportId}/locais`);
     return data;
   },
+  async getEquipesPorAeroporto(airportId: number) {
+    const { data } = await api.get(`/api/aeroportos/${airportId}/equipes`);
+    return data;
+  },
   async criarLocal(airportId: number, payload: { code: string; runway_ref?: string; description?: string }) {
     const { data } = await api.post(`/api/aeroportos/${airportId}/locais`, payload);
     return data;

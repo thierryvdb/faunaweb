@@ -65,7 +65,9 @@ export async function sightingsRoutes(app: FastifyInstance) {
     const offset = (filtros.pagina - 1) * filtros.limite;
     valores.push(filtros.limite, offset);
     const { rows } = await db.query(
-      `SELECT s.sighting_id AS id, s.airport_id, s.date_utc, s.time_local, s.location_id, s.latitude_dec, s.longitude_dec,
+      `SELECT s.sighting_id AS id, s.airport_id, s.date_utc, s.time_local, s.location_id,
+              COALESCE(l.code, CONCAT('ID ', s.location_id::text)) AS location_nome,
+              s.latitude_dec, s.longitude_dec,
               s.detection_method, s.effort_hours, s.effort_km, s.effort_area_ha, s.precip_id, s.wind_id, s.vis_id,
               s.photo_url, s.confidence_overall, s.observer_team, s.notes,
               COALESCE((
@@ -80,6 +82,7 @@ export async function sightingsRoutes(app: FastifyInstance) {
                 WHERE si.sighting_id = s.sighting_id
               ), '[]'::json) AS itens
        FROM wildlife.fact_sighting s
+       LEFT JOIN wildlife.dim_location l ON l.location_id = s.location_id
        ${where}
        ORDER BY s.date_utc DESC, s.time_local DESC
        LIMIT $${valores.length - 1} OFFSET $${valores.length}`,

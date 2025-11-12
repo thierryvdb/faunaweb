@@ -18,11 +18,20 @@
         <button class="btn btn-primary" @click="carregar">Filtrar</button>
       </div>
       <LoadingState :carregando="carregando" :erro="erro">
-        <DataTable :colunas="colunas" :dados="lista" vazio="Sem atrativos" />
+        <DataTable :colunas="colunas" :dados="lista" vazio="Sem atrativos">
+          <template #date_br="{ valor }">{{ valor ?? '-' }}</template>
+          <template #tipo_nome="{ valor }">{{ valor ?? '-' }}</template>
+          <template #acoes="{ linha }">
+            <button class="btn btn-secondary" @click="editar(linha)">Editar</button>
+          </template>
+        </DataTable>
       </LoadingState>
     </div>
     <div class="card">
-      <h3>Novo registro</h3>
+      <header class="cabecalho">
+        <h3>{{ editandoId ? 'Editar atrativo' : 'Novo registro' }}</h3>
+        <button v-if="editandoId" class="btn btn-secondary" type="button" @click="cancelarEdicao">Cancelar</button>
+      </header>
       <form class="form" @submit.prevent="salvar">
         <label>
           Aeroporto
@@ -33,7 +42,7 @@
         </label>
         <label>
           Data
-          <input type="date" v-model="novo.date_utc" required />
+          <input type="date" lang="pt-BR" v-model="novo.date_utc" required />
         </label>
         <label>
           Tipo
@@ -67,10 +76,11 @@ import LoadingState from '@/components/LoadingState.vue';
 import { ApiService, api } from '@/services/api';
 
 const colunas = [
-  { titulo: 'Data', campo: 'date_utc' },
-  { titulo: 'Tipo', campo: 'attractor_type_id' },
+  { titulo: 'Data', campo: 'date_br' },
+  { titulo: 'Tipo', campo: 'tipo_nome' },
   { titulo: 'Status', campo: 'status' },
-  { titulo: 'Descricao', campo: 'description' }
+  { titulo: 'Descricao', campo: 'description' },
+  { titulo: 'Ações', campo: 'acoes' }
 ];
 
 const filtros = ref<{ status?: string }>({});
@@ -86,12 +96,18 @@ const novo = ref({
   status: 'ativo',
   description: ''
 });
+const editandoId = ref<number | null>(null);
 
 async function carregar() {
   carregando.value = true;
   erro.value = null;
   try {
-    lista.value = await ApiService.getAtrativos(filtros.value);
+    const dados = await ApiService.getAtrativos(filtros.value);
+    lista.value = dados.map((atr: any) => ({
+      ...atr,
+      date_br: atr.date_utc ? new Date(atr.date_utc).toLocaleDateString('pt-BR') : null,
+      tipo_nome: lookups.value.tipos_atrativo.find((t: any) => t.id === atr.attractor_type_id)?.name ?? '-'
+    }));
   } catch (e: any) {
     erro.value = e?.message ?? 'Falha ao buscar atrativos';
   } finally {
@@ -101,12 +117,32 @@ async function carregar() {
 
 async function salvar() {
   try {
-    await api.post('/api/atrativos', novo.value);
-    carregar();
-    novo.value = { airport_id: '' as any, date_utc: '', attractor_type_id: undefined as any, status: 'ativo', description: '' };
+    if (editandoId.value) {
+      await api.put(`/api/atrativos/${editandoId.value}`, novo.value);
+    } else {
+      await api.post('/api/atrativos', novo.value);
+    }
+    await carregar();
+    cancelarEdicao();
   } catch (e: any) {
     alert(e?.message ?? 'Erro ao salvar');
   }
+}
+
+function cancelarEdicao() {
+  editandoId.value = null;
+  novo.value = { airport_id: '' as any, date_utc: '', attractor_type_id: undefined as any, status: 'ativo', description: '' };
+}
+
+function editar(atr: any) {
+  editandoId.value = atr.id;
+  novo.value = {
+    airport_id: atr.airport_id,
+    date_utc: atr.date_utc ? atr.date_utc.slice(0, 10) : '',
+    attractor_type_id: atr.attractor_type_id,
+    status: atr.status,
+    description: atr.description ?? ''
+  } as any;
 }
 
 onMounted(async () => {

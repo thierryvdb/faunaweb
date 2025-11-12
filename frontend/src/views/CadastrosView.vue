@@ -76,6 +76,37 @@
       </div>
       <p v-else class="vazio">Selecione um aeroporto para listar os locais.</p>
     </div>
+    <div class="card">
+      <h3>Equipes de fauna</h3>
+      <form class="form" @submit.prevent="salvarEquipe">
+        <label>
+          Aeroporto
+          <select v-model.number="formEquipe.airport_id" required>
+            <option value="" disabled>Selecione</option>
+            <option v-for="a in aeroportos" :key="a.id" :value="a.id">{{ a.name }}</option>
+          </select>
+        </label>
+        <label>
+          Nome da equipe
+          <input v-model="formEquipe.name" required />
+        </label>
+        <label>
+          Observações
+          <textarea rows="2" v-model="formEquipe.description"></textarea>
+        </label>
+        <button class="btn btn-primary" type="submit">Salvar equipe</button>
+      </form>
+      <div v-if="equipesSelecionadas.length" class="lista-locais">
+        <article v-for="team in equipesSelecionadas" :key="team.id" class="local-item">
+          <div>
+            <strong>{{ team.name }}</strong>
+            <p>{{ team.description }}</p>
+          </div>
+          <button class="btn btn-secondary" @click="removerEquipe(team.id)">Remover</button>
+        </article>
+      </div>
+      <p v-else class="vazio">Selecione um aeroporto para listar as equipes.</p>
+    </div>
   </div>
 </template>
 
@@ -91,6 +122,8 @@ const novoAero = ref({ icao_code: '', name: '', city: '' });
 const novaEspecie = ref({ common_name: '', group_id: undefined as any });
 const localForm = ref({ airport_id: '' as any, code: '', runway_ref: '', description: '' });
 const locaisSelecionados = ref<any[]>([]);
+const formEquipe = ref({ airport_id: '' as any, name: '', description: '' });
+const equipesSelecionadas = ref<any[]>([]);
 
 async function carregar() {
   const cad = await ApiService.getCadastros();
@@ -138,6 +171,37 @@ async function removerLocal(locationId: number) {
   await ApiService.removerLocal(localForm.value.airport_id, locationId);
   await carregarLocaisDoAeroporto(localForm.value.airport_id);
 }
+
+async function carregarEquipesDoAeroporto(id?: number) {
+  if (!id) {
+    equipesSelecionadas.value = [];
+    return;
+  }
+  equipesSelecionadas.value = await ApiService.getEquipesPorAeroporto(id);
+}
+
+async function salvarEquipe() {
+  if (!formEquipe.value.airport_id) return;
+  await api.post(`/api/aeroportos/${formEquipe.value.airport_id}/equipes`, {
+    name: formEquipe.value.name,
+    description: formEquipe.value.description || undefined
+  });
+  await carregarEquipesDoAeroporto(formEquipe.value.airport_id);
+  formEquipe.value = { ...formEquipe.value, name: '', description: '' };
+}
+
+async function removerEquipe(teamId: number) {
+  if (!formEquipe.value.airport_id) return;
+  await api.delete(`/api/aeroportos/${formEquipe.value.airport_id}/equipes/${teamId}`);
+  await carregarEquipesDoAeroporto(formEquipe.value.airport_id);
+}
+
+watch(
+  () => formEquipe.value.airport_id,
+  (novo) => {
+    carregarEquipesDoAeroporto(novo);
+  }
+);
 
 watch(
   () => localForm.value.airport_id,
