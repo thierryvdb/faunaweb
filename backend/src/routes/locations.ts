@@ -11,11 +11,18 @@ const corpo = z.object({
 });
 
 export async function locationsRoutes(app: FastifyInstance) {
-  app.get('/api/aeroportos/:airportId/locais', async (request) => {
+  app.get('/api/aeroportos/:airportId/locais', async (request, reply) => {
     const { airportId } = paramsAero.parse(request.params);
-    const userAirportId = (request as any).user.airport_id as number;
-    if (airportId !== userAirportId) {
-      return [];
+    const user = (request as any).user as { sub: number; airport_id: number };
+    // Permite acessar se o aeroporto for o do token OU se o usuário tiver permissão explícita em app_user_airport
+    if (airportId !== user.airport_id) {
+      const ok = await db.query(
+        `SELECT 1 FROM wildlife.app_user_airport WHERE user_id=$1 AND airport_id=$2`,
+        [user.sub, airportId]
+      );
+      if (!ok.rows[0]) {
+        return reply.code(403).send({ mensagem: 'Acesso negado' });
+      }
     }
     const { rows } = await db.query(
       `SELECT location_id AS id, code, runway_ref, description
