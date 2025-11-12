@@ -16,7 +16,7 @@
           <label class="sel-aero">
             Aeroporto
             <select v-model.number="selAero" @change="trocarAeroporto">
-              <option v-for="a in permitidos" :key="a.id" :value="a.id">{{ a.icao_code }} — {{ a.name }}</option>
+              <option v-for="a in permitidos" :key="a.id" :value="a.id">{{ a.icao_code }} - {{ a.name }}</option>
             </select>
           </label>
           Olá, {{ usuario?.nome }} — {{ usuario?.aeroporto || '' }}

@@ -21,7 +21,7 @@ const router = createRouter({
   ]
 });
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('fauna_token');
   if (to.path !== '/login' && !token) {
     next('/login');
@@ -31,4 +31,3 @@ router.beforeEach((to, from, next) => {
 });
 
 export default router;
-
