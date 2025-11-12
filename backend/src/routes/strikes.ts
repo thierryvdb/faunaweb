@@ -48,7 +48,7 @@ const corpo = z.object({
   inside_aerodrome: z.boolean().optional(),
   risk_mgmt_notes: z.string().optional(),
   related_attractor_id: z.coerce.number().optional(),
-  photo_url: z.string().url().optional(),
+  photo_url: z.preprocess((v) => (typeof v === 'string' && v.trim() === '' ? undefined : v), z.string().url().optional()),
   source_ref: z.string().optional(),
   notes: z.string().optional()
 });
@@ -189,7 +189,7 @@ export async function strikesRoutes(app: FastifyInstance) {
           body.inside_aerodrome ?? null,
           body.risk_mgmt_notes ?? null,
           body.related_attractor_id ?? null,
-          body.photo_url ?? null,
+          body.photo_url && (body.photo_url as string).trim() !== '' ? body.photo_url : null,
           body.source_ref ?? null,
           body.notes ?? null
         ]
