@@ -106,12 +106,7 @@ async function salvar() {
   }
 }
 
-onMounted(async () => {
-  const cad = await ApiService.getCadastros();
-  aeroportos.value = cad.aeroportos;
-  carregar();
-});
-</script>
+(\n  () => novo.value.airport_id,\n  async () => {\n    if (novo.value.airport_id) {\n      try {\n        const user = ApiService.getUser<any>();\n        if (user?.aeroporto_id && user.aeroporto_id !== novo.value.airport_id) {\n          await ApiService.switchAirport(Number(novo.value.airport_id));\n        }\n      } catch {}\n    }\n  }\n);\r\n
 
 <style scoped>
 .cabecalho {

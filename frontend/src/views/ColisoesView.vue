@@ -371,6 +371,12 @@ async function carregarLocais() {
     atrativos.value = [];
     return;
   }
+  try {
+    const user = ApiService.getUser<any>();
+    if (user?.aeroporto_id && user.aeroporto_id !== novo.value.airport_id) {
+      await ApiService.switchAirport(novo.value.airport_id);
+    }
+  } catch {}
   locais.value = await ApiService.getLocaisPorAeroporto(novo.value.airport_id);
   atrativos.value = await ApiService.getAtrativosPorAeroporto(novo.value.airport_id);
 }
@@ -465,4 +471,3 @@ onMounted(async () => {
 .form { flex-direction: column; }
 select, input, textarea { padding: 0.45rem 0.5rem; border: 1px solid #cbd5f5; border-radius: 8px; }
 </style>
-

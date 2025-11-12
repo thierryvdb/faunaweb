@@ -84,7 +84,10 @@ export const ApiService = {
   async login(username: string, password: string) {
     const { data } = await api.post('/api/auth/login', { username, password });
     if (data?.token) setToken(data.token);
-    if (data?.usuario) setUser(data.usuario);
+    if (data?.usuario) {
+      const user = { ...data.usuario, aeroportos_permitidos: data?.aeroportos_permitidos ?? [] };
+      setUser(user);
+    }
     return data;
   },
   getToken,

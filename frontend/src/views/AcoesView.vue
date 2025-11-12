@@ -79,9 +79,9 @@
           <button class="btn btn-secondary" type="submit">Calcular</button>
         </form>
         <div v-if="resultadoBa" class="resultado">
-          <p><strong>SR pre:</strong> {{ resultadoBa.sr10k_pre ?? '�' }}</p>
-          <p><strong>SR pos:</strong> {{ resultadoBa.sr10k_pos ?? '�' }}</p>
-          <p><strong>RR:</strong> {{ resultadoBa.rr ?? '�' }}</p>
+          <p><strong>SR pre:</strong> {{ resultadoBa.sr10k_pre ?? 'â€”' }}</p>
+          <p><strong>SR pos:</strong> {{ resultadoBa.sr10k_pos ?? 'â€”' }}</p>
+          <p><strong>RR:</strong> {{ resultadoBa.rr ?? 'â€”' }}</p>
         </div>
       </div>
     </div>
@@ -99,7 +99,7 @@ const colunas = [
   { titulo: 'Tipo', campo: 'tipo_nome' },
   { titulo: 'Duracao', campo: 'duration_min' },
   { titulo: 'Observacoes', campo: 'result_notes' },
-  { titulo: 'A��es', campo: 'acoes' }
+  { titulo: 'AÃ§Ãµes', campo: 'acoes' }
 ];
 
 const filtros = ref<{ airportId?: number }>({});
@@ -169,13 +169,20 @@ async function rodarBa() {
   }
 }
 
-onMounted(async () => {
-  const cad = await ApiService.getCadastros();
-  aeroportos.value = cad.aeroportos;
-  lookups.value = cad.lookups;
-  carregar();
-});
-</script>
+watch(
+  () => nova.value.airport_id,
+  async () => {
+    if (nova.value.airport_id) {
+      try {
+        const user = ApiService.getUser<any>();
+        if (user?.aeroporto_id && user.aeroporto_id !== nova.value.airport_id) {
+          await ApiService.switchAirport(Number(nova.value.airport_id));
+        }
+      } catch {}
+    }
+  }
+);
+
 
 <style scoped>
 .cabecalho {

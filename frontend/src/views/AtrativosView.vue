@@ -80,7 +80,7 @@ const colunas = [
   { titulo: 'Tipo', campo: 'tipo_nome' },
   { titulo: 'Status', campo: 'status' },
   { titulo: 'Descricao', campo: 'description' },
-  { titulo: 'Ações', campo: 'acoes' }
+  { titulo: 'AÃƒÂ§ÃƒÂµes', campo: 'acoes' }
 ];
 
 const filtros = ref<{ status?: string }>({});
@@ -145,13 +145,20 @@ function editar(atr: any) {
   } as any;
 }
 
-onMounted(async () => {
-  const cad = await ApiService.getCadastros();
-  aeroportos.value = cad.aeroportos;
-  lookups.value = cad.lookups;
-  carregar();
-});
-</script>
+watch(
+  () => novo.value.airport_id,
+  async () => {
+    if (novo.value.airport_id) {
+      try {
+        const user = ApiService.getUser<any>();
+        if (user?.aeroporto_id && user.aeroporto_id !== novo.value.airport_id) {
+          await ApiService.switchAirport(Number(novo.value.airport_id));
+        }
+      } catch {}
+    }
+  }
+);
+
 
 <style scoped>
 .cabecalho {
