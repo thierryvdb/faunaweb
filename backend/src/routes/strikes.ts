@@ -69,19 +69,19 @@ export async function strikesRoutes(app: FastifyInstance) {
     const condicoes: string[] = [];
     const valores: any[] = [];
     if (filtros.airportId) {
-      condicoes.push(`airport_id=$${condicoes.length + 1}`);
+      condicoes.push(`s.airport_id=$${condicoes.length + 1}`);
       valores.push(filtros.airportId);
     }
     if (filtros.fase) {
-      condicoes.push(`phase_id=$${condicoes.length + 1}`);
+      condicoes.push(`s.phase_id=$${condicoes.length + 1}`);
       valores.push(filtros.fase);
     }
     if (filtros.inicio) {
-      condicoes.push(`date_utc >= $${condicoes.length + 1}`);
+      condicoes.push(`s.date_utc >= $${condicoes.length + 1}`);
       valores.push(filtros.inicio);
     }
     if (filtros.fim) {
-      condicoes.push(`date_utc <= $${condicoes.length + 1}`);
+      condicoes.push(`s.date_utc <= $${condicoes.length + 1}`);
       valores.push(filtros.fim);
     }
     const where = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : '';
@@ -105,7 +105,7 @@ export async function strikesRoutes(app: FastifyInstance) {
        LEFT JOIN wildlife.dim_location l ON l.location_id = s.location_id
        LEFT JOIN wildlife.fact_attractor fa ON fa.attractor_id = s.related_attractor_id
        ${where}
-       ORDER BY date_utc DESC, time_local DESC
+       ORDER BY s.date_utc DESC, s.time_local DESC
        LIMIT $${valores.length - 1} OFFSET $${valores.length}`,
       valores
     );
