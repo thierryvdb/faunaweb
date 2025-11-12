@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <RouterView v-if="isLogin" />
   <div v-else class="layout">
     <aside class="menu">
@@ -18,9 +18,9 @@
     <main class="conteudo">
       <header class="topo">
         <h1>{{ tituloPagina }}</h1>
-        <div class="acoes-topo">Olá, {{ usuario?.nome }} — {{ usuario?.aeroporto || "" }} <button class="btn btn-secondary" @click="sair">Sair</button>
+        <div cl —.nome }} ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â {{ usu —.aeroporto || "" }} <button class="btn btn-secondary" @click="sair">Sair</button>
         </div>
-        <p>Monitoramento integrado de fauna, riscos e KPIs aeroportuÃ¡rios.</p>
+        <p>Monitoramento integrado de fauna, riscos e KPIs aeroportuÃƒÆ’Ã‚Â¡rios.</p>
       </header>
       <section class="miolo">
         <RouterView />
@@ -57,7 +57,7 @@ const titulos: Record<string, string> = {
   '/cadastros': 'Cadastros de apoio'
 };
 
-const tituloPagina = computed(() => titulos[route.path] ?? 'Painel');
+const tituloP —? 'Painel');
 
 function sair() {
   ApiService.clearToken();
@@ -65,7 +65,7 @@ function sair() {
   window.location.href = '/login';
 }
 
-type Usuario = { id: number; nome: string; aeroporto?: string; aeroporto_id?: number };
+type Usu —: string;  —: number };
 const usuario = computed(() => ApiService.getUser<Usuario>());
 </script>
 
@@ -136,5 +136,6 @@ const usuario = computed(() => ApiService.getUser<Usuario>());
   }
 }
 </style>
+
 
 

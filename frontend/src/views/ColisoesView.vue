@@ -1,8 +1,8 @@
-﻿<template>
+<template>
   <div class="grid" style="grid-template-columns: 3fr 2fr; gap: 1.5rem; flex-wrap: wrap;">
     <div class="card">
       <header class="cabecalho">
-        <h3>ColisÃƒÂµes registradas</h3>
+        <h3>Colisões registradas</h3>
         <button class="btn btn-secondary" @click="carregar">Atualizar</button>
       </header>
       <div class="filtros">
@@ -23,39 +23,28 @@
         <button class="btn btn-primary" @click="carregar">Filtrar</button>
       </div>
       <LoadingState :carregando="carregando" :erro="erro">
-        <DataTable :colunas="colunas" :dados="lista" vazio="Sem ColisÃƒÂµes">
-          <template #date_br="{ valor }">
-            {{ valor ?? '-' }}
-          </template>
-          <template #location_nome="{ valor }">
-            {{ valor ?? '-' }}
-          </template>
-          <template #fase_nome="{ valor }">
-            {{ valor ?? '-' }}
-          </template>
-          <template #dano_nome="{ valor }">
-            {{ valor ?? '-' }}
-          </template>
-          <template #acoes="{ linha }">
-            <button class="btn btn-secondary" @click="editar(linha)">Editar</button>
-          </template>          <template #evento_label="{ linha }">
-            {{ linha ? (linha.event_type === 'colisÃƒÂ£o_outro_animal' ? 'ColisÃƒÆ’Ã‚Â£o (outro animal)' : (linha.event_type === 'quase_colisÃƒÂ£o' ? 'Quase-colisÃƒÆ’Ã‚Â£o' : 'ColisÃƒÆ’Ã‚Â£o (ave)')) : '-' }}
+        <DataTable :colunas="colunas" :dados="lista" vazio="Sem colisões">
+          <template #date_br="{ valor }">{{ valor ?? '-' }}</template>
+          <template #location_nome="{ valor }">{{ valor ?? '-' }}</template>
+          <template #fase_nome="{ valor }">{{ valor ?? '-' }}</template>
+          <template #dano_nome="{ valor }">{{ valor ?? '-' }}</template>
+          <template #evento_label="{ linha }">
+            {{ linha ? (linha.event_type === 'colisao_outro_animal' ? 'Colisão (outro animal)' : (linha.event_type === 'quase_colisao' ? 'Quase-colisão' : 'Colisão (ave)')) : '-' }}
           </template>
           <template #periodo_label="{ linha }">
             {{ lookups.periodos_dia.find((p: any) => p.id === linha.time_period_id)?.name ?? '-' }}
           </template>
-          <template #pilot_alerted_label="{ linha }">
-            {{ linha.pilot_alerted == null ? '-' : (linha.pilot_alerted ? 'Sim' : 'NÃƒÆ’Ã‚Â£o') }}
-          </template>
-          <template #near_miss_label="{ linha }">
-            {{ linha.near_miss == null ? '-' : (linha.near_miss ? 'Sim' : 'NÃƒÆ’Ã‚Â£o') }}
+          <template #pilot_alerted_label="{ linha }">{{ linha.pilot_alerted == null ? '-' : (linha.pilot_alerted ? 'Sim' : 'Não') }}</template>
+          <template #near_miss_label="{ linha }">{{ linha.near_miss == null ? '-' : (linha.near_miss ? 'Sim' : 'Não') }}</template>
+          <template #acoes="{ linha }">
+            <button class="btn btn-secondary" @click="editar(linha)">Editar</button>
           </template>
         </DataTable>
       </LoadingState>
     </div>
     <div class="card">
       <header class="cabecalho">
-        <h3>{{ editandoId ? 'Editar colisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o' : 'Registrar colisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o' }}</h3>
+        <h3>{{ editandoId ? 'Editar colisão' : 'Registrar colisão' }}</h3>
         <button v-if="editandoId" class="btn btn-secondary" type="button" @click="cancelarEdicao">Cancelar</button>
       </header>
       <form class="form" @submit.prevent="salvar">
@@ -105,7 +94,7 @@
           </select>
         </label>
         <label>
-          PerÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­odo
+          Período
           <select v-model.number="novo.time_period_id">
             <option :value="undefined">Selecione</option>
             <option v-for="p in lookups.periodos_dia" :key="p.id" :value="p.id">{{ p.name }}</option>
@@ -114,9 +103,9 @@
         <label>
           Tipo de evento
           <select v-model="novo.event_type">
-            <option value="colisÃƒÂ£o_ave">ColisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o com ave</option>
-            <option value="colisÃƒÂ£o_outro_animal">ColisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o com outro animal</option>
-            <option value="quase_colisÃƒÂ£o">Quase-colisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o</option>
+            <option value="colisao_ave">Colisão com ave</option>
+            <option value="colisao_outro_animal">Colisão com outro animal</option>
+            <option value="quase_colisao">Quase-colisão</option>
           </select>
         </label>
         <label>
@@ -141,16 +130,16 @@
           </select>
         </label>
         <label>
-          PrecipitaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
+          Precipitação
           <select v-model.number="novo.precip_id">
             <option :value="undefined">Selecione</option>
             <option v-for="p in lookups.precipitacao" :key="p.id" :value="p.id">{{ p.name }}</option>
           </select>
         </label>
         <label>
-          EspÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©cie
+          Espécie
           <select v-model.number="novo.species_id">
-            <option :value="undefined">NÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o identificada</option>
+            <option :value="undefined">Não identificada</option>
             <option v-for="e in especies" :key="e.id" :value="e.id">{{ e.common_name }}</option>
           </select>
         </label>
@@ -159,13 +148,13 @@
           <input type="number" min="1" v-model.number="novo.quantity" />
         </label>
         <label>
-          ConfianÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§a na identificaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
+          Confiança na identificação
           <select v-model="novo.id_confidence">
             <option :value="undefined">Selecione</option>
             <option value="Alta">Alta</option>
-            <option value="Media">MÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©dia</option>
+            <option value="Media">Média</option>
             <option value="Baixa">Baixa</option>
-            <option value="Nao_identificada">NÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o identificada</option>
+            <option value="Nao_identificada">Não identificada</option>
           </select>
         </label>
         <label>
@@ -184,11 +173,11 @@
           <input type="number" min="0" step="1" v-model.number="novo.aircraft_speed_kt" />
         </label>
         <label>
-          ConsequÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âªncia operacional
+          Consequência operacional
           <input type="text" v-model="novo.operational_consequence" />
         </label>
         <label>
-          Danos visÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­veis (notas)
+          Danos visíveis (notas)
           <input type="text" v-model="novo.visible_damage_notes" />
         </label>
         <label>
@@ -202,11 +191,11 @@
           <input type="checkbox" v-model="novo.pilot_alerted" />
         </label>
         <label>
-          Quase-colisÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
+          Quase-colisão
           <input type="checkbox" v-model="novo.near_miss" />
         </label>
         <label>
-          MatrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­cula da aeronave
+          Matrícula da aeronave
           <input type="text" v-model="novo.aircraft_registration" />
         </label>
         <label>
@@ -225,11 +214,11 @@
           <input type="text" v-model="novo.investigated_by" />
         </label>
         <label>
-          CarcaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§a encontrada
+          Carcaça encontrada
           <input type="checkbox" v-model="novo.carcass_found" />
         </label>
         <label>
-          AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes tomadas
+          Ações tomadas
           <textarea rows="2" v-model="novo.actions_taken"></textarea>
         </label>
         <label>
@@ -237,7 +226,7 @@
           <input type="url" v-model="novo.photo_url" />
         </label>
         <label>
-          Dentro do aerÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³dromo
+          Dentro do aeródromo
           <input type="checkbox" v-model="novo.inside_aerodrome" />
         </label>
         <label>
@@ -248,7 +237,7 @@
           </select>
         </label>
         <label>
-          Notas de gestÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o de risco
+          Notas de gestão de risco
           <textarea rows="2" v-model="novo.risk_mgmt_notes"></textarea>
         </label>
         <label>
@@ -291,14 +280,14 @@ const colunas = [
   { titulo: 'Hora', campo: 'time_local' },
   { titulo: 'Local', campo: 'location_nome' },
   { titulo: 'Evento', campo: 'evento_label' },
-  { titulo: 'PerÃƒÂ­odo', campo: 'periodo_label' },
+  { titulo: 'Período', campo: 'periodo_label' },
   { titulo: 'Fase', campo: 'fase_nome' },
   { titulo: 'Dano', campo: 'dano_nome' },
   { titulo: 'Piloto alertado', campo: 'pilot_alerted_label' },
-  { titulo: 'Quase-colisÃƒÂ£o', campo: 'near_miss_label' },
+  { titulo: 'Quase-colisão', campo: 'near_miss_label' },
   { titulo: 'Atrativo', campo: 'related_attractor_desc' },
   { titulo: 'Notas', campo: 'notes' },
-  { titulo: 'AÃƒÂ§ÃƒÂµes', campo: 'acoes' }
+  { titulo: 'Ações', campo: 'acoes' }
 ];
 
 const filtros = ref<{ airportId?: number; fase?: number }>({});
@@ -310,31 +299,32 @@ const atrativos = ref<any[]>([]);
 const especies = ref<any[]>([]);
 const carregando = ref(false);
 const erro = ref<string | null>(null);
-const novo = ref({
-  airport_id: '' as any,
-  location_id: '' as any,
+
+const novo = ref<any>({
+  airport_id: '',
+  location_id: '',
   date_utc: '',
   time_local: '',
-  time_period_id: undefined as any,
-  event_type: 'colisÃƒÂ£o_ave',
-  latitude_dec: undefined as any,
-  longitude_dec: undefined as any,
-  quadrant: undefined as any,
-  phase_id: undefined as any,
-  vis_id: undefined as any,
-  wind_id: undefined as any,
-  precip_id: undefined as any,
-  species_id: undefined as any,
-  quantity: undefined as any,
-  id_confidence: undefined as any,
-  damage_id: undefined as any,
-  engine_type_id: undefined as any,
+  time_period_id: undefined,
+  event_type: 'colisao_ave',
+  latitude_dec: undefined,
+  longitude_dec: undefined,
+  quadrant: undefined,
+  phase_id: undefined,
+  vis_id: undefined,
+  wind_id: undefined,
+  precip_id: undefined,
+  species_id: undefined,
+  quantity: undefined,
+  id_confidence: undefined,
+  damage_id: undefined,
+  engine_type_id: undefined,
   near_miss: false,
   pilot_alerted: false,
   aircraft_registration: '',
   aircraft_type: '',
-  impact_height_agl_m: undefined as any,
-  aircraft_speed_kt: undefined as any,
+  impact_height_agl_m: undefined,
+  aircraft_speed_kt: undefined,
   operational_consequence: '',
   visible_damage_notes: '',
   investigated_by: '',
@@ -342,10 +332,10 @@ const novo = ref({
   actions_taken: '',
   photo_url: '',
   inside_aerodrome: false,
-  related_attractor_id: undefined as any,
+  related_attractor_id: undefined,
   risk_mgmt_notes: '',
-  est_mass_id: undefined as any,
-  est_mass_grams: undefined as any,
+  est_mass_id: undefined,
+  est_mass_grams: undefined,
   reporter_name: '',
   reporter_contact: '',
   notes: ''
@@ -358,26 +348,99 @@ async function carregar() {
   erro.value = null;
   try {
     const dados = await ApiService.getColisoes(filtros.value);
-    const mapEvento = (tipo: string | undefined) => {
-      if (tipo === 'colisao_outro_animal') return 'ColisÃ£o (outro animal)';
-      if (tipo === 'quase_colisao') return 'Quase-colisÃ£o';
-      return 'ColisÃ£o (ave)';
-    };
     lista.value = dados.map((item: any) => ({
       ...item,
       date_br: item.date_utc ? new Date(item.date_utc).toLocaleDateString('pt-BR') : null,
       fase_nome: lookups.value.fases_voo.find((f: any) => f.id === item.phase_id)?.name ?? null,
       dano_nome: lookups.value.classes_dano.find((d: any) => d.id === item.damage_id)?.name ?? null,
-      evento_label: mapEvento(item.event_type),
+      evento_label: item.event_type === 'colisao_outro_animal' ? 'Colisão (outro animal)' : (item.event_type === 'quase_colisao' ? 'Quase-colisão' : 'Colisão (ave)'),
       periodo_label: lookups.value.periodos_dia.find((p: any) => p.id === item.time_period_id)?.name ?? null,
-      pilot_alerted_label: item.pilot_alerted == null ? null : (item.pilot_alerted ? 'Sim' : 'NÃ£o'),
-      near_miss_label: item.near_miss == null ? null : (item.near_miss ? 'Sim' : 'NÃ£o')
+      pilot_alerted_label: item.pilot_alerted == null ? null : (item.pilot_alerted ? 'Sim' : 'Não'),
+      near_miss_label: item.near_miss == null ? null : (item.near_miss ? 'Sim' : 'Não')
     }));
   } catch (e: any) {
-    erro.value = e?.message ?? 'Falha ao buscar colisoes';
+    erro.value = e?.message ?? 'Falha ao buscar colisões';
   } finally {
     carregando.value = false;
   }
+}
+
+async function carregarLocais() {
+  if (!novo.value.airport_id) {
+    locais.value = [];
+    atrativos.value = [];
+    return;
+  }
+  locais.value = await ApiService.getLocaisPorAeroporto(novo.value.airport_id);
+  atrativos.value = await ApiService.getAtrativosPorAeroporto(novo.value.airport_id);
+}
+
+async function salvar() {
+  try {
+    const payload = { ...novo.value, parts: partesSelecionadas.value } as any;
+    if (editandoId.value) {
+      await api.put(`/api/colisoes/${editandoId.value}`, payload);
+    } else {
+      await api.post('/api/colisoes', payload);
+    }
+    await carregar();
+    cancelarEdicao();
+  } catch (e: any) {
+    alert(e?.message ?? 'Erro ao salvar');
+  }
+}
+
+function cancelarEdicao() {
+  editandoId.value = null;
+  partesSelecionadas.value = [];
+  novo.value = { ...novo.value, airport_id: '', location_id: '', date_utc: '', time_local: '' };
+  locais.value = [];
+  atrativos.value = [];
+}
+
+async function editar(registro: any) {
+  editandoId.value = registro.id;
+  novo.value = {
+    airport_id: registro.airport_id,
+    location_id: registro.location_id,
+    date_utc: registro.date_utc?.slice(0, 10) ?? '',
+    time_local: registro.time_local ?? '',
+    time_period_id: registro.time_period_id,
+    event_type: registro.event_type ?? 'colisao_ave',
+    latitude_dec: registro.latitude_dec,
+    longitude_dec: registro.longitude_dec,
+    quadrant: registro.quadrant,
+    phase_id: registro.phase_id,
+    vis_id: registro.vis_id,
+    wind_id: registro.wind_id,
+    precip_id: registro.precip_id,
+    species_id: registro.species_id,
+    quantity: registro.quantity,
+    id_confidence: registro.id_confidence,
+    damage_id: registro.damage_id,
+    engine_type_id: registro.engine_type_id,
+    near_miss: !!registro.near_miss,
+    pilot_alerted: !!registro.pilot_alerted,
+    aircraft_registration: registro.aircraft_registration ?? '',
+    aircraft_type: registro.aircraft_type ?? '',
+    impact_height_agl_m: registro.impact_height_agl_m,
+    aircraft_speed_kt: registro.aircraft_speed_kt,
+    operational_consequence: registro.operational_consequence ?? '',
+    visible_damage_notes: registro.visible_damage_notes ?? '',
+    investigated_by: registro.investigated_by ?? '',
+    carcass_found: !!registro.carcass_found,
+    actions_taken: registro.actions_taken ?? '',
+    photo_url: registro.photo_url ?? '',
+    inside_aerodrome: !!registro.inside_aerodrome,
+    related_attractor_id: registro.related_attractor_id,
+    risk_mgmt_notes: registro.risk_mgmt_notes ?? '',
+    est_mass_id: registro.est_mass_id,
+    est_mass_grams: registro.est_mass_grams,
+    reporter_name: registro.reporter_name ?? '',
+    reporter_contact: registro.reporter_contact ?? '',
+    notes: registro.notes ?? ''
+  } as any;
+  await carregarLocais();
 }
 
 watch(
@@ -397,31 +460,9 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.cabecalho {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.filtros,
-.form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.form {
-  flex-direction: column;
-}
-
-select,
-input,
-textarea {
-  padding: 0.45rem 0.5rem;
-  border: 1px solid #cbd5f5;
-  border-radius: 8px;
-}
+.cabecalho { display: flex; justify-content: space-between; align-items: center; }
+.filtros, .form { display: flex; flex-wrap: wrap; gap: 1rem; }
+.form { flex-direction: column; }
+select, input, textarea { padding: 0.45rem 0.5rem; border: 1px solid #cbd5f5; border-radius: 8px; }
 </style>
-
-
 

@@ -34,7 +34,7 @@
             {{ lookups.periodos_dia?.find((p: any) => p.id === linha.time_period_id)?.name ?? '-' }}
           </template>
           <template #inside_label="{ linha }">
-            {{ linha.inside_aerodrome == null ? '-' : (linha.inside_aerodrome ? 'Sim' : 'NÃ£o') }}
+            {{ linha.inside_aerodrome == null ? '-' : (linha.inside_aerodrome ? 'Sim' : 'NÃƒÂ£o') }}
           </template>
         </DataTable>
       </LoadingState>
@@ -68,7 +68,7 @@
           <input type="time" v-model="novo.time_local" required />
         </label>
         <label>
-          PerÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­odo
+          PerÃƒÂ­odo
           <select v-model.number="novo.time_period_id">
             <option :value="undefined">Selecione</option>
             <option v-for="p in lookups.periodos_dia" :key="p.id" :value="p.id">{{ p.name }}</option>
@@ -102,7 +102,7 @@
           <input type="number" min="0" step="1" v-model.number="novo.fauna_height_agl_m" />
         </label>
         <label>
-          Dentro do aerÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³dromo
+          Dentro do aerÃƒÂ³dromo
           <input type="checkbox" v-model="novo.inside_aerodrome" />
         </label>
         <label>
@@ -113,11 +113,11 @@
           </select>
         </label>
         <label>
-          Notas de gestÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o de risco
+          Notas de gestÃƒÂ£o de risco
           <textarea v-model="novo.risk_mgmt_notes" rows="2"></textarea>
         </label>
         <label>
-          AÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes tomadas
+          AÃ§Ãµes tomadas
           <textarea v-model="novo.actions_taken" rows="2"></textarea>
         </label>
         <label>
@@ -147,14 +147,14 @@ const colunas = [
   { titulo: 'Data', campo: 'date_br' },
   { titulo: 'Hora', campo: 'time_local' },
   { titulo: 'Local', campo: 'location_nome' },
-  { titulo: 'Período', campo: 'periodo_label' },
+  { titulo: 'PerÃƒÂ­odo', campo: 'periodo_label' },
   { titulo: 'Quadrante', campo: 'quadrant' },
   { titulo: 'Dentro do AD', campo: 'inside_label' },
   { titulo: 'AGL (m)', campo: 'fauna_height_agl_m' },
   { titulo: 'Atrativo', campo: 'related_attractor_desc' },
   { titulo: 'Equipe', campo: 'observer_team' },
   { titulo: 'Notas', campo: 'notes' },
-  { titulo: 'Ações', campo: 'acoes' }
+  { titulo: 'AÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes', campo: 'acoes' }
 ];
 
 const filtros = ref<{ airportId?: number; inicio?: string; fim?: string }>({});
@@ -320,3 +320,4 @@ textarea {
   border-radius: 8px;
 }
 </style>
+
