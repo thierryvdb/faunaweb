@@ -44,6 +44,17 @@ export const ApiService = {
     const { data } = await api.get('/api/atrativos', { params });
     return data;
   },
+  async getLocaisPorAeroporto(airportId: number) {
+    const { data } = await api.get(`/api/aeroportos/${airportId}/locais`);
+    return data;
+  },
+  async criarLocal(airportId: number, payload: { code: string; runway_ref?: string; description?: string }) {
+    const { data } = await api.post(`/api/aeroportos/${airportId}/locais`, payload);
+    return data;
+  },
+  async removerLocal(airportId: number, locationId: number) {
+    await api.delete(`/api/aeroportos/${airportId}/locais/${locationId}`);
+  },
   async getLookups() {
     const { data } = await api.get('/api/lookups');
     return data;

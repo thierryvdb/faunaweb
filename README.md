@@ -189,7 +189,7 @@ Todos os retornos utilizam textos em portugues e seguem validacao com Zod.
 4. **Colisoes**: filtro por fase, formulario para evidenciar fase/dano.
 5. **Acoes de Controle**: cadastro e painel rapido de BA espacial (chama `/api/kpis/ba-espacial`).
 6. **Atrativos**: status (ativo/mitigando/resolvido) com formulario dedicado.
-7. **Cadastros**: manutencao basica de aeroportos e especies para alimentar outros fluxos.
+7. **Cadastros**: manutencao basica de aeroportos, especies e agora locais operacionais (incluindo selecao por aeroporto e remoção dos registros), garantindo que avistamentos/colisoes usem IDs válidos.
 
 Cada modulo possui sua rota no Vue Router, evitando concentrar todos os CRUDs em uma unica pagina conforme solicitado.
 
