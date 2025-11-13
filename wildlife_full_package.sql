@@ -424,8 +424,8 @@ FROM airport WHERE icao_code='SBPS'
 ON CONFLICT (username) DO NOTHING;
 
 INSERT INTO app_user (name, username, password_hash, airport_id)
-SELECT 'Pamela', 'pamela', crypt('linux2', gen_salt('bf')), airport_id
-FROM airport WHERE icao_code='SBCY'
+SELECT 'flavia', 'flavia', crypt('fauna1', gen_salt('bf')), airport_id
+FROM airport WHERE icao_code='SBPS'
 ON CONFLICT (username) DO NOTHING;
 
 -- Seeds normalization (UTF-8 accents) and canonical inserts
