@@ -1,0 +1,15 @@
+
+          airport_id, date_utc, time_local, time_period_id, event_type,
+          location_id, latitude_dec, longitude_dec,
+          precip_id, wind_id, vis_id,
+          phase_id, species_id, id_confidence, quantity, damage_id, ingestion, effect_id, part_id,
+          time_out_hours, cost_brl, sample_collected, severity_weight,
+          aircraft_registration, aircraft_type, engine_type_id,
+          near_miss, pilot_alerted,
+          est_mass_id, est_mass_grams,
+          reported_by_user_id, reporter_name, reporter_contact,
+          quadrant, impact_height_agl_m, aircraft_speed_kt, operational_consequence, visible_damage_notes,
+          investigated_by, carcass_found, actions_taken, inside_aerodrome, risk_mgmt_notes, related_attractor_id,
+          photo_url,
+          source_ref, notes
+        
