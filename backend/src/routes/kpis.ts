@@ -134,4 +134,20 @@ export async function kpisRoutes(app: FastifyInstance) {
   );
   return rows[0] ?? null;
   });
+
+  app.get('/api/kpis/baist', async (request) => {
+    const filtros = rangeSchema.parse(request.query ?? {});
+    const agora = new Date();
+    const inicioPadrao = new Date(agora.getFullYear(), 0, 1).toISOString().slice(0, 10);
+    const fimPadrao = new Date(agora.getFullYear(), 11, 31).toISOString().slice(0, 10);
+    const inicio = filtros.inicio ?? inicioPadrao;
+    const fim = filtros.fim ?? fimPadrao;
+    const userAirportId = (request as any).user?.airport_id as number | undefined;
+    const selectedAirport = filtros.airportId ?? userAirportId ?? null;
+    const { rows } = await db.query(
+      'SELECT * FROM wildlife_kpi.fn_baist_indicadores($1,$2,$3)',
+      [inicio, fim, selectedAirport]
+    );
+    return { periodo: { inicio, fim }, aeroportos: rows };
+  });
 }

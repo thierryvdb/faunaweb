@@ -6,6 +6,8 @@ import ColisoesView from '@/views/ColisoesView.vue';
 import AcoesView from '@/views/AcoesView.vue';
 import AtrativosView from '@/views/AtrativosView.vue';
 import CadastrosView from '@/views/CadastrosView.vue';
+import InspecoesView from '@/views/InspecoesView.vue';
+import GovernancaView from '@/views/GovernancaView.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -17,7 +19,9 @@ const router = createRouter({
     { path: '/colisoes', component: ColisoesView },
     { path: '/acoes', component: AcoesView },
     { path: '/atrativos', component: AtrativosView },
-    { path: '/cadastros', component: CadastrosView }
+    { path: '/cadastros', component: CadastrosView },
+    { path: '/inspecoes', component: InspecoesView },
+    { path: '/governanca', component: GovernancaView }
   ]
 });
 

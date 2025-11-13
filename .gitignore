@@ -1,0 +1,2 @@
+# Ignore resource artifacts (PDFs, HTML conversões, etc.)
+/resource/

@@ -136,6 +136,54 @@ export const ApiService = {
     const { data } = await api.get('/api/atrativos', { params: { airportId } });
     return data;
   },
+  async getInspecoes(params?: Record<string, any>) {
+    const { data } = await api.get('/api/inspecoes', { params });
+    return data;
+  },
+  async criarInspecao(payload: Record<string, any>) {
+    const { data } = await api.post('/api/inspecoes', payload);
+    return data;
+  },
+  async getCarcacas(params?: Record<string, any>) {
+    const { data } = await api.get('/api/carcacas', { params });
+    return data;
+  },
+  async criarCarcaca(payload: Record<string, any>) {
+    const { data } = await api.post('/api/carcacas', payload);
+    return data;
+  },
+  async getAuditoriasAmbientais(params?: Record<string, any>) {
+    const { data } = await api.get('/api/auditorias-ambientais', { params });
+    return data;
+  },
+  async criarAuditoriaAmbiental(payload: Record<string, any>) {
+    const { data } = await api.post('/api/auditorias-ambientais', payload);
+    return data;
+  },
+  async getAsaFocos(params?: Record<string, any>) {
+    const { data } = await api.get('/api/asa-focos', { params });
+    return data;
+  },
+  async criarAsaFoco(payload: Record<string, any>) {
+    const { data } = await api.post('/api/asa-focos', payload);
+    return data;
+  },
+  async getComunicadosExternos(params?: Record<string, any>) {
+    const { data } = await api.get('/api/comunicados-externos', { params });
+    return data;
+  },
+  async criarComunicadoExterno(payload: Record<string, any>) {
+    const { data } = await api.post('/api/comunicados-externos', payload);
+    return data;
+  },
+  async getTreinamentos(params?: Record<string, any>) {
+    const { data } = await api.get('/api/treinamentos-fauna', { params });
+    return data;
+  },
+  async criarTreinamento(payload: Record<string, any>) {
+    const { data } = await api.post('/api/treinamentos-fauna', payload);
+    return data;
+  },
   async getLocaisPorAeroporto(airportId: number) {
     const { data } = await api.get(`/api/aeroportos/${airportId}/locais`);
     return data;
@@ -153,6 +201,10 @@ export const ApiService = {
   },
   async getLookups() {
     const { data } = await api.get('/api/lookups');
+    return data;
+  },
+  async getKpisBaist(params?: Record<string, any>) {
+    const { data } = await api.get('/api/kpis/baist', { params });
     return data;
   },
   async getCadastros() {

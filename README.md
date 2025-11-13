@@ -27,6 +27,22 @@ fauna/
 - **Backend** (`backend/`): Fastify + `pg` com validacao via Zod. Rotas separadas por dominio (`src/routes/*`) e servicos de banco (`src/services/db.ts`). KPIs e relatorios chamam diretamente as views/funcoes do schema `wildlife_kpi`.
 - **Frontend** (`frontend/`): Vite + Vue Router + Chart.js. Telas isoladas (Painel, Movimentos, Avistamentos, Colisoes, Acoes, Atrativos, Cadastros) e componentes utilitarios (`KpiCard`, `DataTable`, `FiltroPeriodo`, `LoadingState`). Proxy local `/api` -> `http://localhost:3333`.
 
+### 2.1 Extensão de conformidade (Manual ANAC/UFMG)
+
+O arquivo `wildlife_extension.sql` amplia o pacote com tabelas e funções necessárias para aderir às boas práticas descritas no *Manual de Boas Práticas no Gerenciamento de Risco da Fauna*. Ele inclui:
+
+- **fact_inspection** (inspeções diárias no sítio e na ASA com observações estruturadas).
+- **fact_carcass**, **fact_environment_audit**, **fact_asa_focus**, **fact_external_notice** e **fact_training_session** para carcaças, resíduos/esgoto/sistemas de proteção, focos externos, comunicações e treinamentos.
+- Função `wildlife_kpi.fn_baist_indicadores` que calcula os indicadores BAIST (ReAvi/ReASA/ReFau, PeAvi/PeFau, strikes múltiplas, massa média, etc.).
+
+Após aplicar o `wildlife_full_package.sql`, rode:
+
+```bash
+psql -d fauna -f wildlife_extension.sql
+```
+
+O backend expõe as novas rotas (`/api/inspecoes`, `/api/carcacas`, `/api/auditorias-ambientais`, `/api/asa-focos`, `/api/comunicados-externos`, `/api/treinamentos-fauna` e `/api/kpis/baist`) e o frontend ganhou as telas **Inspeções/ASA** e **Governança** para operar esses dados.
+
 ## 3. Pre-requisitos
 
 - Node.js >= 20 (testado com Node 24.x)

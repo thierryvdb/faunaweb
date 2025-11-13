@@ -40,21 +40,25 @@ const links = [
   { to: '/', label: 'Painel' },
   { to: '/movimentos', label: 'Movimentos' },
   { to: '/avistamentos', label: 'Avistamentos' },
-  { to: '/colisoes', label: 'Colisões' },
-  { to: '/acoes', label: 'Ações de Controle' },
+  { to: '/colisoes', label: 'Colis?es' },
+  { to: '/acoes', label: 'A??es de Controle' },
   { to: '/atrativos', label: 'Atrativos' },
+  { to: '/inspecoes', label: 'Inspe??es/ASA' },
+  { to: '/governanca', label: 'Governan?a' },
   { to: '/cadastros', label: 'Cadastros' }
 ];
 
 const route = useRoute();
 const isLogin = computed(() => route.path === '/login');
 const titulos: Record<string, string> = {
-  '/': 'Visão geral',
+  '/': 'Vis?o geral',
   '/movimentos': 'Movimentos operacionais',
   '/avistamentos': 'Avistamentos de fauna',
-  '/colisoes': 'Colisões com fauna',
-  '/acoes': 'Ações de controle',
-  '/atrativos': 'Gestão de atrativos',
+  '/colisoes': 'Colis?es com fauna',
+  '/acoes': 'A??es de controle',
+  '/atrativos': 'Gest?o de atrativos',
+  '/inspecoes': 'Inspe??es, ASA e carca?as',
+  '/governanca': 'Governan?a e indicadores',
   '/cadastros': 'Cadastros de apoio'
 };
 
