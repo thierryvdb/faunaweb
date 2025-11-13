@@ -132,7 +132,7 @@ function calcularCoordenadas(rowIdx: number, colIdx: number) {
 }
 
 .qp-cell {
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: none;
   background: transparent;
   padding: 0;
   margin: 0;
@@ -141,12 +141,12 @@ function calcularCoordenadas(rowIdx: number, colIdx: number) {
 }
 
 .qp-cell:hover {
-  background: rgba(14, 165, 233, 0.2);
+  background: rgba(14, 165, 233, 0.15);
 }
 
 .qp-cell.selecionado {
-  background: rgba(14, 165, 233, 0.35);
-  border-color: rgba(14, 165, 233, 0.8);
+  background: rgba(14, 165, 233, 0.3);
+  box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.4);
 }
 
 .qp-axis {
