@@ -125,6 +125,12 @@
           <button v-if="formQuadrante.id" class="btn btn-secondary" type="button" @click="cancelarQuadrante">Cancelar</button>
         </div>
       </form>
+      <div class="acoes-form">
+        <button class="btn btn-secondary" type="button" :disabled="resetandoQuadrantes" @click="resetarQuadrantes">
+          {{ resetandoQuadrantes ? 'Gerando grade...' : 'Gerar grade A-N x 1-33' }}
+        </button>
+        <small class="ajuda">Esta ação substitui todos os quadrantes atuais pela grade completa.</small>
+      </div>
       <ul class="lista-quadrantes">
         <li v-for="q in quadrantes" :key="q.id">
           <div>
@@ -159,6 +165,7 @@ const formEquipe = ref({ airport_id: '' as any, name: '', description: '' });
 const equipesSelecionadas = ref<any[]>([]);
 const formQuadrante = ref<{ id: number | null; code: string; description: string }>({ id: null, code: '', description: '' });
 const salvandoQuadrante = ref(false);
+const resetandoQuadrantes = ref(false);
 
 async function carregar() {
   const cad = await ApiService.getCadastros();
@@ -230,6 +237,22 @@ async function removerEquipe(teamId: number) {
   if (!formEquipe.value.airport_id) return;
   await api.delete(`/api/aeroportos/${formEquipe.value.airport_id}/equipes/${teamId}`);
   await carregarEquipesDoAeroporto(formEquipe.value.airport_id);
+}
+
+async function resetarQuadrantes() {
+  if (!confirm('Isto irá substituir todos os quadrantes cadastrados pela grade completa A-N x 1-33. Deseja continuar?')) {
+    return;
+  }
+  resetandoQuadrantes.value = true;
+  try {
+    await ApiService.resetQuadrantes();
+    await carregarQuadrantes();
+  } catch (error: any) {
+    const mensagem = error?.response?.data?.mensagem ?? 'Falha ao gerar a grade';
+    alert(mensagem);
+  } finally {
+    resetandoQuadrantes.value = false;
+  }
 }
 
 async function carregarQuadrantes() {
@@ -380,6 +403,10 @@ li {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+.ajuda {
+  font-size: 0.8rem;
+  color: #64748b;
 }
 
 .acoes-quadrante {

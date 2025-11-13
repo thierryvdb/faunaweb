@@ -46,6 +46,27 @@ psql -d fauna -f wildlife_extension.sql
 
 O backend expõe as novas rotas (`/api/inspecoes`, `/api/carcacas`, `/api/auditorias-ambientais`, `/api/asa-focos`, `/api/comunicados-externos`, `/api/treinamentos-fauna` e `/api/kpis/baist`) e o frontend ganhou as telas **Inspeções/ASA** e **Governança** para operar esses dados.
 
+### 2.2 Páginas e fluxos principais do portal
+
+- **Painel**: KPIs SR/10k, taxa de dano e pareto de espécies agrupados por aeroporto.
+- **Movimentos**: CRUD com filtros e paginação que alimenta o KPI de exposição e o relatório /api/relatorios/movimentos-periodo.
+- **Avistamentos**: formulário compatível com o FC-15, já com seleção de quadrante/latitude/longitude e associação de equipe.
+- **Colisões**: registro completo do FC-15, permitindo upload de arquivos, anexar URLs, indicar partes atingidas e controlar impactos operacionais.
+- **Ações de Controle / Atrativos**: acompanhamento das medidas mitigatórias e dos focos que atraem fauna.
+- **Inspeções/ASA e Governança**: telas dedicadas às tabelas do *Manual de Boas Práticas*, cobrindo inspeções de sítio/ASA, auditorias ambientais, focos externos e comunicados.
+- **Relatórios**: consultas Pareto/Fases/Partes e novos relatórios de movimentos por período e colisões com imagens (exportação em PDF ou DOCX).
+- **Cadastros e Usuários**: administração de aeroportos, locais, equipes, quadrantes, espécies e contas de acesso.
+
+### 2.3 Ferramentas de apoio ao gerenciamento de risco de fauna
+
+- **Grade única de quadrantes A–N × 1–33**: `lu_quadrant` guarda linha/coluna e pode ser regenerada via `POST /api/quadrantes/reset-grade` ou pelo botão “Gerar grade A-N x 1-33” na tela de Cadastros.
+- **Mapa clicável**: o componente `QuadrantMapPicker` (ativado em Avistamentos e Colisões) permite escolher visualmente o quadrante e, opcionalmente, preencher latitude/longitude ao configurar `QUADRANT_MAP.bounds` em `src/config/quadrantGrid.ts`. A imagem pode ser trocada apontando `VITE_QUADRANT_MAP_URL` para um arquivo customizado.
+- **Upload de evidências**: colisões aceitam arquivo do computador (armazenado em `fact_strike.photo_blob`) ou uma URL pública, mantendo o histórico exigido pelo FC-15.
+- **Relatórios exportáveis**:
+  - `GET /api/relatorios/movimentos-periodo`: agrega totais mensais E compara anos adjacentes em %.
+  - `GET /api/relatorios/colisoes-imagens` e `/export`: lista as colisões com miniaturas e gera PDF ou DOCX para anexos em comissões ou auditorias.
+- **Conformidade com o Manual**: inspeções ASA, auditorias ambientais, focos externos, comunicações e treinamentos com alertas de validade cobrem os itens do Programa de Gerenciamento de Risco da Fauna (PGRF) e dos indicadores BAIST.
+
 ## 3. Pre-requisitos
 
 - Node.js >= 20 (testado com Node 24.x)

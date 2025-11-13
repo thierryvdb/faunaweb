@@ -86,11 +86,14 @@
           Quadrante
           <select v-model="novo.quadrant">
             <option :value="undefined">Selecione</option>
-            <option v-for="q in quadrantesDisponiveis" :key="q.code" :value="q.code">
+            <option v-for="q in quadrantes" :key="q.code" :value="q.code">
               {{ q.description ? q.code + ' - ' + q.description : q.code }}
             </option>
           </select>
         </label>
+        <div class="map-card">
+          <QuadrantMapPicker :selected="novo.quadrant ?? ''" @select="aplicarQuadrante" />
+        </div>
         <label>
           Altura da fauna (AGL, m)
           <input type="number" min="0" step="1" v-model.number="novo.fauna_height_agl_m" />
@@ -132,10 +135,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue';
+import { ref, onMounted, watch } from 'vue';
+import QuadrantMapPicker from '@/components/QuadrantMapPicker.vue';
 import DataTable from '@/components/DataTable.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { ApiService, api } from '@/services/api';
+import type { QuadrantSelection } from '@/config/quadrantGrid';
+import type { QuadrantSelection } from '@/config/quadrantGrid';
 
 const colunas = [
   { titulo: 'Data', campo: 'date_br' },
@@ -159,18 +165,6 @@ const atrativos = ref<any[]>([]);
 const equipes = ref<any[]>([]);
 const lookups = ref<any>({ periodos_dia: [] });
 const quadrantes = ref<any[]>([]);
-const quadrantesPadrao = [
-  { code: 'N', description: 'Norte' },
-  { code: 'NE', description: 'Nordeste' },
-  { code: 'E', description: 'Leste' },
-  { code: 'SE', description: 'Sudeste' },
-  { code: 'S', description: 'Sul' },
-  { code: 'SW', description: 'Sudoeste' },
-  { code: 'W', description: 'Oeste' },
-  { code: 'NW', description: 'Noroeste' },
-  { code: 'C', description: 'Centro' }
-];
-const quadrantesDisponiveis = computed(() => (quadrantes.value?.length ? quadrantes.value : quadrantesPadrao));
 const carregando = ref(false);
 const erro = ref<string | null>(null);
 const novo = ref({
@@ -225,6 +219,16 @@ async function carregarLocaisEquipes() {
     equipeSelecionada.value = match ? match.id : '';
   } else {
     equipeSelecionada.value = '';
+  }
+}
+
+function aplicarQuadrante(selecao: QuadrantSelection) {
+  novo.value.quadrant = selecao.quadrant;
+  if (selecao.latitude !== null) {
+    novo.value.latitude_dec = selecao.latitude;
+  }
+  if (selecao.longitude !== null) {
+    novo.value.longitude_dec = selecao.longitude;
   }
 }
 
@@ -326,6 +330,12 @@ textarea {
   padding: 0.45rem 0.5rem;
   border: 1px solid #cbd5f5;
   border-radius: 8px;
+}
+.map-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.75rem;
+  background: #f8fafc;
 }
 </style>
 

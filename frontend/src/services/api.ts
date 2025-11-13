@@ -283,6 +283,10 @@ export const ApiService = {
   async removerQuadrante(id: number) {
     await api.delete(`/api/quadrantes/${id}`);
   },
+  async resetQuadrantes() {
+    const { data } = await api.post('/api/quadrantes/reset-grade', { confirm: 'matriz-33x14' });
+    return data;
+  },
   async getLocaisPorAeroporto(airportId: number) {
     const { data } = await api.get(`/api/aeroportos/${airportId}/locais`);
     return data;

@@ -83,11 +83,14 @@
           Quadrante
           <select v-model="novo.quadrant">
             <option :value="undefined">Selecione</option>
-            <option v-for="q in quadrantesDisponiveis" :key="q.code" :value="q.code">
+            <option v-for="q in quadrantes" :key="q.code" :value="q.code">
               {{ q.description ? q.code + ' - ' + q.description : q.code }}
             </option>
           </select>
         </label>
+        <div class="map-card">
+          <QuadrantMapPicker :selected="novo.quadrant ?? ''" @select="aplicarQuadrante" />
+        </div>
         <label>
           Período
           <select v-model.number="novo.time_period_id">
@@ -216,23 +219,30 @@
           Ações tomadas
           <textarea rows="2" v-model="novo.actions_taken"></textarea>
         </label>
-        <label>
-          Foto (upload)
-          <input type="file" accept="image/*" @change="selecionarFoto" />
-        </label>
-        <div class="foto-preview">
-          <div v-if="fotoServidorDisponivel && !fotoPreview" class="foto-status">
-            Imagem enviada anteriormente armazenada no servidor.
+        <div class="foto-section">
+          <div class="foto-modos">
+            <label>
+              <input type="radio" value="upload" v-model="modoFoto" /> Upload do computador
+            </label>
+            <label>
+              <input type="radio" value="url" v-model="modoFoto" /> Informar URL
+            </label>
           </div>
-          <div v-if="fotoPreview" class="preview-container">
-            <img :src="fotoPreview" alt="Pré-visualização" />
-            <button class="btn btn-secondary" type="button" @click="removerFotoSelecionada">Remover foto</button>
+          <div v-if="modoFoto === 'upload'" class="foto-preview">
+            <input :key="fileInputKey" type="file" accept="image/*" @change="selecionarFoto" />
+            <div v-if="fotoServidorDisponivel && !fotoPreview" class="foto-status">
+              Imagem enviada anteriormente armazenada no servidor.
+            </div>
+            <div v-if="fotoPreview" class="preview-container">
+              <img :src="fotoPreview" alt="Pré-visualização" />
+              <button class="btn btn-secondary" type="button" @click="removerFotoSelecionada">Remover foto</button>
+            </div>
+          </div>
+          <div v-else class="foto-url">
+            <input type="url" v-model="novo.photo_url" placeholder="https://exemplo.com/foto.jpg" />
+            <small>Use links HTTPS acessíveis externamente.</small>
           </div>
         </div>
-        <label>
-          Foto (URL opcional)
-          <input type="url" v-model="novo.photo_url" placeholder="https://exemplo.com/foto.jpg" />
-        </label>
         <label>
           Dentro do aeródromo
           <input type="checkbox" v-model="novo.inside_aerodrome" />
@@ -278,10 +288,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed, onBeforeUnmount } from 'vue';
+import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
+import QuadrantMapPicker from '@/components/QuadrantMapPicker.vue';
 import DataTable from '@/components/DataTable.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { ApiService, api } from '@/services/api';
+import type { QuadrantSelection } from '@/config/quadrantGrid';
+import type { QuadrantSelection } from '@/config/quadrantGrid';
 
 const colunas = [
   { titulo: 'Data', campo: 'date_br' },
@@ -307,18 +320,6 @@ const locais = ref<any[]>([]);
 const atrativos = ref<any[]>([]);
 const especies = ref<any[]>([]);
 const quadrantes = ref<any[]>([]);
-const quadrantesPadrao = [
-  { code: 'N', description: 'Norte' },
-  { code: 'NE', description: 'Nordeste' },
-  { code: 'E', description: 'Leste' },
-  { code: 'SE', description: 'Sudeste' },
-  { code: 'S', description: 'Sul' },
-  { code: 'SW', description: 'Sudoeste' },
-  { code: 'W', description: 'Oeste' },
-  { code: 'NW', description: 'Noroeste' },
-  { code: 'C', description: 'Centro' }
-];
-const quadrantesDisponiveis = computed(() => (quadrantes.value?.length ? quadrantes.value : quadrantesPadrao));
 const carregando = ref(false);
 const erro = ref<string | null>(null);
 
@@ -367,6 +368,8 @@ const partesSelecionadas = ref<number[]>([]);
 const fotoArquivo = ref<File | null>(null);
 const fotoPreview = ref<string | null>(null);
 const fotoServidorDisponivel = ref(false);
+const fileInputKey = ref(0);
+const modoFoto = ref<'upload' | 'url'>('upload');
 
 function atualizarPreview(file: File | null) {
   if (fotoPreview.value) {
@@ -378,6 +381,12 @@ function atualizarPreview(file: File | null) {
   }
 }
 
+function limparFotoLocal() {
+  fotoArquivo.value = null;
+  atualizarPreview(null);
+  fileInputKey.value += 1;
+}
+
 function selecionarFoto(event: Event) {
   const alvo = event.target as HTMLInputElement;
   const arquivo = alvo.files?.[0] ?? null;
@@ -387,8 +396,18 @@ function selecionarFoto(event: Event) {
 }
 
 function removerFotoSelecionada() {
-  fotoArquivo.value = null;
-  atualizarPreview(null);
+  limparFotoLocal();
+  fotoServidorDisponivel.value = false;
+}
+
+function aplicarQuadrante(selecao: QuadrantSelection) {
+  novo.value.quadrant = selecao.quadrant;
+  if (selecao.latitude !== null) {
+    novo.value.latitude_dec = selecao.latitude;
+  }
+  if (selecao.longitude !== null) {
+    novo.value.longitude_dec = selecao.longitude;
+  }
 }
 
 function montarCorpoComArquivo(dados: Record<string, any>) {
@@ -448,6 +467,11 @@ async function carregarLocais() {
 async function salvar() {
   try {
     const payload = { ...novo.value, parts: partesSelecionadas.value } as any;
+    if (modoFoto.value === 'upload') {
+      delete payload.photo_url;
+    } else if (payload.photo_url) {
+      payload.photo_url = (payload.photo_url as string).trim();
+    }
     const corpo = montarCorpoComArquivo(payload);
     if (editandoId.value) {
       await api.put(`/api/colisoes/${editandoId.value}`, corpo);
@@ -469,6 +493,7 @@ function cancelarEdicao() {
   atrativos.value = [];
   removerFotoSelecionada();
   fotoServidorDisponivel.value = false;
+  modoFoto.value = 'upload';
 }
 
 async function editar(registro: any) {
@@ -514,9 +539,19 @@ async function editar(registro: any) {
     notes: registro.notes ?? ''
   } as any;
   await carregarLocais();
-  fotoArquivo.value = null;
-  atualizarPreview(null);
-  fotoServidorDisponivel.value = !!registro.photo_upload_disponivel;
+  if (registro.photo_upload_disponivel) {
+    modoFoto.value = 'upload';
+    fotoServidorDisponivel.value = true;
+    novo.value.photo_url = '';
+  } else if (registro.photo_url) {
+    modoFoto.value = 'url';
+    fotoServidorDisponivel.value = false;
+  } else {
+    modoFoto.value = 'upload';
+    fotoServidorDisponivel.value = false;
+    novo.value.photo_url = '';
+  }
+  limparFotoLocal();
 }
 
 watch(
@@ -525,6 +560,15 @@ watch(
     carregarLocais();
   }
 );
+
+watch(modoFoto, (valor) => {
+  if (valor === 'upload') {
+    novo.value.photo_url = '';
+  } else {
+    fotoServidorDisponivel.value = false;
+    limparFotoLocal();
+  }
+});
 
 onMounted(async () => {
   const cad = await ApiService.getCadastros();
@@ -556,4 +600,9 @@ select, input, textarea { padding: 0.45rem 0.5rem; border: 1px solid #cbd5f5; bo
 .foto-preview { display: flex; flex-direction: column; gap: .5rem; font-size: .85rem; color: #475569; }
 .preview-container { display: flex; flex-direction: column; gap: .4rem; }
 .preview-container img { max-width: 100%; border-radius: 8px; border: 1px solid #dbeafe; object-fit: contain; background: #fff; }
+.foto-section { border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; background: #f8fafc; }
+.foto-modos { display: flex; gap: 1rem; font-size: 0.85rem; color: #475569; }
+.foto-modos input { margin-right: 0.35rem; }
+.foto-url small { display: block; margin-top: 0.25rem; color: #94a3b8; }
+.map-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.75rem; background: #f8fafc; }
 </style>
