@@ -56,7 +56,8 @@ const mapRatio = QUADRANT_MAP.aspectRatio ?? cols.length / rows.length;
 
 const canvasStyle = computed(() => ({
   backgroundImage: `url(${mapImage})`,
-  '--qp-ratio': `${mapRatio}`
+  '--qp-ratio': `${mapRatio}`,
+  backgroundSize: '100% 100%'
 }));
 
 const cells = computed(() =>
