@@ -141,7 +141,6 @@ import DataTable from '@/components/DataTable.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { ApiService, api } from '@/services/api';
 import type { QuadrantSelection } from '@/config/quadrantGrid';
-import type { QuadrantSelection } from '@/config/quadrantGrid';
 
 const colunas = [
   { titulo: 'Data', campo: 'date_br' },
