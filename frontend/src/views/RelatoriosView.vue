@@ -207,6 +207,79 @@
         </div>
       </div>
     </section>
+
+    <section class="bloco">
+      <header class="bloco-topo">
+        <div>
+          <h2>Colisões com imagens</h2>
+          <p>Consulta e exportação das evidências registradas em um período.</p>
+        </div>
+        <form class="filtros" @submit.prevent="carregarColisoes">
+          <label>
+            Aeroporto
+            <select v-model="filtroColisoes.airportId">
+              <option value="">Todos</option>
+              <option v-for="a in aeroportos" :key="a.id ?? a.airport_id" :value="a.id ?? a.airport_id">
+                {{ a.name ?? a.nome }}
+              </option>
+            </select>
+          </label>
+          <label>
+            Início
+            <input type="date" v-model="filtroColisoes.inicio" required />
+          </label>
+          <label>
+            Fim
+            <input type="date" v-model="filtroColisoes.fim" required />
+          </label>
+          <button class="btn" type="submit">Carregar</button>
+          <button
+            class="btn btn-secondary"
+            type="button"
+            :disabled="!colisoes.dados.length || exportandoColisoes"
+            @click="exportarColisoes('pdf')"
+          >
+            Exportar PDF
+          </button>
+          <button
+            class="btn btn-secondary"
+            type="button"
+            :disabled="!colisoes.dados.length || exportandoColisoes"
+            @click="exportarColisoes('docx')"
+          >
+            Exportar DOCX
+          </button>
+        </form>
+      </header>
+      <LoadingState :carregando="carregandoColisoes" :erro="erroColisoes">
+        <p v-if="colisoes.periodo" class="periodo">
+          Período: {{ colisoes.periodo.inicio }} a {{ colisoes.periodo.fim }} — {{ colisoes.dados.length }} registros
+        </p>
+        <div v-if="colisoes.dados.length" class="colisoes-grid">
+          <article v-for="item in colisoes.dados" :key="item.id" class="card-mov">
+            <header class="colisao-header">
+              <strong>#{{ item.id }}</strong>
+              <span>{{ item.date_utc }} {{ item.time_local ?? '' }}</span>
+            </header>
+            <p><strong>Aeroporto:</strong> {{ item.aeroporto ?? item.airport_id }}</p>
+            <p><strong>Local:</strong> {{ item.location_nome ?? item.location_id }}</p>
+            <p><strong>Evento:</strong> {{ item.event_type ?? 'n/d' }}</p>
+            <p><strong>Espécie:</strong> {{ item.especie ?? 'Não informada' }}</p>
+            <p><strong>Dano:</strong> {{ item.dano ?? 'Não informado' }}</p>
+            <p v-if="item.notes"><strong>Notas:</strong> {{ item.notes }}</p>
+            <div class="foto-thumb">
+              <img v-if="item.foto_base64" :src="item.foto_base64" alt="Imagem da colisão" />
+              <template v-else-if="item.photo_url">
+                <span>Foto externa:</span>
+                <a :href="item.photo_url" target="_blank" rel="noreferrer">{{ item.photo_url }}</a>
+              </template>
+              <span v-else>Sem imagem.</span>
+            </div>
+          </article>
+        </div>
+        <p v-else class="sem-dados">Nenhuma colisão encontrada para o período informado.</p>
+      </LoadingState>
+    </section>
   </div>
 </template>
 
@@ -250,6 +323,18 @@ const relatorioMovimentos = ref<any | null>(null);
 const carregandoMovimentos = ref(false);
 const erroMovimentos = ref<string | null>(null);
 const NOMES_MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+const filtroColisoes = reactive({
+  airportId: '' as '' | number,
+  inicio: inicioPadrao,
+  fim: fimPadrao
+});
+const colisoes = reactive<{ periodo: { inicio: string; fim: string } | null; dados: any[] }>({
+  periodo: null,
+  dados: []
+});
+const carregandoColisoes = ref(false);
+const erroColisoes = ref<string | null>(null);
+const exportandoColisoes = ref(false);
 
 async function carregarFinanceiro() {
   const data = await ApiService.getFinanceiro({
@@ -298,6 +383,63 @@ async function carregarMovimentos() {
     erroMovimentos.value = e?.message ?? 'Falha ao carregar movimentos';
   } finally {
     carregandoMovimentos.value = false;
+  }
+}
+
+async function carregarColisoes() {
+  carregandoColisoes.value = true;
+  erroColisoes.value = null;
+  try {
+    const params: Record<string, any> = {
+      inicio: filtroColisoes.inicio,
+      fim: filtroColisoes.fim
+    };
+    if (filtroColisoes.airportId) {
+      params.airportId = filtroColisoes.airportId;
+    }
+    const data = await ApiService.getRelatorioColisoesImagens(params);
+    colisoes.periodo = data.periodo ?? null;
+    colisoes.dados = data.dados ?? [];
+  } catch (e: any) {
+    erroColisoes.value = e?.message ?? 'Falha ao carregar o relatório de colisões';
+  } finally {
+    carregandoColisoes.value = false;
+  }
+}
+
+async function exportarColisoes(formato: 'pdf' | 'docx') {
+  exportandoColisoes.value = true;
+  try {
+    const params: Record<string, any> = {
+      inicio: filtroColisoes.inicio,
+      fim: filtroColisoes.fim,
+      formato
+    };
+    if (filtroColisoes.airportId) {
+      params.airportId = filtroColisoes.airportId;
+    }
+    const resposta = await ApiService.exportarRelatorioColisoesImagens(params);
+    const contentType =
+      resposta.headers['content-type'] ??
+      (formato === 'pdf'
+        ? 'application/pdf'
+        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    const blob = new Blob([resposta.data], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const nomeArquivo =
+      resposta.headers['content-disposition']?.split('filename=').pop()?.replace(/"/g, '') ??
+      `relatorio-colisoes.${formato}`;
+    link.href = url;
+    link.download = nomeArquivo;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (e: any) {
+    alert(e?.message ?? 'Não foi possível exportar o relatório');
+  } finally {
+    exportandoColisoes.value = false;
   }
 }
 
@@ -376,7 +518,7 @@ const comparativoMeses = computed(() => {
 
 onMounted(async () => {
   await Promise.all([carregarFinanceiro(), carregarIncidentes(), carregarAeroportos()]);
-  await carregarMovimentos();
+  await Promise.all([carregarMovimentos(), carregarColisoes()]);
 });
 </script>
 
@@ -402,4 +544,9 @@ onMounted(async () => {
 .card-mov th, .card-mov td { border-bottom: 1px solid #e2e8f0; padding: .35rem; text-align: left; }
 .card-mov th { background: #eef2ff; }
 .erro { color: #b91c1c; }
+.periodo { font-size: .9rem; color: #475569; }
+.colisoes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
+.colisao-header { display: flex; justify-content: space-between; font-size: .9rem; }
+.foto-thumb { margin-top: .5rem; display: flex; flex-direction: column; gap: .35rem; font-size: .85rem; }
+.foto-thumb img { width: 100%; max-height: 180px; object-fit: cover; border-radius: 10px; border: 1px solid #dbeafe; }
 </style>
