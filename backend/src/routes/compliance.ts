@@ -120,11 +120,13 @@ const trainingSchema = z.object({
 
 const personnelSchema = z.object({
   airport_id: z.coerce.number().optional(),
-  name: z.string(),
+  name: z.string().min(2),
+  last_name: z.string().min(2),
+  cpf: z.string().min(11).max(14),
   role: z.string(),
   organization: z.string().optional(),
-  email: z.string().email().optional(),
-  phone: z.string().optional(),
+  email: z.string().email(),
+  phone: z.string().min(8),
   notes: z.string().optional()
 });
 
@@ -724,12 +726,14 @@ export async function complianceRoutes(app: FastifyInstance) {
     const body = personnelSchema.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.dim_personnel (
-        airport_id, name, role, organization, email, phone, notes
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+        airport_id, name, last_name, cpf, role, organization, email, phone, notes
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
       RETURNING personnel_id AS id`,
       [
         body.airport_id ?? null,
         body.name,
+        body.last_name,
+        body.cpf,
         body.role,
         body.organization ?? null,
         body.email ?? null,
@@ -785,7 +789,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     }
     const where = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : '';
     const { rows } = await db.query(
-      `SELECT c.*, p.name AS pessoa, p.role, ts.title AS treinamento
+      `SELECT c.*, CONCAT(p.name,' ',COALESCE(p.last_name,'')) AS pessoa, p.role, ts.title AS treinamento
        FROM wildlife.fact_training_completion c
        JOIN wildlife.dim_personnel p ON p.personnel_id = c.personnel_id
        LEFT JOIN wildlife.fact_training_session ts ON ts.training_id = c.training_id
