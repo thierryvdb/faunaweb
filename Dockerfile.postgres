@@ -5,3 +5,4 @@ ENV POSTGRES_DB=fauna \
     POSTGRES_PASSWORD=fauna_secret
 
 COPY wildlife_full_package.sql /docker-entrypoint-initdb.d/01_wildlife_full_package.sql
+COPY wildlife_extension.sql      /docker-entrypoint-initdb.d/02_wildlife_extension.sql

@@ -35,7 +35,7 @@ O arquivo `wildlife_extension.sql` amplia o pacote com tabelas e funções neces
 - **fact_carcass**, **fact_environment_audit**, **fact_asa_focus**, **fact_external_notice** e **fact_training_session** para carcaças, resíduos/esgoto/sistemas de proteção, focos externos, comunicações e treinamentos.
 - Função `wildlife_kpi.fn_baist_indicadores` que calcula os indicadores BAIST (ReAvi/ReASA/ReFau, PeAvi/PeFau, strikes múltiplas, massa média, etc.).
 
-Após aplicar o `wildlife_full_package.sql`, rode:
+Se estiver usando o Dockerfile fornecido, os dois scripts já são copiados para `/docker-entrypoint-initdb.d` e executados automaticamente (01_wildlife_full_package.sql seguido de 02_wildlife_extension.sql). Para instalações manuais, após aplicar o `wildlife_full_package.sql`, rode:
 
 ```bash
 psql -d fauna -f wildlife_extension.sql
