@@ -45,6 +45,7 @@ const links = [
   { to: '/atrativos', label: 'Atrativos' },
   { to: '/inspecoes', label: 'Inspe??es/ASA' },
   { to: '/governanca', label: 'Governan?a' },
+  { to: '/relatorios', label: 'Relatórios' },
   { to: '/cadastros', label: 'Cadastros' }
 ];
 
@@ -59,6 +60,7 @@ const titulos: Record<string, string> = {
   '/atrativos': 'Gest?o de atrativos',
   '/inspecoes': 'Inspe??es, ASA e carca?as',
   '/governanca': 'Governan?a e indicadores',
+  '/relatorios': 'Relatórios e análises',
   '/cadastros': 'Cadastros de apoio'
 };
 

@@ -118,6 +118,27 @@ const trainingSchema = z.object({
   notes: z.string().optional()
 });
 
+const personnelSchema = z.object({
+  airport_id: z.coerce.number().optional(),
+  name: z.string(),
+  role: z.string(),
+  organization: z.string().optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  notes: z.string().optional()
+});
+
+const trainingCompletionSchema = z.object({
+  training_id: z.coerce.number().optional(),
+  personnel_id: z.coerce.number(),
+  completion_date: z.string(),
+  hours: z.number().optional(),
+  validity_months: z.coerce.number().optional(),
+  status: z.enum(['valido', 'expirado', 'pendente']).optional(),
+  certificate_url: z.string().url().optional(),
+  notes: z.string().optional()
+});
+
 const idParams = z.object({ id: z.coerce.number() });
 
 export async function complianceRoutes(app: FastifyInstance) {
@@ -676,5 +697,213 @@ export async function complianceRoutes(app: FastifyInstance) {
     const { id } = idParams.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_training_session WHERE training_id=$1', [id]);
     return reply.code(204).send();
+  });
+
+  // Equipe e matrículas de treinamento
+  app.get('/api/pessoal', async (request) => {
+    const filtros = z.object({ airportId: z.coerce.number().optional() }).parse(request.query ?? {});
+    const condicoes: string[] = [];
+    const valores: any[] = [];
+    if (filtros.airportId) {
+      condicoes.push(`p.airport_id=$${condicoes.length + 1}`);
+      valores.push(filtros.airportId);
+    }
+    const where = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : '';
+    const { rows } = await db.query(
+      `SELECT p.*, a.icao_code
+       FROM wildlife.dim_personnel p
+       LEFT JOIN wildlife.airport a ON a.airport_id = p.airport_id
+       ${where}
+       ORDER BY p.role, p.name`,
+      valores
+    );
+    return rows;
+  });
+
+  app.post('/api/pessoal', async (request, reply) => {
+    const body = personnelSchema.parse(request.body);
+    const { rows } = await db.query(
+      `INSERT INTO wildlife.dim_personnel (
+        airport_id, name, role, organization, email, phone, notes
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+      RETURNING personnel_id AS id`,
+      [
+        body.airport_id ?? null,
+        body.name,
+        body.role,
+        body.organization ?? null,
+        body.email ?? null,
+        body.phone ?? null,
+        body.notes ?? null
+      ]
+    );
+    return reply.code(201).send({ id: rows[0].id });
+  });
+
+  app.put('/api/pessoal/:id', async (request, reply) => {
+    const { id } = idParams.parse(request.params);
+    const body = personnelSchema.partial().parse(request.body ?? {});
+    const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
+    if (!pares.length) {
+      return reply.code(400).send({ mensagem: 'Nenhum campo informado' });
+    }
+    const sets = pares.map(([campo], idx) => `${campo}=$${idx + 1}`);
+    const valores = pares.map(([, valor]) => valor);
+    valores.push(id);
+    const { rowCount } = await db.query(
+      `UPDATE wildlife.dim_personnel SET ${sets.join(', ')}, updated_at=now() WHERE personnel_id=$${valores.length}`,
+      valores
+    );
+    if (!rowCount) {
+      return reply.code(404).send({ mensagem: 'Pessoa nao encontrada' });
+    }
+    return { id };
+  });
+
+  app.delete('/api/pessoal/:id', async (request, reply) => {
+    const { id } = idParams.parse(request.params);
+    await db.query('DELETE FROM wildlife.dim_personnel WHERE personnel_id=$1', [id]);
+    return reply.code(204).send();
+  });
+
+  app.get('/api/treinamentos-conclusoes', async (request) => {
+    const filtros = z
+      .object({
+        airportId: z.coerce.number().optional(),
+        personnelId: z.coerce.number().optional()
+      })
+      .parse(request.query ?? {});
+    const condicoes: string[] = [];
+    const valores: any[] = [];
+    if (filtros.airportId) {
+      condicoes.push(`p.airport_id=$${condicoes.length + 1}`);
+      valores.push(filtros.airportId);
+    }
+    if (filtros.personnelId) {
+      condicoes.push(`c.personnel_id=$${condicoes.length + 1}`);
+      valores.push(filtros.personnelId);
+    }
+    const where = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : '';
+    const { rows } = await db.query(
+      `SELECT c.*, p.name AS pessoa, p.role, ts.title AS treinamento
+       FROM wildlife.fact_training_completion c
+       JOIN wildlife.dim_personnel p ON p.personnel_id = c.personnel_id
+       LEFT JOIN wildlife.fact_training_session ts ON ts.training_id = c.training_id
+       ${where}
+       ORDER BY c.completion_date DESC`,
+      valores
+    );
+    return rows;
+  });
+
+  app.post('/api/treinamentos-conclusoes', async (request, reply) => {
+    const body = trainingCompletionSchema.parse(request.body);
+    const { rows } = await db.query(
+      `INSERT INTO wildlife.fact_training_completion (
+        training_id, personnel_id, completion_date, hours, validity_months, status, certificate_url, notes
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8
+      ) RETURNING completion_id AS id`,
+      [
+        body.training_id ?? null,
+        body.personnel_id,
+        body.completion_date,
+        body.hours ?? null,
+        body.validity_months ?? null,
+        body.status ?? 'valido',
+        body.certificate_url ?? null,
+        body.notes ?? null
+      ]
+    );
+    return reply.code(201).send({ id: rows[0].id });
+  });
+
+  app.put('/api/treinamentos-conclusoes/:id', async (request, reply) => {
+    const { id } = idParams.parse(request.params);
+    const body = trainingCompletionSchema.partial().parse(request.body ?? {});
+    const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
+    if (!pares.length) {
+      return reply.code(400).send({ mensagem: 'Nenhum campo informado' });
+    }
+    const sets = pares.map(([campo], idx) => `${campo}=$${idx + 1}`);
+    const valores = pares.map(([, valor]) => valor);
+    valores.push(id);
+    const { rowCount } = await db.query(
+      `UPDATE wildlife.fact_training_completion SET ${sets.join(', ')}, updated_at=now()
+       WHERE completion_id=$${valores.length}`,
+      valores
+    );
+    if (!rowCount) {
+      return reply.code(404).send({ mensagem: 'Conclusao nao encontrada' });
+    }
+    return { id };
+  });
+
+  app.delete('/api/treinamentos-conclusoes/:id', async (request, reply) => {
+    const { id } = idParams.parse(request.params);
+    await db.query('DELETE FROM wildlife.fact_training_completion WHERE completion_id=$1', [id]);
+    return reply.code(204).send();
+  });
+
+  app.get('/api/treinamentos/status', async (request) => {
+    const filtros = z.object({ airportId: z.coerce.number().optional() }).parse(request.query ?? {});
+    const params = [filtros.airportId ?? null];
+    const { rows } = await db.query(
+      `WITH ultima AS (
+         SELECT p.personnel_id,
+                p.role,
+                p.name,
+                p.airport_id,
+                c.status,
+                c.valid_until,
+                c.completion_date,
+                c.training_id,
+                ROW_NUMBER() OVER (PARTITION BY p.personnel_id ORDER BY COALESCE(c.valid_until, c.completion_date) DESC NULLS LAST) AS ordem
+         FROM wildlife.dim_personnel p
+         LEFT JOIN wildlife.fact_training_completion c ON c.personnel_id = p.personnel_id
+         WHERE $1::bigint IS NULL OR p.airport_id = $1
+       )
+       SELECT role,
+              COUNT(*) FILTER (WHERE ordem = 1)::int AS total,
+              COUNT(*) FILTER (WHERE ordem = 1 AND COALESCE(status, 'pendente') = 'valido')::int AS validos,
+              COUNT(*) FILTER (WHERE ordem = 1 AND COALESCE(status, 'pendente') = 'expirado')::int AS expirados,
+              COUNT(*) FILTER (WHERE ordem = 1 AND COALESCE(status, 'pendente') = 'pendente')::int AS pendentes
+       FROM ultima
+       GROUP BY role
+       ORDER BY role`,
+      params
+    );
+
+    const pendencias = await db.query(
+      `WITH ultima AS (
+         SELECT p.personnel_id,
+                p.role,
+                p.name,
+                p.airport_id,
+                c.status,
+                c.valid_until,
+                c.completion_date,
+                ROW_NUMBER() OVER (PARTITION BY p.personnel_id ORDER BY COALESCE(c.valid_until, c.completion_date) DESC NULLS LAST) AS ordem
+         FROM wildlife.dim_personnel p
+         LEFT JOIN wildlife.fact_training_completion c ON c.personnel_id = p.personnel_id
+         WHERE $1::bigint IS NULL OR p.airport_id = $1
+       )
+       SELECT personnel_id, name, role,
+              valid_until,
+              completion_date,
+              COALESCE(status, 'pendente') AS status
+       FROM ultima
+       WHERE ordem = 1
+         AND (
+           COALESCE(status, 'pendente') <> 'valido'
+           OR valid_until IS NULL
+           OR valid_until <= CURRENT_DATE + 30
+         )
+       ORDER BY COALESCE(valid_until, CURRENT_DATE - 1), name
+       LIMIT 200`,
+      params
+    );
+
+    return { statusPorFuncao: rows, pendencias: pendencias.rows };
   });
 }

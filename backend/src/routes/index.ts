@@ -13,6 +13,7 @@ import { reportsRoutes } from './reports';
 import { teamsRoutes } from './teams';
 import { authRoutes } from './auth';
 import { complianceRoutes } from './compliance';
+import { analyticsRoutes } from './analytics';
 
 export async function registerRoutes(app: FastifyInstance) {
   await app.register(authRoutes);
@@ -37,4 +38,5 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(kpisRoutes);
   await app.register(reportsRoutes);
   await app.register(complianceRoutes);
+  await app.register(analyticsRoutes);
 }

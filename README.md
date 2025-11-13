@@ -33,7 +33,9 @@ O arquivo `wildlife_extension.sql` amplia o pacote com tabelas e funções neces
 
 - **fact_inspection** (inspeções diárias no sítio e na ASA com observações estruturadas).
 - **fact_carcass**, **fact_environment_audit**, **fact_asa_focus**, **fact_external_notice** e **fact_training_session** para carcaças, resíduos/esgoto/sistemas de proteção, focos externos, comunicações e treinamentos.
+- **fact_strike_cost**, **dim_personnel** e **fact_training_completion** para controle financeiro das colisões e acompanhamento de validades por função.
 - Função `wildlife_kpi.fn_baist_indicadores` que calcula os indicadores BAIST (ReAvi/ReASA/ReFau, PeAvi/PeFau, strikes múltiplas, massa média, etc.).
+- Endpoints dedicados no backend (`/api/inspecoes`, `/api/carcacas`, `/api/auditorias-ambientais`, `/api/asa-focos`, `/api/comunicados-externos`, `/api/pessoal`, `/api/treinamentos-conclusoes`, `/api/treinamentos/status`, `/api/analytics/*`) e páginas no frontend (Inspeções/ASA, Governança e Relatórios) para operar esses dados.
 
 Se estiver usando o Dockerfile fornecido, os dois scripts já são copiados para `/docker-entrypoint-initdb.d` e executados automaticamente (01_wildlife_full_package.sql seguido de 02_wildlife_extension.sql). Para instalações manuais, após aplicar o `wildlife_full_package.sql`, rode:
 
@@ -195,6 +197,17 @@ Variavel opcional `VITE_API_URL` pode apontar para outro host; caso vazio utiliz
 | POST | `/api/kpis/did` | Difference-in-Differences para uma acao |
 | POST | `/api/kpis/ba-espacial` | Buffer Analysis espacial |
 | GET | `/api/relatorios/*` | Pareto de especies, fases de voo, partes com dano, janela BA |
+| CRUD | `/api/inspecoes` | Inspeções do sítio/ASA com observações e quadrantes |
+| CRUD | `/api/carcacas` | Registro de coleta/destino de carcaças |
+| CRUD | `/api/auditorias-ambientais` | Auditorias de resíduos, esgoto e sistemas de proteção |
+| CRUD | `/api/asa-focos` | Focos atrativos na ASA com protocolos e follow-ups |
+| CRUD | `/api/comunicados-externos` | Ofícios, prazos e respostas de órgãos externos |
+| CRUD | `/api/treinamentos-fauna` | Sessões de treinamento realizadas |
+| CRUD | `/api/pessoal` | Cadastro de pessoas por função |
+| CRUD | `/api/treinamentos-conclusoes` | Conclusões individuais com validade |
+| GET | `/api/treinamentos/status` | Resumo de status por função e pendências próximas |
+| GET | `/api/analytics/financeiro` | Indicadores financeiros de colisões por ano/categoria |
+| GET | `/api/analytics/incidentes` | Distribuições avançadas por ano, espécie, tipo e dano |
 
 Todos os retornos utilizam textos em portugues e seguem validacao com Zod.
 
@@ -207,6 +220,9 @@ Todos os retornos utilizam textos em portugues e seguem validacao com Zod.
 5. **Acoes de Controle**: cadastro e painel rapido de BA espacial (chama `/api/kpis/ba-espacial`).
 6. **Atrativos**: status (ativo/mitigando/resolvido) com formulario dedicado.
 7. **Cadastros**: manutencao basica de aeroportos, especies, locais operacionais e equipes (CRUD completo por aeroporto), garantindo que avistamentos/colisoes usem IDs válidos.
+8. **Inspecoes/ASA**: concentra inspe??es do s?tio/ASA, coleta de carca?as e auditorias ambientais com formul?rios orientados.
+9. **Governanca**: painel ?nico para focos ASA, comunicados externos, gest?o de treinamentos, cadastro de pessoal e status autom?tico de validade por fun??o.
+10. **Relatorios**: visualiza indicadores financeiros e an?lises (ano/categoria/esp?cie/tipo de incidente) em tabelas export?veis.
 
 Cada modulo possui sua rota no Vue Router, evitando concentrar todos os CRUDs em uma unica pagina conforme solicitado.
 
@@ -216,6 +232,8 @@ Cada modulo possui sua rota no Vue Router, evitando concentrar todos os CRUDs em
 - `POST /api/kpis/did`: chama `wildlife_kpi.kpi_did_sr10k` para comparar locais controle vs tratamento.
 - `POST /api/kpis/ba-espacial`: utiliza `wildlife_kpi.kpi_ba_spatial` e retorna SR, limites e taxa de avistamentos antes/depois por buffer.
 - `GET /api/relatorios/*`: replicas das views `rpt_*` com periodo dinamico.
+- `GET /api/analytics/financeiro`: agrega custos de colisões (diretos, indiretos, outros) por ano, categoria taxonômica, tipo de incidente e dano.
+- `GET /api/analytics/incidentes`: distribuições complementares (ano, categoria, espécie, fase de voo, tipo de incidente) para análises exigidas pelos manuais.
 
 ## 12. Testes e proximos passos
 

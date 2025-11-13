@@ -184,6 +184,48 @@ export const ApiService = {
     const { data } = await api.post('/api/treinamentos-fauna', payload);
     return data;
   },
+  async getPessoal(params?: Record<string, any>) {
+    const { data } = await api.get('/api/pessoal', { params });
+    return data;
+  },
+  async criarPessoa(payload: Record<string, any>) {
+    const { data } = await api.post('/api/pessoal', payload);
+    return data;
+  },
+  async atualizarPessoa(id: number, payload: Record<string, any>) {
+    const { data } = await api.put(`/api/pessoal/${id}`, payload);
+    return data;
+  },
+  async removerPessoa(id: number) {
+    await api.delete(`/api/pessoal/${id}`);
+  },
+  async getTreinamentoConclusoes(params?: Record<string, any>) {
+    const { data } = await api.get('/api/treinamentos-conclusoes', { params });
+    return data;
+  },
+  async criarTreinamentoConclusao(payload: Record<string, any>) {
+    const { data } = await api.post('/api/treinamentos-conclusoes', payload);
+    return data;
+  },
+  async atualizarTreinamentoConclusao(id: number, payload: Record<string, any>) {
+    const { data } = await api.put(`/api/treinamentos-conclusoes/${id}`, payload);
+    return data;
+  },
+  async removerTreinamentoConclusao(id: number) {
+    await api.delete(`/api/treinamentos-conclusoes/${id}`);
+  },
+  async getStatusTreinamentos(params?: Record<string, any>) {
+    const { data } = await api.get('/api/treinamentos/status', { params });
+    return data;
+  },
+  async getFinanceiro(params?: Record<string, any>) {
+    const { data } = await api.get('/api/analytics/financeiro', { params });
+    return data;
+  },
+  async getAnaliseIncidentes(params?: Record<string, any>) {
+    const { data } = await api.get('/api/analytics/incidentes', { params });
+    return data;
+  },
   async getLocaisPorAeroporto(airportId: number) {
     const { data } = await api.get(`/api/aeroportos/${airportId}/locais`);
     return data;

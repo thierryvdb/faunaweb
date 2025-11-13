@@ -8,6 +8,7 @@ import AtrativosView from '@/views/AtrativosView.vue';
 import CadastrosView from '@/views/CadastrosView.vue';
 import InspecoesView from '@/views/InspecoesView.vue';
 import GovernancaView from '@/views/GovernancaView.vue';
+import RelatoriosView from '@/views/RelatoriosView.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -21,7 +22,8 @@ const router = createRouter({
     { path: '/atrativos', component: AtrativosView },
     { path: '/cadastros', component: CadastrosView },
     { path: '/inspecoes', component: InspecoesView },
-    { path: '/governanca', component: GovernancaView }
+    { path: '/governanca', component: GovernancaView },
+    { path: '/relatorios', component: RelatoriosView }
   ]
 });
 

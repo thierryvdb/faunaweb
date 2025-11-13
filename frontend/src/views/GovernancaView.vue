@@ -227,6 +227,175 @@
     <section class="bloco">
       <header class="bloco-topo">
         <div>
+          <h2>Equipe e controle de validades</h2>
+          <p>Cadastro dos responsáveis por função e status automático de validade do treinamento.</p>
+        </div>
+      </header>
+      <form class="grid" @submit.prevent="salvarPessoa">
+        <label>
+          Nome*
+          <input type="text" v-model="formPessoa.name" required />
+        </label>
+        <label>
+          Função*
+          <input type="text" v-model="formPessoa.role" required placeholder="EGRF, CTA, Mecânico..." />
+        </label>
+        <label>
+          Organização
+          <input type="text" v-model="formPessoa.organization" />
+        </label>
+        <label>
+          E-mail
+          <input type="email" v-model="formPessoa.email" />
+        </label>
+        <label>
+          Telefone
+          <input type="text" v-model="formPessoa.phone" />
+        </label>
+        <label class="wide">
+          Notas
+          <textarea rows="2" v-model="formPessoa.notes"></textarea>
+        </label>
+        <button class="btn principal" :disabled="salvandoPessoa">
+          {{ salvandoPessoa ? 'Salvando...' : 'Adicionar pessoa' }}
+        </button>
+      </form>
+      <div class="tabela">
+        <h3>Status por função</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Função</th>
+              <th>Total</th>
+              <th>Válidos</th>
+              <th>Expirados</th>
+              <th>Pendentes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="linha in statusFuncoes" :key="linha.role">
+              <td>{{ linha.role }}</td>
+              <td>{{ linha.total }}</td>
+              <td>{{ linha.validos }}</td>
+              <td>{{ linha.expirados }}</td>
+              <td>{{ linha.pendentes }}</td>
+            </tr>
+            <tr v-if="!statusFuncoes.length">
+              <td colspan="5">Cadastre a equipe para visualizar o status.</td>
+            </tr>
+          </tbody>
+        </table>
+        <h3>Pendências e reciclagens</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Função</th>
+              <th>Status</th>
+              <th>Validade</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in pendenciasTreinamento" :key="item.personnel_id">
+              <td>{{ item.name }}</td>
+              <td>{{ item.role }}</td>
+              <td>{{ item.status }}</td>
+              <td>{{ item.valid_until || 'Sem validade' }}</td>
+            </tr>
+            <tr v-if="!pendenciasTreinamento.length">
+              <td colspan="4">Nenhuma pendência recente.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bloco">
+      <header class="bloco-topo">
+        <div>
+          <h2>Conclusões de treinamento</h2>
+          <p>Associe cada pessoa ao treinamento realizado e validade configurada.</p>
+        </div>
+      </header>
+      <form class="grid" @submit.prevent="salvarConclusao">
+        <label>
+          Pessoa*
+          <select v-model="formConclusao.personnel_id" required>
+            <option value="">Selecione</option>
+            <option v-for="p in pessoal" :key="p.personnel_id" :value="p.personnel_id">{{ p.name }} - {{ p.role }}</option>
+          </select>
+        </label>
+        <label>
+          Treinamento
+          <select v-model="formConclusao.training_id">
+            <option value="">-</option>
+            <option v-for="t in treinamentos" :key="t.training_id" :value="t.training_id">{{ t.title }}</option>
+          </select>
+        </label>
+        <label>
+          Data de conclusão*
+          <input type="date" v-model="formConclusao.completion_date" required />
+        </label>
+        <label>
+          Carga (h)
+          <input type="number" min="0" step="0.5" v-model.number="formConclusao.hours" />
+        </label>
+        <label>
+          Validade (meses)
+          <input type="number" min="0" step="1" v-model.number="formConclusao.validity_months" />
+        </label>
+        <label>
+          Status
+          <select v-model="formConclusao.status">
+            <option value="valido">Válido</option>
+            <option value="expirado">Expirado</option>
+            <option value="pendente">Pendente</option>
+          </select>
+        </label>
+        <label class="wide">
+          Link certificado
+          <input type="url" v-model="formConclusao.certificate_url" />
+        </label>
+        <label class="wide">
+          Notas
+          <textarea rows="2" v-model="formConclusao.notes"></textarea>
+        </label>
+        <button class="btn principal" :disabled="salvandoConclusao">
+          {{ salvandoConclusao ? 'Salvando...' : 'Registrar conclusão' }}
+        </button>
+      </form>
+      <div class="tabela">
+        <table>
+          <thead>
+            <tr>
+              <th>Pessoa</th>
+              <th>Função</th>
+              <th>Treinamento</th>
+              <th>Data</th>
+              <th>Validade</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in conclusoes" :key="item.completion_id">
+              <td>{{ item.pessoa }}</td>
+              <td>{{ item.role }}</td>
+              <td>{{ item.treinamento || '-' }}</td>
+              <td>{{ item.completion_date }}</td>
+              <td>{{ item.valid_until || 'Sem validade' }}</td>
+              <td>{{ item.status }}</td>
+            </tr>
+            <tr v-if="!conclusoes.length">
+              <td colspan="6">Sem registros de conclusão.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bloco">
+      <header class="bloco-topo">
+        <div>
           <h2>Indicadores BAIST</h2>
           <p>Taxas e indicadores precursores conforme Guia BAIST / MCA 3-8.</p>
         </div>
@@ -289,6 +458,10 @@ const focos = ref<any[]>([]);
 const comunicados = ref<any[]>([]);
 const treinamentos = ref<any[]>([]);
 const kpisBaist = ref<any[]>([]);
+const pessoal = ref<any[]>([]);
+const statusFuncoes = ref<any[]>([]);
+const pendenciasTreinamento = ref<any[]>([]);
+const conclusoes = ref<any[]>([]);
 
 const formFoco = reactive({
   airport_id: 1,
@@ -328,6 +501,26 @@ const formTreinamento = reactive({
 const topicosTexto = ref('');
 const participantesTexto = ref('');
 const salvandoTreinamento = ref(false);
+const formPessoa = reactive({
+  name: '',
+  role: '',
+  organization: '',
+  email: '',
+  phone: '',
+  notes: ''
+});
+const salvandoPessoa = ref(false);
+const formConclusao = reactive({
+  training_id: '' as string | number | '',
+  personnel_id: '' as string | number | '',
+  completion_date: new Date().toISOString().slice(0, 10),
+  hours: undefined as number | undefined,
+  validity_months: 12,
+  status: 'valido',
+  certificate_url: '',
+  notes: ''
+});
+const salvandoConclusao = ref(false);
 
 const kpiFiltro = reactive({
   inicio: new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10),
@@ -432,6 +625,67 @@ async function salvarTreinamento() {
   }
 }
 
+async function carregarPessoal() {
+  const data = await ApiService.getPessoal({ airportId: airportIdAtual() });
+  pessoal.value = data;
+}
+
+async function salvarPessoa() {
+  if (!formPessoa.name || !formPessoa.role) return;
+  salvandoPessoa.value = true;
+  try {
+    await ApiService.criarPessoa({
+      ...formPessoa,
+      airport_id: airportIdAtual()
+    });
+    Object.assign(formPessoa, { name: '', role: '', organization: '', email: '', phone: '', notes: '' });
+    await Promise.all([carregarPessoal(), carregarStatusTreinamentos()]);
+  } finally {
+    salvandoPessoa.value = false;
+  }
+}
+
+async function carregarConclusoes() {
+  const data = await ApiService.getTreinamentoConclusoes({ airportId: airportIdAtual() });
+  conclusoes.value = data;
+}
+
+async function salvarConclusao() {
+  if (!formConclusao.personnel_id) return;
+  salvandoConclusao.value = true;
+  try {
+    await ApiService.criarTreinamentoConclusao({
+      personnel_id: Number(formConclusao.personnel_id),
+      training_id: formConclusao.training_id ? Number(formConclusao.training_id) : undefined,
+      completion_date: formConclusao.completion_date,
+      hours: formConclusao.hours ?? null,
+      validity_months: formConclusao.validity_months ?? null,
+      status: formConclusao.status || 'valido',
+      certificate_url: formConclusao.certificate_url || null,
+      notes: formConclusao.notes || null
+    });
+    Object.assign(formConclusao, {
+      training_id: '',
+      personnel_id: '',
+      completion_date: new Date().toISOString().slice(0, 10),
+      hours: undefined,
+      validity_months: 12,
+      status: 'valido',
+      certificate_url: '',
+      notes: ''
+    });
+    await Promise.all([carregarConclusoes(), carregarStatusTreinamentos()]);
+  } finally {
+    salvandoConclusao.value = false;
+  }
+}
+
+async function carregarStatusTreinamentos() {
+  const data = await ApiService.getStatusTreinamentos({ airportId: airportIdAtual() });
+  statusFuncoes.value = data.statusPorFuncao ?? [];
+  pendenciasTreinamento.value = data.pendencias ?? [];
+}
+
 async function carregarKpis() {
   const data = await ApiService.getKpisBaist({
     inicio: kpiFiltro.inicio,
@@ -466,7 +720,15 @@ function formatNumber(value: number | null | undefined) {
 }
 
 onMounted(async () => {
-  await Promise.all([carregarFocos(), carregarComunicados(), carregarTreinamentos(), carregarKpis()]);
+  await Promise.all([
+    carregarFocos(),
+    carregarComunicados(),
+    carregarTreinamentos(),
+    carregarKpis(),
+    carregarPessoal(),
+    carregarConclusoes(),
+    carregarStatusTreinamentos()
+  ]);
 });
 </script>
 
