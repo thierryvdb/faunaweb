@@ -22,6 +22,7 @@
     "fastify": "^4.26.2",
     "pdfkit": "^0.15.0",
     "pg": "^8.11.3",
+    "sharp": "^0.33.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {

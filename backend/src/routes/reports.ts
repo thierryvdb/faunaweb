@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import PDFDocument from 'pdfkit';
 import { Document, HeadingLevel, ImageRun, Packer, Paragraph } from 'docx';
+import sharp from 'sharp';
 import { db } from '../services/db';
 
 const periodoSchema = z.object({
@@ -319,6 +320,19 @@ function bufferParaBase64(buffer: Buffer, mime?: string | null) {
   return `data:${tipo};base64,${buffer.toString('base64')}`;
 }
 
+async function prepararImagemParaRelatorio(item: ColisaoImagem) {
+  if (!item.photo_blob) return null;
+  const mime = (item.photo_mime ?? '').toLowerCase();
+  if (mime.includes('png') || mime.includes('jpeg') || mime.includes('jpg')) {
+    return item.photo_blob;
+  }
+  try {
+    return await sharp(item.photo_blob).png().toBuffer();
+  } catch {
+    return null;
+  }
+}
+
 async function gerarDocxColisoes(colisoes: ColisaoImagem[], periodo: { inicio: string; fim: string }) {
   const children: Paragraph[] = [
     new Paragraph({
@@ -329,7 +343,7 @@ async function gerarDocxColisoes(colisoes: ColisaoImagem[], periodo: { inicio: s
     new Paragraph(' ')
   ];
 
-  colisoes.forEach((item) => {
+  for (const item of colisoes) {
     children.push(
       new Paragraph({
         text: `Colisao #${item.id}`,
@@ -345,12 +359,13 @@ async function gerarDocxColisoes(colisoes: ColisaoImagem[], periodo: { inicio: s
     if (item.notes) {
       children.push(new Paragraph(`Notas: ${item.notes}`));
     }
-    if (item.photo_blob) {
+    const imagemBuffer = await prepararImagemParaRelatorio(item);
+    if (imagemBuffer) {
       children.push(
         new Paragraph({
           children: [
             new ImageRun({
-              data: item.photo_blob,
+              data: imagemBuffer,
               transformation: { width: 400, height: 260 }
             })
           ]
@@ -362,7 +377,7 @@ async function gerarDocxColisoes(colisoes: ColisaoImagem[], periodo: { inicio: s
       children.push(new Paragraph('Sem imagem fornecida.'));
     }
     children.push(new Paragraph(' '));
-  });
+  }
 
   const doc = new Document({
     sections: [
@@ -382,42 +397,50 @@ async function gerarPdfColisoes(colisoes: ColisaoImagem[], periodo: { inicio: st
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', (err) => reject(err));
 
-    doc.fontSize(18).text('Relatorio de colisoes com imagens', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(12).text(`Periodo: ${periodo.inicio} a ${periodo.fim}`);
+    const processar = async () => {
+      doc.fontSize(18).text('Relatorio de colisoes com imagens', { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(12).text(`Periodo: ${periodo.inicio} a ${periodo.fim}`);
 
-    colisoes.forEach((item, index) => {
-      if (index > 0) {
-        doc.addPage();
-      } else {
-        doc.moveDown();
-      }
-      doc.fontSize(14).text(`Colisao #${item.id}`, { underline: true });
-      doc.moveDown(0.5);
-      doc.fontSize(11);
-      doc.text(`Data/Hora: ${item.date_utc} ${item.time_local ?? ''}`);
-      doc.text(`Aeroporto: ${item.aeroporto ?? item.airport_id}`);
-      doc.text(`Local: ${item.location_nome ?? item.location_id}`);
-      doc.text(`Evento: ${item.event_type ?? 'n/d'}`);
-      doc.text(`Especie: ${item.especie ?? 'Nao informada'}`);
-      doc.text(`Dano: ${item.dano ?? 'Nao informado'}`);
-      if (item.notes) {
-        doc.text(`Notas: ${item.notes}`);
-      }
-      doc.moveDown(0.5);
-      if (item.photo_blob) {
-        try {
-          doc.image(item.photo_blob, { fit: [460, 300], align: 'center' });
-        } catch {
-          doc.text('Nao foi possivel exibir a imagem (formato nao suportado).');
+      for (let index = 0; index < colisoes.length; index++) {
+        const item = colisoes[index];
+        if (index > 0) {
+          doc.addPage();
+        } else {
+          doc.moveDown();
         }
-      } else if (item.photo_url) {
-        doc.text(`Foto (URL): ${item.photo_url}`);
-      } else {
-        doc.text('Sem imagem fornecida.');
+        doc.fontSize(14).text(`Colisao #${item.id}`, { underline: true });
+        doc.moveDown(0.5);
+        doc.fontSize(11);
+        doc.text(`Data/Hora: ${item.date_utc} ${item.time_local ?? ''}`);
+        doc.text(`Aeroporto: ${item.aeroporto ?? item.airport_id}`);
+        doc.text(`Local: ${item.location_nome ?? item.location_id}`);
+        doc.text(`Evento: ${item.event_type ?? 'n/d'}`);
+        doc.text(`Especie: ${item.especie ?? 'Nao informada'}`);
+        doc.text(`Dano: ${item.dano ?? 'Nao informado'}`);
+        if (item.notes) {
+          doc.text(`Notas: ${item.notes}`);
+        }
+        doc.moveDown(0.5);
+        const imagemBuffer = await prepararImagemParaRelatorio(item);
+        if (imagemBuffer) {
+          try {
+            doc.image(imagemBuffer, { fit: [460, 300], align: 'center' });
+          } catch {
+            doc.text('Nao foi possivel exibir a imagem (formato nao suportado).');
+          }
+        } else if (item.photo_url) {
+          doc.text(`Foto (URL): ${item.photo_url}`);
+        } else {
+          doc.text('Sem imagem fornecida.');
+        }
       }
-    });
+      doc.end();
+    };
 
-    doc.end();
+    processar().catch((err) => {
+      doc.destroy();
+      reject(err);
+    });
   });
 }
