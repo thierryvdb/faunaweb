@@ -137,7 +137,10 @@ const trainingCompletionSchema = z.object({
   hours: z.number().optional(),
   validity_months: z.coerce.number().optional(),
   status: z.enum(['valido', 'expirado', 'pendente']).optional(),
-  certificate_url: z.string().url().optional(),
+  certificate_url: z.preprocess(
+    (v) => (v === null || (typeof v === 'string' && v.trim() === '') ? undefined : v),
+    z.string().url().optional()
+  ),
   notes: z.string().optional()
 });
 
