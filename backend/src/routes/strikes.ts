@@ -3,6 +3,11 @@ import { z } from 'zod';
 import { MultipartFile } from '@fastify/multipart';
 import { db } from '../services/db';
 
+const fotoObjetoSchema = z.object({
+  foto_id: z.coerce.number(),
+  photo_url: z.string().url().nullable().optional()
+});
+
 const corpo = z.object({
   airport_id: z.coerce.number(),
   date_utc: z.string(),
@@ -50,6 +55,7 @@ const corpo = z.object({
   risk_mgmt_notes: z.string().optional(),
   related_attractor_id: z.coerce.number().optional(),
   photo_url: z.preprocess((v) => (typeof v === 'string' && v.trim() === '' ? undefined : v), z.string().url().optional()),
+  fotos: z.array(fotoObjetoSchema).optional(),
   source_ref: z.string().optional(),
   notes: z.string().optional()
 });
@@ -78,23 +84,23 @@ async function parseStrikePayload<T extends z.ZodTypeAny>(
   request: FastifyRequest,
   schema: T,
   options?: { allowEmpty?: boolean }
-): Promise<{ body: z.infer<T>; foto: FotoUpload | null }> {
+): Promise<{ body: z.infer<T>; fotos: FotoUpload[] }> {
   if (!request.isMultipart()) {
-    return { body: schema.parse(request.body ?? {}), foto: null };
+    return { body: schema.parse(request.body ?? {}), fotos: [] };
   }
   const parts = request.parts();
   let basePayload: any = {};
-  let foto: FotoUpload | null = null;
+  const fotos: FotoUpload[] = [];
 
   for await (const part of parts) {
     if (part.type === 'file') {
-      if (part.fieldname === 'foto') {
+      if (part.fieldname === 'foto' || part.fieldname === 'fotos') {
         const buffer = await bufferFromPart(part);
-        foto = {
+        fotos.push({
           buffer,
           filename: part.filename ?? undefined,
           mimetype: part.mimetype ?? undefined
-        };
+        });
       }
       continue;
     }
@@ -113,7 +119,7 @@ async function parseStrikePayload<T extends z.ZodTypeAny>(
     throw request.server.httpErrors.badRequest('Nenhum dado informado');
   }
 
-  return { body: schema.parse(basePayload), foto };
+  return { body: schema.parse(basePayload), fotos };
 }
 
 export async function strikesRoutes(app: FastifyInstance) {
@@ -174,7 +180,7 @@ export async function strikesRoutes(app: FastifyInstance) {
   });
 
   app.post('/api/colisoes', async (request, reply) => {
-    const { body, foto } = await parseStrikePayload(request, corpo);
+    const { body, fotos } = await parseStrikePayload(request, corpo);
     const created = await db.transaction(async (client) => {
       const colunas = [
         'airport_id',
@@ -222,9 +228,6 @@ export async function strikesRoutes(app: FastifyInstance) {
         'risk_mgmt_notes',
         'related_attractor_id',
         'photo_url',
-        'photo_filename',
-        'photo_mime',
-        'photo_blob',
         'source_ref',
         'notes'
       ] as const;
@@ -277,9 +280,6 @@ export async function strikesRoutes(app: FastifyInstance) {
         risk_mgmt_notes: body.risk_mgmt_notes ?? null,
         related_attractor_id: body.related_attractor_id ?? null,
         photo_url: foto ? null : photoUrlNormalizada || null,
-        photo_filename: foto?.filename ?? null,
-        photo_mime: foto?.mimetype ?? null,
-        photo_blob: foto?.buffer ?? null,
         source_ref: body.source_ref ?? null,
         notes: body.notes ?? null
       };
@@ -294,6 +294,19 @@ export async function strikesRoutes(app: FastifyInstance) {
         valores
       );
       const id = rows[0].id as number;
+      if (fotos.length) {
+        await client.query(
+          `INSERT INTO wildlife.fact_strike_foto (strike_id, foto_idx, photo_blob, photo_filename, photo_mime)
+           SELECT $1, idx, foto, nome, mime
+           FROM UNNEST($2::bytea[], $3::text[], $4::text[]) AS t(foto, nome, mime) WITH ORDINALITY AS u(foto, nome, mime, idx)`,
+          [
+            id,
+            fotos.map((f) => f.buffer),
+            fotos.map((f) => f.filename ?? null),
+            fotos.map((f) => f.mimetype ?? null)
+          ]
+        );
+      }
       if (body.parts?.length) {
         for (const p of body.parts) {
           await client.query(
@@ -309,7 +322,7 @@ export async function strikesRoutes(app: FastifyInstance) {
 
   app.put('/api/colisoes/:id', async (request, reply) => {
     const { id } = paramsId.parse(request.params);
-    const { body, foto } = await parseStrikePayload(request, corpo.partial(), { allowEmpty: true });
+    const { body, fotos } = await parseStrikePayload(request, corpo.partial(), { allowEmpty: true });
     const pares = Object.entries(body)
       .filter(([chave, valor]) => chave !== 'parts' && valor !== undefined)
       .map(([campo, valor]) => {
@@ -339,17 +352,20 @@ export async function strikesRoutes(app: FastifyInstance) {
         );
       }
 
-      if (foto) {
+      if (fotos.length) {
+        await client.query('DELETE FROM wildlife.fact_strike_foto WHERE strike_id=$1', [id]);
         await client.query(
-          `UPDATE wildlife.fact_strike
-             SET photo_blob=$1,
-                 photo_filename=$2,
-                 photo_mime=$3,
-                 photo_url=NULL,
-                 updated_at=now()
-           WHERE strike_id=$4`,
-          [foto.buffer, foto.filename ?? null, foto.mimetype ?? null, id]
+          `INSERT INTO wildlife.fact_strike_foto (strike_id, foto_idx, photo_blob, photo_filename, photo_mime)
+           SELECT $1, idx, foto, nome, mime
+           FROM UNNEST($2::bytea[], $3::text[], $4::text[]) AS t(foto, nome, mime) WITH ORDINALITY AS u(foto, nome, mime, idx)`,
+          [
+            id,
+            fotos.map((f) => f.buffer),
+            fotos.map((f) => f.filename ?? null),
+            fotos.map((f) => f.mimetype ?? null)
+          ]
         );
+        await client.query(`UPDATE wildlife.fact_strike SET photo_url=NULL, updated_at=now() WHERE strike_id=$1`, [id]);
       }
 
       if (body.parts) {

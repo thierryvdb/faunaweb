@@ -323,12 +323,16 @@ function bufferParaBase64(buffer: Buffer, mime?: string | null) {
 async function prepararImagemParaRelatorio(item: ColisaoImagem) {
   if (!item.photo_blob) return null;
   const mime = (item.photo_mime ?? '').toLowerCase();
-  if (mime.includes('png') || mime.includes('jpeg') || mime.includes('jpg')) {
+  if (mime && (mime.includes('png') || mime.includes('jpeg') || mime.includes('jpg'))) {
     return item.photo_blob;
   }
   try {
     return await sharp(item.photo_blob).png().toBuffer();
   } catch {
+    // se a conversão falhar, tenta devolver o buffer original
+    if (mime) {
+      return item.photo_blob;
+    }
     return null;
   }
 }

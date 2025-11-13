@@ -87,13 +87,20 @@ async function carregar() {
     const dados = await ApiService.getMovimentos(filtros.value);
     lista.value = dados.map((mov: any) => ({
       ...mov,
-      date_br: mov.date_utc ? new Date(mov.date_utc).toLocaleDateString('pt-BR') : null
+      date_br: formatarData(mov.date_utc)
     }));
   } catch (e: any) {
     erro.value = e?.message ?? 'Falha ao buscar movimentos';
   } finally {
     carregando.value = false;
   }
+}
+
+function formatarData(valor?: string | null) {
+  if (!valor) return null;
+  const somenteData = valor.split('T')[0];
+  const data = new Date(`${somenteData}T00:00:00Z`);
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(data);
 }
 
 async function salvar() {
