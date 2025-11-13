@@ -19,7 +19,7 @@
               <option v-for="a in permitidos" :key="a.id" :value="a.id">{{ a.icao_code }} - {{ a.name }}</option>
             </select>
           </label>
-          Olá, {{ usuario?.nome }} — {{ usuario?.aeroporto || '' }}
+          Olá, {{ usuario?.nome }} – {{ usuario?.aeroporto || '' }}
           <button class="btn btn-secondary" @click="sair">Sair</button>
         </div>
         <p>Monitoramento integrado de fauna, riscos e KPIs aeroportuários.</p>
@@ -40,27 +40,29 @@ const links = [
   { to: '/', label: 'Painel' },
   { to: '/movimentos', label: 'Movimentos' },
   { to: '/avistamentos', label: 'Avistamentos' },
-  { to: '/colisoes', label: 'Colis?es' },
-  { to: '/acoes', label: 'A??es de Controle' },
+  { to: '/colisoes', label: 'Colisões' },
+  { to: '/acoes', label: 'Ações de Controle' },
   { to: '/atrativos', label: 'Atrativos' },
-  { to: '/inspecoes', label: 'Inspe??es/ASA' },
-  { to: '/governanca', label: 'Governan?a' },
+  { to: '/inspecoes', label: 'Inspeções/ASA' },
+  { to: '/governanca', label: 'Governança' },
   { to: '/relatorios', label: 'Relatórios' },
+  { to: '/usuarios', label: 'Usuários' },
   { to: '/cadastros', label: 'Cadastros' }
 ];
 
 const route = useRoute();
 const isLogin = computed(() => route.path === '/login');
 const titulos: Record<string, string> = {
-  '/': 'Vis?o geral',
+  '/': 'Visão geral',
   '/movimentos': 'Movimentos operacionais',
   '/avistamentos': 'Avistamentos de fauna',
-  '/colisoes': 'Colis?es com fauna',
-  '/acoes': 'A??es de controle',
-  '/atrativos': 'Gest?o de atrativos',
-  '/inspecoes': 'Inspe??es, ASA e carca?as',
-  '/governanca': 'Governan?a e indicadores',
+  '/colisoes': 'Colisões com fauna',
+  '/acoes': 'Ações de controle',
+  '/atrativos': 'Gestão de atrativos',
+  '/inspecoes': 'Inspeções, ASA e carcaças',
+  '/governanca': 'Governança e indicadores',
   '/relatorios': 'Relatórios e análises',
+  '/usuarios': 'Gestão de usuários',
   '/cadastros': 'Cadastros de apoio'
 };
 
@@ -107,4 +109,3 @@ async function trocarAeroporto() {
   .menu-link { margin: 0 1rem 0 0; }
 }
 </style>
-

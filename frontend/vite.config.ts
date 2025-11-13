@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     port: 5173,
+    allowedHosts: ['fauna.maragojipe.com'],
     proxy: {
       '/api': 'http://localhost:3333'
     }

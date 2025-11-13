@@ -36,6 +36,7 @@ O arquivo `wildlife_extension.sql` amplia o pacote com tabelas e funções neces
 - **fact_strike_cost**, **dim_personnel** e **fact_training_completion** para controle financeiro das colisões e acompanhamento de validades por função.
 - Função `wildlife_kpi.fn_baist_indicadores` que calcula os indicadores BAIST (ReAvi/ReASA/ReFau, PeAvi/PeFau, strikes múltiplas, massa média, etc.).
 - Endpoints dedicados no backend (`/api/inspecoes`, `/api/carcacas`, `/api/auditorias-ambientais`, `/api/asa-focos`, `/api/comunicados-externos`, `/api/pessoal`, `/api/treinamentos-conclusoes`, `/api/treinamentos/status`, `/api/analytics/*`) e páginas no frontend (Inspeções/ASA, Governança e Relatórios) para operar esses dados.
+- Estrutura de usuários (`app_user`, `app_user_airport`) com colunas de status/troca obrigatória e APIs (`/api/usuarios*`, `/api/auth/change-password`) para gestão e redefinição de senha.
 
 Se estiver usando o Dockerfile fornecido, os dois scripts já são copiados para `/docker-entrypoint-initdb.d` e executados automaticamente (01_wildlife_full_package.sql seguido de 02_wildlife_extension.sql). Para instalações manuais, após aplicar o `wildlife_full_package.sql`, rode:
 
@@ -208,6 +209,14 @@ Variavel opcional `VITE_API_URL` pode apontar para outro host; caso vazio utiliz
 | GET | `/api/treinamentos/status` | Resumo de status por função e pendências próximas |
 | GET | `/api/analytics/financeiro` | Indicadores financeiros de colisões por ano/categoria |
 | GET | `/api/analytics/incidentes` | Distribuições avançadas por ano, espécie, tipo e dano |
+| CRUD | `/api/usuarios` | Cadastro de usu?rios e aeroportos permitidos |
+| POST | `/api/usuarios/:id/reset-senha` | Redefine a senha para o padr?o (`fauna1`) e for?a nova troca |
+| POST | `/api/usuarios/reset-senha` | Redefine a senha de m?ltiplos usu?rios para `fauna1` |
+| POST | `/api/auth/change-password` | Troca de senha pelo pr?prio usu?rio autenticado |
+| CRUD | `/api/usuarios` | Cadastro de usu?rios e aeroportos permitidos |
+| POST | `/api/usuarios/:id/reset-senha` | Redefine a senha para o padr?o (`fauna1`) e obriga nova troca |
+| POST | `/api/auth/change-password` | Troca de senha pelo pr?prio usu?rio autenticado |
+
 
 Todos os retornos utilizam textos em portugues e seguem validacao com Zod.
 
@@ -220,9 +229,10 @@ Todos os retornos utilizam textos em portugues e seguem validacao com Zod.
 5. **Acoes de Controle**: cadastro e painel rapido de BA espacial (chama `/api/kpis/ba-espacial`).
 6. **Atrativos**: status (ativo/mitigando/resolvido) com formulario dedicado.
 7. **Cadastros**: manutencao basica de aeroportos, especies, locais operacionais e equipes (CRUD completo por aeroporto), garantindo que avistamentos/colisoes usem IDs válidos.
-8. **Inspecoes/ASA**: concentra inspe??es do s?tio/ASA, coleta de carca?as e auditorias ambientais com formul?rios orientados.
-9. **Governanca**: painel ?nico para focos ASA, comunicados externos, gest?o de treinamentos, cadastro de pessoal e status autom?tico de validade por fun??o.
-10. **Relatorios**: visualiza indicadores financeiros e an?lises (ano/categoria/esp?cie/tipo de incidente) em tabelas export?veis.
+8. **Inspecoes/ASA**: concentra inspeções do sítio/ASA, coleta de carcaças e auditorias ambientais com formulários orientados.
+9. **Governanca**: painel único para focos ASA, comunicados externos, gestão de treinamentos, cadastro de pessoal e status automático de validade por função.
+10. **Relatorios**: visualiza indicadores financeiros e análises (ano/categoria/espécie/tipo de incidente) em tabelas exportáveis.
+11. **Usuarios**: cadastro de usuários do sistema, aeroportos permitidos e reset de senha padrão.
 
 Cada modulo possui sua rota no Vue Router, evitando concentrar todos os CRUDs em uma unica pagina conforme solicitado.
 

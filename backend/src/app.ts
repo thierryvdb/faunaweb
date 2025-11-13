@@ -8,7 +8,12 @@ export function buildApp() {
   const app = Fastify({ logger: true });
 
   app.register(cors, { origin: true });
-  app.register(jwt, { secret: env.jwtSecret });
+  app.register(jwt, {
+    secret: env.jwtSecret,
+    sign: {
+      expiresIn: '4h'
+    }
+  });
 
   app.decorate('authenticate', async function (request, reply) {
     try {

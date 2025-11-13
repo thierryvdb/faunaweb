@@ -184,6 +184,34 @@ export const ApiService = {
     const { data } = await api.post('/api/treinamentos-fauna', payload);
     return data;
   },
+  async getUsuarios() {
+    const { data } = await api.get('/api/usuarios');
+    return data;
+  },
+  async criarUsuario(payload: Record<string, any>) {
+    const { data } = await api.post('/api/usuarios', payload);
+    return data;
+  },
+  async atualizarUsuario(id: number, payload: Record<string, any>) {
+    const { data } = await api.put(`/api/usuarios/${id}`, payload);
+    return data;
+  },
+  async removerUsuario(id: number) {
+    await api.delete(`/api/usuarios/${id}`);
+  },
+  async resetSenhaUsuario(id: number) {
+    const { data } = await api.post(`/api/usuarios/${id}/reset-senha`, {});
+    return data;
+  },
+  async resetSenhaUsuarioLote(ids: number[]) {
+    const { data } = await api.post('/api/usuarios/reset-senha', { user_ids: ids });
+    return data;
+  },
+  async changePassword(payload: { current_password: string; new_password: string }) {
+    const { data } = await api.post('/api/auth/change-password', payload);
+    if (data?.token) setToken(data.token);
+    return data;
+  },
   async getPessoal(params?: Record<string, any>) {
     const { data } = await api.get('/api/pessoal', { params });
     return data;
