@@ -107,45 +107,75 @@ export async function sightingsRoutes(app: FastifyInstance) {
   app.post('/api/avistamentos', async (request, reply) => {
     const body = corpo.parse(request.body);
     const resultado = await db.transaction(async (client) => {
+      const colunas = [
+        'airport_id',
+        'date_utc',
+        'time_local',
+        'time_period_id',
+        'event_type',
+        'location_id',
+        'latitude_dec',
+        'longitude_dec',
+        'quadrant',
+        'fauna_height_agl_m',
+        'inside_aerodrome',
+        'detection_method',
+        'effort_hours',
+        'effort_km',
+        'effort_area_ha',
+        'precip_id',
+        'wind_id',
+        'vis_id',
+        'photo_url',
+        'confidence_overall',
+        'observer_team',
+        'risk_mgmt_notes',
+        'related_attractor_id',
+        'actions_taken',
+        'reported_by_user_id',
+        'reporter_name',
+        'reporter_contact',
+        'notes'
+      ] as const;
+
+      const valoresMapa: Record<(typeof colunas)[number], any> = {
+        airport_id: body.airport_id,
+        date_utc: body.date_utc,
+        time_local: body.time_local,
+        time_period_id: body.time_period_id ?? null,
+        event_type: body.event_type ?? 'avistamento',
+        location_id: body.location_id,
+        latitude_dec: body.latitude_dec ?? null,
+        longitude_dec: body.longitude_dec ?? null,
+        quadrant: body.quadrant ?? null,
+        fauna_height_agl_m: body.fauna_height_agl_m ?? null,
+        inside_aerodrome: body.inside_aerodrome ?? null,
+        detection_method: body.detection_method ?? null,
+        effort_hours: body.effort_hours ?? null,
+        effort_km: body.effort_km ?? null,
+        effort_area_ha: body.effort_area_ha ?? null,
+        precip_id: body.precip_id ?? null,
+        wind_id: body.wind_id ?? null,
+        vis_id: body.vis_id ?? null,
+        photo_url: body.photo_url && (body.photo_url as string).trim() !== '' ? body.photo_url : null,
+        confidence_overall: body.confidence_overall ?? null,
+        observer_team: body.observer_team ?? null,
+        risk_mgmt_notes: body.risk_mgmt_notes ?? null,
+        related_attractor_id: body.related_attractor_id ?? null,
+        actions_taken: body.actions_taken ?? null,
+        reported_by_user_id: body.reported_by_user_id ?? null,
+        reporter_name: body.reporter_name ?? null,
+        reporter_contact: body.reporter_contact ?? null,
+        notes: body.notes ?? null
+      };
+
+      const placeholders = colunas.map((_, idx) => `$${idx + 1}`).join(',');
+      const valores = colunas.map((coluna) => valoresMapa[coluna]);
       const insercao = await client.query(
-        `INSERT INTO wildlife.fact_sighting (
-          airport_id, date_utc, time_local, time_period_id, event_type,
-          location_id, latitude_dec, longitude_dec, quadrant, fauna_height_agl_m, inside_aerodrome,
-          detection_method, effort_hours, effort_km, effort_area_ha, precip_id, wind_id, vis_id, photo_url, confidence_overall,
-          observer_team, risk_mgmt_notes, related_attractor_id, actions_taken,
-          reported_by_user_id, reporter_name, reporter_contact, notes)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28)
-          RETURNING sighting_id AS id`,
-        [
-          body.airport_id,
-          body.date_utc,
-          body.time_local,
-          body.time_period_id ?? null,
-          body.event_type ?? 'avistamento',
-          body.location_id,
-          body.latitude_dec ?? null,
-          body.longitude_dec ?? null,
-          body.quadrant ?? null,
-          body.fauna_height_agl_m ?? null,
-          body.inside_aerodrome ?? null,
-          body.detection_method ?? null,
-          body.effort_hours ?? null,
-          body.effort_km ?? null,
-          body.effort_area_ha ?? null,
-          body.precip_id ?? null,
-          body.wind_id ?? null,
-          body.vis_id ?? null,
-          body.photo_url && (body.photo_url as string).trim() !== '' ? body.photo_url : null,
-          body.confidence_overall ?? null,
-          body.observer_team ?? null,
-          body.risk_mgmt_notes ?? null,
-          body.related_attractor_id ?? null,
-          body.actions_taken ?? null,
-          body.reported_by_user_id ?? null,
-          body.reporter_name ?? null,
-          body.reporter_contact ?? null,
-          body.notes ?? null
-        ]
+        `INSERT INTO wildlife.fact_sighting (${colunas.join(', ')})
+         VALUES (${placeholders})
+         RETURNING sighting_id AS id`,
+        valores
       );
       const sightingId = insercao.rows[0].id;
       if (body.itens?.length) {
