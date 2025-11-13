@@ -154,7 +154,6 @@ CREATE TABLE IF NOT EXISTS fact_sighting (
   precip_id         SMALLINT REFERENCES lu_weather_precip(precip_id),
   wind_id           SMALLINT REFERENCES lu_weather_wind(wind_id),
   vis_id            SMALLINT REFERENCES lu_weather_visibility(vis_id),
-  photo_url         TEXT,
   confidence_overall TEXT,
   observer_team     TEXT,
   -- FC15: informações de quem reportou (nome/contato ou usuário)
