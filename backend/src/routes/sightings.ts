@@ -114,7 +114,7 @@ export async function sightingsRoutes(app: FastifyInstance) {
           detection_method, effort_hours, effort_km, effort_area_ha, precip_id, wind_id, vis_id, photo_url, confidence_overall,
           observer_team, risk_mgmt_notes, related_attractor_id, actions_taken,
           reported_by_user_id, reporter_name, reporter_contact, notes)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28)
           RETURNING sighting_id AS id`,
         [
           body.airport_id,

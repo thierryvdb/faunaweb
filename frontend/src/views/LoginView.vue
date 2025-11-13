@@ -3,7 +3,7 @@
     <form class="card" @submit.prevent="entrar">
       <h3>Acessar</h3>
       <label>
-        UsuÃƒÂ¡rio
+        Usu?rio
         <input v-model="user" required />
       </label>
       <label>
