@@ -229,19 +229,44 @@
             </label>
           </div>
           <div v-if="modoFoto === 'upload'" class="foto-preview">
-            <input :key="fileInputKey" type="file" accept="image/*" @change="selecionarFoto" />
-            <div v-if="fotoServidorDisponivel && !fotoPreview" class="foto-status">
+            <input :key="fileInputKey" type="file" accept="image/*" multiple @change="selecionarFotos" />
+            <div v-if="fotoServidorDisponivel && !fotosPreview.length" class="foto-status">
               Imagem enviada anteriormente armazenada no servidor.
             </div>
-            <div v-if="fotoPreview" class="preview-container">
-              <img :src="fotoPreview" alt="Pré-visualização" />
-              <button class="btn btn-secondary" type="button" @click="removerFotoSelecionada">Remover foto</button>
+            <div v-if="fotosPreview.length" class="fotos-preview-list">
+              <div class="foto-thumb-item" v-for="(preview, idx) in fotosPreview" :key="preview">
+                <img :src="preview" alt="Pré-visualização" />
+                <button class="btn btn-secondary" type="button" @click="removerFoto(idx)">Remover</button>
+              </div>
             </div>
           </div>
           <div v-else class="foto-url">
             <input type="url" v-model="novo.photo_url" placeholder="https://exemplo.com/foto.jpg" />
             <small>Use links HTTPS acessíveis externamente.</small>
           </div>
+        </div>
+        <div class="campo-atraso">
+          <span>Causou atraso no voo?</span>
+          <label><input type="radio" value="sim" v-model="flightDelayChoice" /> Sim</label>
+          <label><input type="radio" value="nao" v-model="flightDelayChoice" /> Não</label>
+        </div>
+        <label v-if="flightDelayChoice === 'sim'">
+          Tempo de atraso (minutos)
+          <input type="number" min="0" step="1" v-model.number="novo.delay_minutes" />
+        </label>
+        <div class="custos-grid">
+          <label>
+            Custo direto (R$)
+            <input type="number" min="0" step="0.01" v-model.number="novo.custos.direto" />
+          </label>
+          <label>
+            Custo indireto (R$)
+            <input type="number" min="0" step="0.01" v-model.number="novo.custos.indireto" />
+          </label>
+          <label>
+            Outros custos (R$)
+            <input type="number" min="0" step="0.01" v-model.number="novo.custos.outros" />
+          </label>
         </div>
         <label>
           Dentro do aeródromo
@@ -322,81 +347,91 @@ const quadrantes = ref<any[]>([]);
 const carregando = ref(false);
 const erro = ref<string | null>(null);
 
-const novo = ref<any>({
-  airport_id: '',
-  location_id: '',
-  date_utc: '',
-  time_local: '',
-  time_period_id: undefined,
-  event_type: 'colisao_ave',
-  latitude_dec: undefined,
-  longitude_dec: undefined,
-  quadrant: undefined,
-  phase_id: undefined,
-  vis_id: undefined,
-  wind_id: undefined,
-  precip_id: undefined,
-  species_id: undefined,
-  quantity: undefined,
-  id_confidence: undefined,
-  damage_id: undefined,
-  engine_type_id: undefined,
-  near_miss: false,
-  pilot_alerted: false,
-  aircraft_registration: '',
-  aircraft_type: '',
-  impact_height_agl_m: undefined,
-  aircraft_speed_kt: undefined,
-  operational_consequence: '',
-  visible_damage_notes: '',
-  investigated_by: '',
-  carcass_found: false,
-  actions_taken: '',
-  photo_url: '',
-  inside_aerodrome: false,
-  related_attractor_id: undefined,
-  risk_mgmt_notes: '',
-  est_mass_id: undefined,
-  est_mass_grams: undefined,
-  reporter_name: '',
-  reporter_contact: '',
-  notes: ''
-});
+function criarEstadoNovo() {
+  return {
+    airport_id: '' as any,
+    location_id: '' as any,
+    date_utc: '',
+    time_local: '',
+    time_period_id: undefined as any,
+    event_type: 'colisao_ave',
+    latitude_dec: undefined as any,
+    longitude_dec: undefined as any,
+    quadrant: undefined as any,
+    phase_id: undefined as any,
+    vis_id: undefined as any,
+    wind_id: undefined as any,
+    precip_id: undefined as any,
+    species_id: undefined as any,
+    quantity: undefined as any,
+    id_confidence: undefined as any,
+    damage_id: undefined as any,
+    engine_type_id: undefined as any,
+    near_miss: false,
+    pilot_alerted: false,
+    flight_delay: false,
+    delay_minutes: undefined as number | undefined,
+    aircraft_registration: '',
+    aircraft_type: '',
+    impact_height_agl_m: undefined as any,
+    aircraft_speed_kt: undefined as any,
+    operational_consequence: '',
+    visible_damage_notes: '',
+    investigated_by: '',
+    carcass_found: false,
+    actions_taken: '',
+    photo_url: '',
+    inside_aerodrome: false,
+    related_attractor_id: undefined as any,
+    risk_mgmt_notes: '',
+    est_mass_id: undefined as any,
+    est_mass_grams: undefined as any,
+    reporter_name: '',
+    reporter_contact: '',
+    custos: {
+      direto: null as number | null,
+      indireto: null as number | null,
+      outros: null as number | null
+    },
+    notes: ''
+  };
+}
+
+const novo = ref<any>(criarEstadoNovo());
 const editandoId = ref<number | null>(null);
 const partesSelecionadas = ref<number[]>([]);
-const fotoArquivo = ref<File | null>(null);
-const fotoPreview = ref<string | null>(null);
+const fotosArquivos = ref<File[]>([]);
+const fotosPreview = ref<string[]>([]);
 const fotoServidorDisponivel = ref(false);
 const fileInputKey = ref(0);
 const modoFoto = ref<'upload' | 'url'>('upload');
+const flightDelayChoice = ref<'sim' | 'nao'>('nao');
 
-function atualizarPreview(file: File | null) {
-  if (fotoPreview.value) {
-    URL.revokeObjectURL(fotoPreview.value);
-    fotoPreview.value = null;
+function limparFotosLocais() {
+  for (const preview of fotosPreview.value) {
+    URL.revokeObjectURL(preview);
   }
-  if (file) {
-    fotoPreview.value = URL.createObjectURL(file);
-  }
-}
-
-function limparFotoLocal() {
-  fotoArquivo.value = null;
-  atualizarPreview(null);
+  fotosArquivos.value = [];
+  fotosPreview.value = [];
   fileInputKey.value += 1;
 }
 
-function selecionarFoto(event: Event) {
+function selecionarFotos(event: Event) {
   const alvo = event.target as HTMLInputElement;
-  const arquivo = alvo.files?.[0] ?? null;
-  fotoArquivo.value = arquivo;
-  atualizarPreview(arquivo);
+  const arquivos = Array.from(alvo.files ?? []);
+  limparFotosLocais();
+  fotosArquivos.value = arquivos;
+  fotosPreview.value = arquivos.map((arquivo) => URL.createObjectURL(arquivo));
   fotoServidorDisponivel.value = false;
 }
 
-function removerFotoSelecionada() {
-  limparFotoLocal();
-  fotoServidorDisponivel.value = false;
+function removerFoto(index: number) {
+  const preview = fotosPreview.value[index];
+  if (preview) {
+    URL.revokeObjectURL(preview);
+  }
+  fotosArquivos.value.splice(index, 1);
+  fotosPreview.value.splice(index, 1);
 }
 
 function aplicarQuadrante(selecao: QuadrantSelection) {
@@ -410,12 +445,14 @@ function aplicarQuadrante(selecao: QuadrantSelection) {
 }
 
 function montarCorpoComArquivo(dados: Record<string, any>) {
-  if (!fotoArquivo.value) {
+  if (!fotosArquivos.value.length) {
     return dados;
   }
   const formData = new FormData();
   formData.append('dados', JSON.stringify(dados));
-  formData.append('foto', fotoArquivo.value);
+  for (const arquivo of fotosArquivos.value) {
+    formData.append('foto', arquivo);
+  }
   return formData;
 }
 
@@ -478,21 +515,30 @@ async function salvar() {
       await api.post('/api/colisoes', corpo);
     }
     await carregar();
-    cancelarEdicao();
+    resetarFormulario();
   } catch (e: any) {
     alert(e?.message ?? 'Erro ao salvar');
   }
 }
 
-function cancelarEdicao() {
+function resetarFormulario(manterAeroporto = true) {
+  const aeroportoAtual = manterAeroporto ? novo.value.airport_id : '';
   editandoId.value = null;
   partesSelecionadas.value = [];
-  novo.value = { ...novo.value, airport_id: '', location_id: '', date_utc: '', time_local: '' };
+  novo.value = criarEstadoNovo();
+  if (manterAeroporto) {
+    novo.value.airport_id = aeroportoAtual;
+  }
   locais.value = [];
   atrativos.value = [];
-  removerFotoSelecionada();
+  limparFotosLocais();
   fotoServidorDisponivel.value = false;
   modoFoto.value = 'upload';
+  flightDelayChoice.value = novo.value.flight_delay ? 'sim' : 'nao';
+}
+
+function cancelarEdicao() {
+  resetarFormulario(false);
 }
 
 async function editar(registro: any) {
@@ -535,8 +581,16 @@ async function editar(registro: any) {
     est_mass_grams: registro.est_mass_grams,
     reporter_name: registro.reporter_name ?? '',
     reporter_contact: registro.reporter_contact ?? '',
+    custos: {
+      direto: registro.custo_direto ?? null,
+      indireto: registro.custo_indireto ?? null,
+      outros: registro.custo_outros ?? null
+    },
     notes: registro.notes ?? ''
   } as any;
+  novo.value.flight_delay = !!registro.flight_delay;
+  novo.value.delay_minutes = registro.delay_minutes ?? undefined;
+  flightDelayChoice.value = novo.value.flight_delay ? 'sim' : 'nao';
   await carregarLocais();
   if (registro.photo_upload_disponivel) {
     modoFoto.value = 'upload';
@@ -550,7 +604,7 @@ async function editar(registro: any) {
     fotoServidorDisponivel.value = false;
     novo.value.photo_url = '';
   }
-  limparFotoLocal();
+  limparFotosLocais();
 }
 
 watch(
@@ -564,8 +618,17 @@ watch(modoFoto, (valor) => {
   if (valor === 'upload') {
     novo.value.photo_url = '';
   } else {
+    limparFotosLocais();
     fotoServidorDisponivel.value = false;
-    limparFotoLocal();
+  }
+});
+
+watch(flightDelayChoice, (valor) => {
+  if (valor === 'sim') {
+    novo.value.flight_delay = true;
+  } else {
+    novo.value.flight_delay = false;
+    novo.value.delay_minutes = undefined;
   }
 });
 
@@ -585,9 +648,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-  if (fotoPreview.value) {
-    URL.revokeObjectURL(fotoPreview.value);
-  }
+  limparFotosLocais();
 });
 </script>
 
@@ -597,11 +658,16 @@ onBeforeUnmount(() => {
 .form { flex-direction: column; }
 select, input, textarea { padding: 0.45rem 0.5rem; border: 1px solid #cbd5f5; border-radius: 8px; }
 .foto-preview { display: flex; flex-direction: column; gap: .5rem; font-size: .85rem; color: #475569; }
-.preview-container { display: flex; flex-direction: column; gap: .4rem; }
-.preview-container img { max-width: 100%; border-radius: 8px; border: 1px solid #dbeafe; object-fit: contain; background: #fff; }
+.fotos-preview-list { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: .5rem; }
+.foto-thumb-item { width: 120px; display: flex; flex-direction: column; gap: .35rem; }
+.foto-thumb-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #dbeafe; }
+.foto-thumb-item button { font-size: .75rem; padding: .25rem .35rem; }
 .foto-section { border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; background: #f8fafc; }
 .foto-modos { display: flex; gap: 1rem; font-size: 0.85rem; color: #475569; }
 .foto-modos input { margin-right: 0.35rem; }
 .foto-url small { display: block; margin-top: 0.25rem; color: #94a3b8; }
 .map-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.75rem; background: #f8fafc; }
+.campo-atraso { display: flex; gap: 1rem; align-items: center; font-size: .85rem; }
+.campo-atraso span { font-weight: 600; color: #0f172a; }
+.custos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.75rem; }
 </style>

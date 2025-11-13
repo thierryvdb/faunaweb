@@ -217,6 +217,8 @@ CREATE TABLE IF NOT EXISTS fact_strike (
   -- FC15: quase-colisão e alerta a piloto
   near_miss         BOOLEAN DEFAULT FALSE,
   pilot_alerted     BOOLEAN,
+  flight_delay      BOOLEAN,
+  delay_minutes     NUMERIC(7,2) CHECK (delay_minutes IS NULL OR delay_minutes >= 0),
   -- FC15: porte estimado quando espécie não identificada
   est_mass_id       SMALLINT REFERENCES lu_mass_class(mass_id),
   est_mass_grams    NUMERIC(10,2) CHECK (est_mass_grams IS NULL OR est_mass_grams > 0),
@@ -563,7 +565,9 @@ ALTER TABLE IF EXISTS fact_strike
   ADD COLUMN IF NOT EXISTS photo_url TEXT,
   ADD COLUMN IF NOT EXISTS photo_blob BYTEA,
   ADD COLUMN IF NOT EXISTS photo_filename TEXT,
-  ADD COLUMN IF NOT EXISTS photo_mime TEXT;
+  ADD COLUMN IF NOT EXISTS photo_mime TEXT,
+  ADD COLUMN IF NOT EXISTS flight_delay BOOLEAN,
+  ADD COLUMN IF NOT EXISTS delay_minutes NUMERIC(7,2) CHECK (delay_minutes IS NULL OR delay_minutes >= 0);
 
 ALTER TABLE IF EXISTS lu_quadrant
   ADD COLUMN IF NOT EXISTS grid_row TEXT,
