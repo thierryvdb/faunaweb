@@ -82,15 +82,9 @@
           Quadrante
           <select v-model="novo.quadrant">
             <option :value="undefined">Selecione</option>
-            <option value="N">N</option>
-            <option value="NE">NE</option>
-            <option value="E">E</option>
-            <option value="SE">SE</option>
-            <option value="S">S</option>
-            <option value="SW">SW</option>
-            <option value="W">W</option>
-            <option value="NW">NW</option>
-            <option value="Centro">Centro</option>
+            <option v-for="q in quadrantesDisponiveis" :key="q.code" :value="q.code">
+              {{ q.description ? q.code + ' - ' + q.description : q.code }}
+            </option>
           </select>
         </label>
         <label>
@@ -270,7 +264,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import DataTable from '@/components/DataTable.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { ApiService, api } from '@/services/api';
@@ -297,6 +291,19 @@ const lookups = ref<any>({ fases_voo: [], classes_dano: [], visibilidade: [], ve
 const locais = ref<any[]>([]);
 const atrativos = ref<any[]>([]);
 const especies = ref<any[]>([]);
+const quadrantes = ref<any[]>([]);
+const quadrantesPadrao = [
+  { code: 'N', description: 'Norte' },
+  { code: 'NE', description: 'Nordeste' },
+  { code: 'E', description: 'Leste' },
+  { code: 'SE', description: 'Sudeste' },
+  { code: 'S', description: 'Sul' },
+  { code: 'SW', description: 'Sudoeste' },
+  { code: 'W', description: 'Oeste' },
+  { code: 'NW', description: 'Noroeste' },
+  { code: 'C', description: 'Centro' }
+];
+const quadrantesDisponiveis = computed(() => (quadrantes.value?.length ? quadrantes.value : quadrantesPadrao));
 const carregando = ref(false);
 const erro = ref<string | null>(null);
 
@@ -461,6 +468,7 @@ onMounted(async () => {
   aeroportos.value = cad.aeroportos;
   especies.value = cad.especies;
   lookups.value = cad.lookups;
+  quadrantes.value = cad.quadrantes ?? [];
   const user = ApiService.getUser<any>();
   if (user?.aeroporto_id) {
     novo.value.airport_id = user.aeroporto_id;

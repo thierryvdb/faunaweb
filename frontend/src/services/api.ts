@@ -254,6 +254,21 @@ export const ApiService = {
     const { data } = await api.get('/api/analytics/incidentes', { params });
     return data;
   },
+  async getQuadrantes() {
+    const { data } = await api.get('/api/quadrantes');
+    return data;
+  },
+  async criarQuadrante(payload: { code: string; description?: string }) {
+    const { data } = await api.post('/api/quadrantes', payload);
+    return data;
+  },
+  async atualizarQuadrante(id: number, payload: { code?: string; description?: string }) {
+    const { data } = await api.put(`/api/quadrantes/${id}`, payload);
+    return data;
+  },
+  async removerQuadrante(id: number) {
+    await api.delete(`/api/quadrantes/${id}`);
+  },
   async getLocaisPorAeroporto(airportId: number) {
     const { data } = await api.get(`/api/aeroportos/${airportId}/locais`);
     return data;
@@ -278,12 +293,18 @@ export const ApiService = {
     return data;
   },
   async getCadastros() {
-    const [aeroportos, especies, lookups] = await Promise.all([
+    const [aeroportos, especies, lookups, quadrantes] = await Promise.all([
       api.get('/api/aeroportos'),
       api.get('/api/especies'),
-      api.get('/api/lookups')
+      api.get('/api/lookups'),
+      api.get('/api/quadrantes')
     ]);
-    return { aeroportos: aeroportos.data, especies: especies.data, lookups: lookups.data };
+    return {
+      aeroportos: aeroportos.data,
+      especies: especies.data,
+      lookups: lookups.data,
+      quadrantes: quadrantes.data
+    };
   }
 };
 

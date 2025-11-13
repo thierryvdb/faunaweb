@@ -86,15 +86,9 @@
           Quadrante
           <select v-model="novo.quadrant">
             <option :value="undefined">Selecione</option>
-            <option value="N">N</option>
-            <option value="NE">NE</option>
-            <option value="E">E</option>
-            <option value="SE">SE</option>
-            <option value="S">S</option>
-            <option value="SW">SW</option>
-            <option value="W">W</option>
-            <option value="NW">NW</option>
-            <option value="Centro">Centro</option>
+            <option v-for="q in quadrantesDisponiveis" :key="q.code" :value="q.code">
+              {{ q.description ? q.code + ' - ' + q.description : q.code }}
+            </option>
           </select>
         </label>
         <label>
@@ -138,7 +132,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import DataTable from '@/components/DataTable.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { ApiService, api } from '@/services/api';
@@ -164,6 +158,19 @@ const locais = ref<any[]>([]);
 const atrativos = ref<any[]>([]);
 const equipes = ref<any[]>([]);
 const lookups = ref<any>({ periodos_dia: [] });
+const quadrantes = ref<any[]>([]);
+const quadrantesPadrao = [
+  { code: 'N', description: 'Norte' },
+  { code: 'NE', description: 'Nordeste' },
+  { code: 'E', description: 'Leste' },
+  { code: 'SE', description: 'Sudeste' },
+  { code: 'S', description: 'Sul' },
+  { code: 'SW', description: 'Sudoeste' },
+  { code: 'W', description: 'Oeste' },
+  { code: 'NW', description: 'Noroeste' },
+  { code: 'C', description: 'Centro' }
+];
+const quadrantesDisponiveis = computed(() => (quadrantes.value?.length ? quadrantes.value : quadrantesPadrao));
 const carregando = ref(false);
 const erro = ref<string | null>(null);
 const novo = ref({
@@ -284,6 +291,7 @@ onMounted(async () => {
   const cad = await ApiService.getCadastros();
   aeroportos.value = cad.aeroportos;
   lookups.value = cad.lookups;
+  quadrantes.value = cad.quadrantes ?? [];
   carregar();
 });
 </script>

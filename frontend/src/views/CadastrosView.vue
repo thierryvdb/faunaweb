@@ -107,6 +107,38 @@
       </div>
       <p v-else class="vazio">Selecione um aeroporto para listar as equipes.</p>
     </div>
+    <div class="card">
+      <h3>Quadrantes operacionais</h3>
+      <form class="form" @submit.prevent="salvarQuadrante">
+        <label>
+          C�digo
+          <input v-model="formQuadrante.code" maxlength="16" required />
+        </label>
+        <label>
+          Descri��o
+          <input v-model="formQuadrante.description" />
+        </label>
+        <div class="acoes-form">
+          <button class="btn btn-primary" type="submit" :disabled="salvandoQuadrante">
+            {{ salvandoQuadrante ? 'Salvando...' : formQuadrante.id ? 'Atualizar' : 'Adicionar' }}
+          </button>
+          <button v-if="formQuadrante.id" class="btn btn-secondary" type="button" @click="cancelarQuadrante">Cancelar</button>
+        </div>
+      </form>
+      <ul class="lista-quadrantes">
+        <li v-for="q in quadrantes" :key="q.id">
+          <div>
+            <strong>{{ q.code }}</strong>
+            <p>{{ q.description || 'Sem descri��o' }}</p>
+          </div>
+          <div class="acoes-quadrante">
+            <button class="link" type="button" @click="editarQuadrante(q)">Editar</button>
+            <button class="link" type="button" @click="removerQuadrante(q.id)">Remover</button>
+          </div>
+        </li>
+        <li v-if="!quadrantes.length">Nenhum quadrante cadastrado.</li>
+      </ul>
+    </div>
   </div>
 </template>
 
@@ -117,6 +149,7 @@ import { ApiService, api } from '@/services/api';
 const aeroportos = ref<any[]>([]);
 const especies = ref<any[]>([]);
 const lookups = ref<any>({ grupos_taxonomicos: [] });
+const quadrantes = ref<any[]>([]);
 
 const novoAero = ref({ icao_code: '', name: '', city: '' });
 const novaEspecie = ref({ common_name: '', group_id: undefined as any });
@@ -124,12 +157,15 @@ const localForm = ref({ airport_id: '' as any, code: '', runway_ref: '', descrip
 const locaisSelecionados = ref<any[]>([]);
 const formEquipe = ref({ airport_id: '' as any, name: '', description: '' });
 const equipesSelecionadas = ref<any[]>([]);
+const formQuadrante = ref<{ id: number | null; code: string; description: string }>({ id: null, code: '', description: '' });
+const salvandoQuadrante = ref(false);
 
 async function carregar() {
   const cad = await ApiService.getCadastros();
   aeroportos.value = cad.aeroportos;
   especies.value = cad.especies;
   lookups.value = cad.lookups;
+  quadrantes.value = cad.quadrantes ?? [];
   if (!novaEspecie.value.group_id && lookups.value.grupos_taxonomicos?.length) {
     novaEspecie.value.group_id = lookups.value.grupos_taxonomicos[0].id;
   }
@@ -194,6 +230,58 @@ async function removerEquipe(teamId: number) {
   if (!formEquipe.value.airport_id) return;
   await api.delete(`/api/aeroportos/${formEquipe.value.airport_id}/equipes/${teamId}`);
   await carregarEquipesDoAeroporto(formEquipe.value.airport_id);
+}
+
+async function carregarQuadrantes() {
+  quadrantes.value = await ApiService.getQuadrantes();
+}
+
+function editarQuadrante(q: any) {
+  formQuadrante.value = {
+    id: q.id,
+    code: q.code,
+    description: q.description || ''
+  };
+}
+
+function cancelarQuadrante() {
+  formQuadrante.value = { id: null, code: '', description: '' };
+}
+
+async function salvarQuadrante() {
+  if (!formQuadrante.value.code.trim()) {
+    return;
+  }
+  salvandoQuadrante.value = true;
+  try {
+    const payload = {
+      code: formQuadrante.value.code.trim(),
+      description: formQuadrante.value.description.trim() || undefined
+    };
+    if (formQuadrante.value.id) {
+      await ApiService.atualizarQuadrante(formQuadrante.value.id, payload);
+    } else {
+      await ApiService.criarQuadrante(payload);
+    }
+    cancelarQuadrante();
+    await carregarQuadrantes();
+  } catch (error: any) {
+    const mensagem = error?.response?.data?.mensagem ?? 'Falha ao salvar quadrante';
+    alert(mensagem);
+  } finally {
+    salvandoQuadrante.value = false;
+  }
+}
+
+async function removerQuadrante(id: number) {
+  if (!confirm('Remover este quadrante?')) {
+    return;
+  }
+  await ApiService.removerQuadrante(id);
+  if (formQuadrante.value.id === id) {
+    cancelarQuadrante();
+  }
+  await carregarQuadrantes();
 }
 
 watch(
@@ -263,5 +351,51 @@ ul {
 li {
   padding: 0.3rem 0;
   border-bottom: 1px solid #e2e8f0;
+}
+
+.lista-quadrantes {
+  list-style: none;
+  padding-left: 0;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lista-quadrantes li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.6rem;
+}
+
+.lista-quadrantes li p {
+  margin: 0.2rem 0 0;
+  color: #475569;
+}
+
+.acoes-form {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.acoes-quadrante {
+  display: flex;
+  gap: 0.5rem;
+}
+
+button.link {
+  background: none;
+  border: none;
+  color: #0ea5e9;
+  padding: 0;
+  cursor: pointer;
+}
+
+button.link:hover {
+  text-decoration: underline;
 }
 </style>

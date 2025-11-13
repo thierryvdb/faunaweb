@@ -237,20 +237,28 @@
           <input type="text" v-model="formPessoa.name" required />
         </label>
         <label>
-          Função*
-          <input type="text" v-model="formPessoa.role" required placeholder="EGRF, CTA, Mecânico..." />
+          Sobrenome*
+          <input type="text" v-model="formPessoa.last_name" required />
         </label>
         <label>
-          Organização
+          CPF*
+          <input type="text" v-model="formPessoa.cpf" required placeholder="Somente numeros" />
+        </label>
+        <label>
+          Funcao*
+          <input type="text" v-model="formPessoa.role" required placeholder="EGRF, CTA, Mecanico..." />
+        </label>
+        <label>
+          Organizacao
           <input type="text" v-model="formPessoa.organization" />
         </label>
         <label>
-          E-mail
-          <input type="email" v-model="formPessoa.email" />
+          E-mail*
+          <input type="email" v-model="formPessoa.email" required />
         </label>
         <label>
-          Telefone
-          <input type="text" v-model="formPessoa.phone" />
+          Telefone*
+          <input type="text" v-model="formPessoa.phone" required />
         </label>
         <label class="wide">
           Notas
@@ -503,6 +511,8 @@ const participantesTexto = ref('');
 const salvandoTreinamento = ref(false);
 const formPessoa = reactive({
   name: '',
+  last_name: '',
+  cpf: '',
   role: '',
   organization: '',
   email: '',
@@ -631,15 +641,40 @@ async function carregarPessoal() {
 }
 
 async function salvarPessoa() {
-  if (!formPessoa.name || !formPessoa.role) return;
+  const obrigatorios = [
+    formPessoa.name,
+    formPessoa.last_name,
+    formPessoa.cpf,
+    formPessoa.role,
+    formPessoa.email,
+    formPessoa.phone
+  ];
+  if (obrigatorios.some((valor) => !valor || !String(valor).trim())) {
+    alert('Preencha nome, sobrenome, CPF, funcao, e-mail e telefone.');
+    return;
+  }
   salvandoPessoa.value = true;
   try {
     await ApiService.criarPessoa({
       ...formPessoa,
+      cpf: formPessoa.cpf.replace(/[^0-9]/g, ''),
       airport_id: airportIdAtual()
     });
-    Object.assign(formPessoa, { name: '', role: '', organization: '', email: '', phone: '', notes: '' });
+    Object.assign(formPessoa, {
+      name: '',
+      last_name: '',
+      cpf: '',
+      role: '',
+      organization: '',
+      email: '',
+      phone: '',
+      notes: ''
+    });
     await Promise.all([carregarPessoal(), carregarStatusTreinamentos()]);
+  } catch (error: any) {
+    console.error('Erro ao salvar pessoa', error);
+    const mensagem = error?.response?.data?.mensagem ?? 'Falha ao salvar pessoa. Verifique os dados informados.';
+    alert(mensagem);
   } finally {
     salvandoPessoa.value = false;
   }

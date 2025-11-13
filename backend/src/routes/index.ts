@@ -15,6 +15,7 @@ import { authRoutes } from './auth';
 import { complianceRoutes } from './compliance';
 import { analyticsRoutes } from './analytics';
 import { usersRoutes } from './users';
+import { quadrantsRoutes } from './quadrants';
 
 export async function registerRoutes(app: FastifyInstance) {
   await app.register(authRoutes);
@@ -27,6 +28,7 @@ export async function registerRoutes(app: FastifyInstance) {
   });
 
   await app.register(lookupsRoutes);
+  await app.register(quadrantsRoutes);
   await app.register(airportsRoutes);
   await app.register(locationsRoutes);
   await app.register(teamsRoutes);

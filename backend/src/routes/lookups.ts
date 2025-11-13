@@ -17,7 +17,8 @@ export async function lookupsRoutes(app: FastifyInstance) {
       { chave: 'tipos_atrativo', sql: "SELECT attractor_type_id AS id, name FROM wildlife.lu_attractor_type ORDER BY name" },
       { chave: 'tipos_acao', sql: "SELECT action_type_id AS id, name FROM wildlife.lu_action_type ORDER BY name" },
       { chave: 'tipos_motor', sql: "SELECT engine_type_id AS id, name FROM wildlife.lu_aircraft_engine_type ORDER BY name" },
-      { chave: 'periodos_dia', sql: "SELECT period_id AS id, name FROM wildlife.lu_time_period ORDER BY id" }
+      { chave: 'periodos_dia', sql: "SELECT period_id AS id, name FROM wildlife.lu_time_period ORDER BY id" },
+      { chave: 'quadrantes', sql: "SELECT quadrant_id AS id, code, description FROM wildlife.lu_quadrant ORDER BY code" }
     ];
 
     const resultados = await Promise.all(
