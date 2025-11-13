@@ -116,6 +116,20 @@ export const ApiService = {
     const { data } = await api.get('/api/movimentos', { params });
     return data;
   },
+  async getRelatorioMovimentos(params?: Record<string, any>) {
+    const { data } = await api.get('/api/relatorios/movimentos-periodo', { params });
+    return data;
+  },
+  async getRelatorioColisoesImagens(params?: Record<string, any>) {
+    const { data } = await api.get('/api/relatorios/colisoes-imagens', { params });
+    return data;
+  },
+  async exportarRelatorioColisoesImagens(params: Record<string, any>) {
+    return api.get('/api/relatorios/colisoes-imagens/export', {
+      params,
+      responseType: 'blob'
+    });
+  },
   async getAvistamentos(params?: Record<string, any>) {
     const { data } = await api.get('/api/avistamentos', { params });
     return data;

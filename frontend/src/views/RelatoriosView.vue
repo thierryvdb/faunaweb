@@ -130,12 +130,93 @@
         </div>
       </div>
     </section>
+
+    <section class="bloco">
+      <header class="bloco-topo">
+        <div>
+          <h2>Movimentos de aeronaves</h2>
+          <p>Comparativo anual e mensal das movimentações registradas.</p>
+        </div>
+        <form class="filtros" @submit.prevent="carregarMovimentos">
+          <label>
+            Aeroporto
+            <select v-model="filtroMovimentos.airportId">
+              <option value="">Todos</option>
+              <option v-for="a in aeroportos" :key="a.id ?? a.airport_id" :value="a.id ?? a.airport_id">
+                {{ a.name ?? a.nome }}
+              </option>
+            </select>
+          </label>
+          <label>
+            Ano inicial
+            <input type="number" v-model.number="filtroMovimentos.anoInicial" min="2000" max="2100" />
+          </label>
+          <label>
+            Ano final
+            <input type="number" v-model.number="filtroMovimentos.anoFinal" min="2000" max="2100" />
+        </label>
+        <button class="btn" type="submit">Gerar</button>
+        <button class="btn btn-secondary" type="button" @click="abrirRelatorioImagens">Relatório com imagens</button>
+      </form>
+    </header>
+      <div v-if="carregandoMovimentos">Carregando movimentos...</div>
+      <div v-else-if="erroMovimentos" class="erro">{{ erroMovimentos }}</div>
+      <div v-else class="grid-mov">
+        <div class="card-mov grafico">
+          <h3>Totais por ano</h3>
+          <Bar v-if="chartMovimentos" :data="chartMovimentos" :options="chartMovOptions" />
+          <p v-else>Sem dados suficientes para montar o gráfico.</p>
+        </div>
+        <div class="card-mov tabela">
+          <h3>Comparativo mensal</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Mês</th>
+                <th>
+                  {{ relatorioMovimentos?.comparativos?.anoInicial?.ano ?? filtroMovimentos.anoInicial }}
+                </th>
+                <th>
+                  vs {{ relatorioMovimentos?.comparativos?.anoInicial?.ano_referencia ?? filtroMovimentos.anoInicial - 1 }}
+                </th>
+                <th>
+                  {{ relatorioMovimentos?.comparativos?.anoFinal?.ano ?? filtroMovimentos.anoFinal }}
+                </th>
+                <th>
+                  vs {{ relatorioMovimentos?.comparativos?.anoFinal?.ano_referencia ?? filtroMovimentos.anoFinal - 1 }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="linha in comparativoMeses" :key="`mov-${linha.mes}`">
+                <td>{{ linha.mesNome }}</td>
+                <td>{{ formatInt(linha.anoInicialTotal) }}</td>
+                <td>
+                  {{ linha.anoInicialVar !== null ? `${formatNumber(linha.anoInicialVar)} %` : '-' }}
+                </td>
+                <td>{{ formatInt(linha.anoFinalTotal) }}</td>
+                <td>
+                  {{ linha.anoFinalVar !== null ? `${formatNumber(linha.anoFinalVar)} %` : '-' }}
+                </td>
+              </tr>
+              <tr v-if="!comparativoMeses.length">
+                <td colspan="5">Sem dados para o intervalo informado.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref, onMounted, computed } from 'vue';
+import { Bar } from 'vue-chartjs';
+import { Chart, registerables } from 'chart.js';
 import { ApiService } from '@/services/api';
+
+Chart.register(...registerables);
 
 const hoje = new Date();
 const inicioPadrao = new Date(hoje.getFullYear(), 0, 1).toISOString().slice(0, 10);
@@ -159,6 +240,16 @@ const incidentes = reactive({
   porFase: [] as any[],
   principaisEspecies: [] as any[]
 });
+const aeroportos = ref<any[]>([]);
+const filtroMovimentos = reactive({
+  airportId: '' as '' | number,
+  anoInicial: hoje.getFullYear() - 1,
+  anoFinal: hoje.getFullYear()
+});
+const relatorioMovimentos = ref<any | null>(null);
+const carregandoMovimentos = ref(false);
+const erroMovimentos = ref<string | null>(null);
+const NOMES_MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 async function carregarFinanceiro() {
   const data = await ApiService.getFinanceiro({
@@ -181,6 +272,35 @@ async function carregarIncidentes() {
   incidentes.principaisEspecies = data.principaisEspecies ?? [];
 }
 
+async function carregarAeroportos() {
+  const cad = await ApiService.getCadastros();
+  aeroportos.value = cad.aeroportos ?? [];
+}
+
+async function carregarMovimentos() {
+  if (filtroMovimentos.anoInicial > filtroMovimentos.anoFinal) {
+    erroMovimentos.value = 'O ano inicial deve ser menor ou igual ao ano final.';
+    return;
+  }
+  carregandoMovimentos.value = true;
+  erroMovimentos.value = null;
+  try {
+    const params: Record<string, any> = {
+      anoInicial: filtroMovimentos.anoInicial,
+      anoFinal: filtroMovimentos.anoFinal
+    };
+    if (filtroMovimentos.airportId) {
+      params.airportId = filtroMovimentos.airportId;
+    }
+    const data = await ApiService.getRelatorioMovimentos(params);
+    relatorioMovimentos.value = data;
+  } catch (e: any) {
+    erroMovimentos.value = e?.message ?? 'Falha ao carregar movimentos';
+  } finally {
+    carregandoMovimentos.value = false;
+  }
+}
+
 function formatCurrency(valor?: number | string | null) {
   if (valor === null || valor === undefined) return '-';
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -191,8 +311,72 @@ function formatNumber(valor?: number | string | null) {
   return Number(valor).toFixed(2);
 }
 
+function formatInt(valor?: number | string | null) {
+  if (valor === null || valor === undefined) return '-';
+  return Number(valor).toLocaleString('pt-BR');
+}
+
+function abrirRelatorioImagens() {
+  window.open('/relatorios/colisoes-imagens', '_blank');
+}
+
+const chartMovimentos = computed(() => {
+  if (!relatorioMovimentos.value?.meses?.length) return null;
+  const totals: Record<string, number> = {};
+  for (const mes of relatorioMovimentos.value.meses) {
+    const key = String(mes.ano);
+    totals[key] = (totals[key] ?? 0) + Number(mes.total ?? 0);
+  }
+  const labels = Object.keys(totals).sort();
+  if (!labels.length) return null;
+  return {
+    labels,
+    datasets: [
+      {
+        label: 'Movimentos',
+        data: labels.map((label) => totals[label]),
+        backgroundColor: '#0f172a'
+      }
+    ]
+  };
+});
+
+const chartMovOptions = {
+  responsive: true,
+  plugins: { legend: { display: false } },
+  scales: {
+    y: {
+      beginAtZero: true,
+      ticks: { precision: 0 }
+    }
+  }
+};
+
+const comparativoMeses = computed(() => {
+  if (!relatorioMovimentos.value?.comparativos) return [];
+  const comp = relatorioMovimentos.value.comparativos ?? {};
+  const inicial = comp.anoInicial?.meses ?? [];
+  const final = comp.anoFinal?.meses ?? [];
+  const mapIni = new Map(inicial.map((m: any) => [m.mes, m]));
+  const mapFim = new Map(final.map((m: any) => [m.mes, m]));
+  return NOMES_MESES.map((nome, idx) => {
+    const mes = idx + 1;
+    const ini = mapIni.get(mes);
+    const fim = mapFim.get(mes);
+    return {
+      mes,
+      mesNome: nome,
+      anoInicialTotal: ini?.total_atual ?? 0,
+      anoInicialVar: ini?.variacao_pct ?? null,
+      anoFinalTotal: fim?.total_atual ?? 0,
+      anoFinalVar: fim?.variacao_pct ?? null
+    };
+  });
+});
+
 onMounted(async () => {
-  await Promise.all([carregarFinanceiro(), carregarIncidentes()]);
+  await Promise.all([carregarFinanceiro(), carregarIncidentes(), carregarAeroportos()]);
+  await carregarMovimentos();
 });
 </script>
 
@@ -203,6 +387,7 @@ onMounted(async () => {
 .filtros { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
 .filtros label { display: flex; flex-direction: column; gap: .25rem; font-size: .9rem; }
 .btn { padding: .55rem 1.2rem; border: none; border-radius: 6px; background: #0f172a; color: #fff; cursor: pointer; }
+.btn-secondary { background: #475569; }
 .tabela table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .tabela th, .tabela td { border-bottom: 1px solid #e5e7eb; padding: .6rem; text-align: left; }
 .tabela th { background: #f8fafc; }
@@ -210,4 +395,11 @@ onMounted(async () => {
 .grid-analise { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; }
 .grid-analise h3 { margin-bottom: .35rem; font-size: 1rem; }
 .grid-analise ul { margin: 0; padding-left: 1.1rem; font-size: .9rem; color: #0f172a; }
+.grid-mov { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
+.card-mov { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1rem; }
+.card-mov h3 { margin: 0 0 .5rem; }
+.card-mov table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.card-mov th, .card-mov td { border-bottom: 1px solid #e2e8f0; padding: .35rem; text-align: left; }
+.card-mov th { background: #eef2ff; }
+.erro { color: #b91c1c; }
 </style>

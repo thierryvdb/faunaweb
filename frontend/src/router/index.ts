@@ -9,6 +9,7 @@ import CadastrosView from '@/views/CadastrosView.vue';
 import InspecoesView from '@/views/InspecoesView.vue';
 import GovernancaView from '@/views/GovernancaView.vue';
 import RelatoriosView from '@/views/RelatoriosView.vue';
+import RelatorioColisoesImagensView from '@/views/RelatorioColisoesImagensView.vue';
 import UsuariosView from '@/views/UsuariosView.vue';
 
 const router = createRouter({
@@ -25,6 +26,7 @@ const router = createRouter({
     { path: '/inspecoes', component: InspecoesView },
     { path: '/governanca', component: GovernancaView },
     { path: '/relatorios', component: RelatoriosView },
+    { path: '/relatorios/colisoes-imagens', component: RelatorioColisoesImagensView },
     { path: '/usuarios', component: UsuariosView }
   ]
 });

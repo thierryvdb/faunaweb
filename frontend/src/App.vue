@@ -62,6 +62,7 @@ const titulos: Record<string, string> = {
   '/inspecoes': 'Inspeções, ASA e carcaças',
   '/governanca': 'Governança e indicadores',
   '/relatorios': 'Relatórios e análises',
+  '/relatorios/colisoes-imagens': 'Relatório de colisões com imagens',
   '/usuarios': 'Gestão de usuários',
   '/cadastros': 'Cadastros de apoio'
 };

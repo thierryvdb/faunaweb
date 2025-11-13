@@ -36,6 +36,7 @@
           </template>
           <template #pilot_alerted_label="{ linha }">{{ linha.pilot_alerted == null ? '-' : (linha.pilot_alerted ? 'Sim' : 'Não') }}</template>
           <template #near_miss_label="{ linha }">{{ linha.near_miss == null ? '-' : (linha.near_miss ? 'Sim' : 'Não') }}</template>
+          <template #foto_info="{ valor }">{{ valor ?? '-' }}</template>
           <template #acoes="{ linha }">
             <button class="btn btn-secondary" @click="editar(linha)">Editar</button>
           </template>
@@ -216,8 +217,21 @@
           <textarea rows="2" v-model="novo.actions_taken"></textarea>
         </label>
         <label>
-          Foto (URL)
-          <input type="url" v-model="novo.photo_url" />
+          Foto (upload)
+          <input type="file" accept="image/*" @change="selecionarFoto" />
+        </label>
+        <div class="foto-preview">
+          <div v-if="fotoServidorDisponivel && !fotoPreview" class="foto-status">
+            Imagem enviada anteriormente armazenada no servidor.
+          </div>
+          <div v-if="fotoPreview" class="preview-container">
+            <img :src="fotoPreview" alt="Pré-visualização" />
+            <button class="btn btn-secondary" type="button" @click="removerFotoSelecionada">Remover foto</button>
+          </div>
+        </div>
+        <label>
+          Foto (URL opcional)
+          <input type="url" v-model="novo.photo_url" placeholder="https://exemplo.com/foto.jpg" />
         </label>
         <label>
           Dentro do aeródromo
@@ -264,7 +278,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue';
+import { ref, onMounted, watch, computed, onBeforeUnmount } from 'vue';
 import DataTable from '@/components/DataTable.vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { ApiService, api } from '@/services/api';
@@ -280,6 +294,7 @@ const colunas = [
   { titulo: 'Piloto alertado', campo: 'pilot_alerted_label' },
   { titulo: 'Quase-colisão', campo: 'near_miss_label' },
   { titulo: 'Atrativo', campo: 'related_attractor_desc' },
+  { titulo: 'Foto', campo: 'foto_info' },
   { titulo: 'Notas', campo: 'notes' },
   { titulo: 'Ações', campo: 'acoes' }
 ];
@@ -349,6 +364,42 @@ const novo = ref<any>({
 });
 const editandoId = ref<number | null>(null);
 const partesSelecionadas = ref<number[]>([]);
+const fotoArquivo = ref<File | null>(null);
+const fotoPreview = ref<string | null>(null);
+const fotoServidorDisponivel = ref(false);
+
+function atualizarPreview(file: File | null) {
+  if (fotoPreview.value) {
+    URL.revokeObjectURL(fotoPreview.value);
+    fotoPreview.value = null;
+  }
+  if (file) {
+    fotoPreview.value = URL.createObjectURL(file);
+  }
+}
+
+function selecionarFoto(event: Event) {
+  const alvo = event.target as HTMLInputElement;
+  const arquivo = alvo.files?.[0] ?? null;
+  fotoArquivo.value = arquivo;
+  atualizarPreview(arquivo);
+  fotoServidorDisponivel.value = false;
+}
+
+function removerFotoSelecionada() {
+  fotoArquivo.value = null;
+  atualizarPreview(null);
+}
+
+function montarCorpoComArquivo(dados: Record<string, any>) {
+  if (!fotoArquivo.value) {
+    return dados;
+  }
+  const formData = new FormData();
+  formData.append('dados', JSON.stringify(dados));
+  formData.append('foto', fotoArquivo.value);
+  return formData;
+}
 
 async function carregar() {
   carregando.value = true;
@@ -360,10 +411,16 @@ async function carregar() {
       date_br: item.date_utc ? new Date(item.date_utc).toLocaleDateString('pt-BR') : null,
       fase_nome: lookups.value.fases_voo.find((f: any) => f.id === item.phase_id)?.name ?? null,
       dano_nome: lookups.value.classes_dano.find((d: any) => d.id === item.damage_id)?.name ?? null,
-      evento_label: item.event_type === 'colisao_outro_animal' ? 'Colisão (outro animal)' : (item.event_type === 'quase_colisao' ? 'Quase-colisão' : 'Colisão (ave)'),
+      evento_label:
+        item.event_type === 'colisao_outro_animal'
+          ? 'Colisão (outro animal)'
+          : item.event_type === 'quase_colisao'
+            ? 'Quase-colisão'
+            : 'Colisão (ave)',
       periodo_label: lookups.value.periodos_dia.find((p: any) => p.id === item.time_period_id)?.name ?? null,
-      pilot_alerted_label: item.pilot_alerted == null ? null : (item.pilot_alerted ? 'Sim' : 'Não'),
-      near_miss_label: item.near_miss == null ? null : (item.near_miss ? 'Sim' : 'Não')
+      pilot_alerted_label: item.pilot_alerted == null ? null : item.pilot_alerted ? 'Sim' : 'Não',
+      near_miss_label: item.near_miss == null ? null : item.near_miss ? 'Sim' : 'Não',
+      foto_info: item.photo_upload_disponivel ? 'Arquivo' : item.photo_url ? 'URL' : '-'
     }));
   } catch (e: any) {
     erro.value = e?.message ?? 'Falha ao buscar colisões';
@@ -391,10 +448,11 @@ async function carregarLocais() {
 async function salvar() {
   try {
     const payload = { ...novo.value, parts: partesSelecionadas.value } as any;
+    const corpo = montarCorpoComArquivo(payload);
     if (editandoId.value) {
-      await api.put(`/api/colisoes/${editandoId.value}`, payload);
+      await api.put(`/api/colisoes/${editandoId.value}`, corpo);
     } else {
-      await api.post('/api/colisoes', payload);
+      await api.post('/api/colisoes', corpo);
     }
     await carregar();
     cancelarEdicao();
@@ -409,6 +467,8 @@ function cancelarEdicao() {
   novo.value = { ...novo.value, airport_id: '', location_id: '', date_utc: '', time_local: '' };
   locais.value = [];
   atrativos.value = [];
+  removerFotoSelecionada();
+  fotoServidorDisponivel.value = false;
 }
 
 async function editar(registro: any) {
@@ -454,6 +514,9 @@ async function editar(registro: any) {
     notes: registro.notes ?? ''
   } as any;
   await carregarLocais();
+  fotoArquivo.value = null;
+  atualizarPreview(null);
+  fotoServidorDisponivel.value = !!registro.photo_upload_disponivel;
 }
 
 watch(
@@ -477,6 +540,12 @@ onMounted(async () => {
   }
   carregar();
 });
+
+onBeforeUnmount(() => {
+  if (fotoPreview.value) {
+    URL.revokeObjectURL(fotoPreview.value);
+  }
+});
 </script>
 
 <style scoped>
@@ -484,4 +553,7 @@ onMounted(async () => {
 .filtros, .form { display: flex; flex-wrap: wrap; gap: 1rem; }
 .form { flex-direction: column; }
 select, input, textarea { padding: 0.45rem 0.5rem; border: 1px solid #cbd5f5; border-radius: 8px; }
+.foto-preview { display: flex; flex-direction: column; gap: .5rem; font-size: .85rem; color: #475569; }
+.preview-container { display: flex; flex-direction: column; gap: .4rem; }
+.preview-container img { max-width: 100%; border-radius: 8px; border: 1px solid #dbeafe; object-fit: contain; background: #fff; }
 </style>

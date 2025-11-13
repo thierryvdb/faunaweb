@@ -144,6 +144,10 @@ CREATE TABLE IF NOT EXISTS fact_sighting (
   reported_by_user_id BIGINT REFERENCES app_user(user_id),
   reporter_name     TEXT,
   reporter_contact  TEXT,
+  photo_url         TEXT,
+  photo_blob        BYTEA,
+  photo_filename    TEXT,
+  photo_mime        TEXT,
   notes             TEXT,
   geom              geometry(Point, 4326),
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -530,7 +534,10 @@ ALTER TABLE IF EXISTS fact_strike
   ADD COLUMN IF NOT EXISTS inside_aerodrome BOOLEAN,
   ADD COLUMN IF NOT EXISTS risk_mgmt_notes TEXT,
   ADD COLUMN IF NOT EXISTS related_attractor_id BIGINT REFERENCES fact_attractor(attractor_id),
-  ADD COLUMN IF NOT EXISTS photo_url TEXT;
+  ADD COLUMN IF NOT EXISTS photo_url TEXT,
+  ADD COLUMN IF NOT EXISTS photo_blob BYTEA,
+  ADD COLUMN IF NOT EXISTS photo_filename TEXT,
+  ADD COLUMN IF NOT EXISTS photo_mime TEXT;
 
 ALTER TABLE IF EXISTS fact_sighting
   ADD COLUMN IF NOT EXISTS quadrant TEXT,
