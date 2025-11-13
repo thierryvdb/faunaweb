@@ -278,6 +278,9 @@
           </article>
         </div>
         <p v-else class="sem-dados">Nenhuma colisão encontrada para o período informado.</p>
+        <div v-if="colisoesChartData" class="grafico-colisoes">
+          <Bar :data="colisoesChartData" :options="chartColisoesOptions" />
+        </div>
       </LoadingState>
     </section>
   </div>
@@ -335,6 +338,35 @@ const colisoes = reactive<{ periodo: { inicio: string; fim: string } | null; dad
 const carregandoColisoes = ref(false);
 const erroColisoes = ref<string | null>(null);
 const exportandoColisoes = ref(false);
+const colisoesChartData = computed(() => {
+  if (!colisoes.dados.length) return null;
+  const agrupado = colisoes.dados.reduce((acc: Record<string, number>, item) => {
+    const chave = item.date_utc ?? 'Sem data';
+    acc[chave] = (acc[chave] ?? 0) + 1;
+    return acc;
+  }, {});
+  const labels = Object.keys(agrupado).sort();
+  return {
+    labels,
+    datasets: [
+      {
+        label: 'Colisões',
+        data: labels.map((label) => agrupado[label]),
+        backgroundColor: '#ea580c'
+      }
+    ]
+  };
+});
+const chartColisoesOptions = {
+  responsive: true,
+  plugins: { legend: { display: false } },
+  scales: {
+    y: {
+      beginAtZero: true,
+      ticks: { precision: 0 }
+    }
+  }
+};
 
 async function carregarFinanceiro() {
   const data = await ApiService.getFinanceiro({
@@ -548,5 +580,6 @@ onMounted(async () => {
 .colisoes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
 .colisao-header { display: flex; justify-content: space-between; font-size: .9rem; }
 .foto-thumb { margin-top: .5rem; display: flex; flex-direction: column; gap: .35rem; font-size: .85rem; }
-.foto-thumb img { width: 100%; max-height: 180px; object-fit: cover; border-radius: 10px; border: 1px solid #dbeafe; }
+.foto-thumb img { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; border: 1px solid #dbeafe; }
+.grafico-colisoes { margin-top: 1rem; }
 </style>
