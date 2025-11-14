@@ -589,6 +589,10 @@ BEGIN
       round((random() * 5000)::numeric, 2) AS custo_outros
     FROM generate_series(1, 50) gs
   ),
+  dados_ord AS (
+    SELECT ROW_NUMBER() OVER (ORDER BY seq) AS rn, d.*
+    FROM dados d
+  ),
   inseridos AS (
     INSERT INTO wildlife.fact_strike (
       airport_id,
@@ -653,36 +657,37 @@ BEGIN
       CONCAT('Operador ', d.seq),
       CONCAT('+55 73 9', lpad((floor(random() * 99999999))::text, 8, '0')),
       'Registro gerado automaticamente para testes'
-    FROM dados d
-    RETURNING strike_id, seq
+    FROM dados_ord d
+    ORDER BY d.rn
+    RETURNING strike_id, ROW_NUMBER() OVER (ORDER BY ctid) AS rn
   ),
   custos AS (
     INSERT INTO wildlife.fact_strike_cost (strike_id, cost_type, amount_brl, description)
     SELECT i.strike_id, 'direto', round(d.custo_direto, 2), 'Custo direto simulado'
     FROM inseridos i
-    JOIN dados d ON d.seq = i.seq
+    JOIN dados_ord d ON d.rn = i.rn
     WHERE d.custo_direto > 0
     UNION ALL
     SELECT i.strike_id, 'indireto', round(d.custo_indireto, 2), 'Custo indireto simulado'
     FROM inseridos i
-    JOIN dados d ON d.seq = i.seq
+    JOIN dados_ord d ON d.rn = i.rn
     WHERE d.custo_indireto > 0
     UNION ALL
     SELECT i.strike_id, 'outros', round(d.custo_outros, 2), 'Custos diversos simulados'
     FROM inseridos i
-    JOIN dados d ON d.seq = i.seq
+    JOIN dados_ord d ON d.rn = i.rn
     WHERE d.custo_outros > 0
   ),
   partes AS (
     INSERT INTO wildlife.fact_strike_part (strike_id, part_id)
     SELECT i.strike_id, d.part_id
     FROM inseridos i
-    JOIN dados d ON d.seq = i.seq
+    JOIN dados_ord d ON d.rn = i.rn
     WHERE d.part_id IS NOT NULL
     UNION ALL
     SELECT i.strike_id, d.part_aux_id
     FROM inseridos i
-    JOIN dados d ON d.seq = i.seq
+    JOIN dados_ord d ON d.rn = i.rn
     WHERE d.part_aux_id IS NOT NULL
       AND d.part_aux_id <> d.part_id
   )
