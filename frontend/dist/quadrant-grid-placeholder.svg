@@ -1,0 +1,13 @@
+<svg width="1430" height="475" viewBox="0 0 1430 475" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      text {
+        font-family: Arial, sans-serif;
+        font-size: 18px;
+        fill: #ffffff;
+        text-shadow: 0 0 4px rgba(0,0,0,0.4);
+      }
+    </style>
+  </defs>
+  <image href="quadrant-grid.png" width="1430" height="475" preserveAspectRatio="xMidYMid slice" />
+</svg>
