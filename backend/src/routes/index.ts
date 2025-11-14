@@ -54,7 +54,7 @@ console.log('✅ All route handlers validated successfully');
 export async function registerRoutes(app: FastifyInstance) {
   // Register auth routes first (no authentication required)
   console.log('Registering authRoutes...');
-  await app.register(authRoutes);
+  await app.register(fp(authRoutes, { name: 'authRoutes' }));
 
   // Add authentication hook for all other routes
   app.addHook('onRequest', async (request, reply) => {
