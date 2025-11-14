@@ -51,7 +51,7 @@ O backend expõe as novas rotas (`/api/inspecoes`, `/api/carcacas`, `/api/audito
 - **Painel**: KPIs SR/10k, taxa de dano e pareto de espécies agrupados por aeroporto.
 - **Movimentos**: CRUD com filtros e paginação que alimenta o KPI de exposição e o relatório /api/relatorios/movimentos-periodo.
 - **Avistamentos**: formulário compatível com o FC-15, já com seleção de quadrante/latitude/longitude e associação de equipe.
-- **Colisões**: registro completo do FC-15, permitindo upload de arquivos, anexar URLs, indicar partes atingidas e controlar impactos operacionais.
+- **Colisoes**: registro completo do FC-15 com upload multiplo (arquivos locais sao redimensionados para 1600px/1920px via Sharp antes de salvar), suporte a URLs externas, controle de quadrante/latitude/longitude, campos de custo (direto/indireto/outros) e flag de atraso de voo com minutos afetados. Todas as fotos ficam em `fact_strike_foto` e abastecem os relatorios.
 - **Ações de Controle / Atrativos**: acompanhamento das medidas mitigatórias e dos focos que atraem fauna.
 - **Inspeções/ASA e Governança**: telas dedicadas às tabelas do *Manual de Boas Práticas*, cobrindo inspeções de sítio/ASA, auditorias ambientais, focos externos e comunicados.
 - **Relatórios**: consultas Pareto/Fases/Partes e novos relatórios de movimentos por período e colisões com imagens (exportação em PDF ou DOCX).
@@ -61,10 +61,11 @@ O backend expõe as novas rotas (`/api/inspecoes`, `/api/carcacas`, `/api/audito
 
 - **Grade única de quadrantes A–N × 1–33**: `lu_quadrant` guarda linha/coluna e pode ser regenerada via `POST /api/quadrantes/reset-grade` ou pelo botão “Gerar grade A-N x 1-33” na tela de Cadastros.
 - **Mapa clicável**: o componente `QuadrantMapPicker` (ativado em Avistamentos e Colisões) permite escolher visualmente o quadrante e, opcionalmente, preencher latitude/longitude ao configurar `QUADRANT_MAP.bounds` em `src/config/quadrantGrid.ts`. A imagem pode ser trocada apontando `VITE_QUADRANT_MAP_URL` para um arquivo customizado.
-- **Upload de evidências**: colisões aceitam arquivo do computador (armazenado em `fact_strike.photo_blob`) ou uma URL pública, mantendo o histórico exigido pelo FC-15.
+- **Upload de evidencias**: o formulario aceita uma ou mais fotos locais (tratadas com Sharp para 1600px/1920px e salvas em `fact_strike_foto`) e URLs externas opcionais. A tela mostra previews, permite remover itens antes do envio e reaproveita os blobs em relatorios/exportacoes.
 - **Relatórios exportáveis**:
-  - `GET /api/relatorios/movimentos-periodo`: agrega totais mensais E compara anos adjacentes em %.
+  - `GET /api/relatorios/movimentos-periodo`: agrega totais mensais, soma anual por ano selecionado e mostra a variacao percentual contra os anos vizinhos.
   - `GET /api/relatorios/colisoes-imagens` e `/export`: lista as colisões com miniaturas e gera PDF ou DOCX para anexos em comissões ou auditorias.
+  - `GET /api/relatorios/incidentes/export`: exporta em PDF ou DOCX as distribuicoes mostradas na pagina Analise de incidentes (ano, categoria, especie, fase de voo e tipo de incidente).
 - **Conformidade com o Manual**: inspeções ASA, auditorias ambientais, focos externos, comunicações e treinamentos com alertas de validade cobrem os itens do Programa de Gerenciamento de Risco da Fauna (PGRF) e dos indicadores BAIST.
 
 ## 3. Pre-requisitos
@@ -159,6 +160,28 @@ Após instalar, use `npm run dev` dentro de cada pasta para subir os servidores 
 2. Aplicar o pacote: `psql -d fauna -f wildlife_full_package.sql`.
 3. Confirmar que os schemas `wildlife` e `wildlife_kpi` foram criados e as funcoes PostGIS estao disponiveis.
 
+### 6.1 Carga de dados ficticios (popular.sql)
+
+O script `popular.sql` preenche automaticamente o ambiente de desenvolvimento com:
+
+- 3 aeroportos ficticios, cada um com 20 locais operacionais.
+- 30 movimentos por aeroporto (90 linhas), 30 avistamentos, 30 colisoes com custos/atraso, 30 acoes de controle e 30 atrativos.
+- Cadastro minimo de especies utilizado pelos formularios e pelos relatorios.
+
+Execute depois de aplicar o pacote principal/extensao:
+
+```bash
+psql -h localhost -U fauna_admin -d fauna -f popular.sql
+```
+
+Ou, se estiver usando o container criado via `Dockerfile.postgres`:
+
+```bash
+docker exec -i fauna-db psql -U fauna_admin -d fauna < popular.sql
+```
+
+> Observacao: o script nao faz TRUNCATE nas tabelas de fatos. Rode em um banco limpo ou apenas uma vez para evitar duplicar registros de teste.
+
 ## 7. Backend (Fastify)
 
 **Windows:**
@@ -219,6 +242,9 @@ Variavel opcional `VITE_API_URL` pode apontar para outro host; caso vazio utiliz
 | POST | `/api/kpis/did` | Difference-in-Differences para uma acao |
 | POST | `/api/kpis/ba-espacial` | Buffer Analysis espacial |
 | GET | `/api/relatorios/*` | Pareto de especies, fases de voo, partes com dano, janela BA |
+| GET | `/api/relatorios/movimentos-periodo` | Totais mensais/anuais com variacao percentual contra anos adjacentes |
+| GET | `/api/relatorios/colisoes-imagens` (`/export`) | Lista colisoes com miniaturas e exporta PDF/DOCX |
+| GET | `/api/relatorios/incidentes/export` | Exporta em PDF/DOCX a analise de incidentes exibida no frontend |
 | CRUD | `/api/inspecoes` | Inspeções do sítio/ASA com observações e quadrantes |
 | CRUD | `/api/carcacas` | Registro de coleta/destino de carcaças |
 | CRUD | `/api/auditorias-ambientais` | Auditorias de resíduos, esgoto e sistemas de proteção |
@@ -246,13 +272,13 @@ Todos os retornos utilizam textos em portugues e seguem validacao com Zod.
 1. **Painel**: filtros de periodo, cards SR/10k por aeroporto, lista de taxa com dano e grafico Pareto (Chart.js).
 2. **Movimentos**: tabela paginada + formulario rapido de cadastro.
 3. **Avistamentos**: filtro por aeroporto/data, CRUD e integracao com itens; formulário usa selects para locais/equipes cadastrados e permite editar registros diretamente na tabela.
-4. **Colisoes**: filtro por fase, formulario para evidenciar fase/dano.
+4. **Colisoes**: filtro por fase e formulario completo (quadrante + mapa, latitude/longitude, upload multiplo com previews, custos direto/indireto/outros, flag e minutos de atraso de voo, URLs externas).
 5. **Acoes de Controle**: cadastro e painel rapido de BA espacial (chama `/api/kpis/ba-espacial`).
 6. **Atrativos**: status (ativo/mitigando/resolvido) com formulario dedicado.
 7. **Cadastros**: manutencao basica de aeroportos, especies, locais operacionais e equipes (CRUD completo por aeroporto), garantindo que avistamentos/colisoes usem IDs válidos.
 8. **Inspecoes/ASA**: concentra inspeções do sítio/ASA, coleta de carcaças e auditorias ambientais com formulários orientados.
 9. **Governanca**: painel único para focos ASA, comunicados externos, gestão de treinamentos, cadastro de pessoal e status automático de validade por função.
-10. **Relatorios**: visualiza indicadores financeiros e análises (ano/categoria/espécie/tipo de incidente) em tabelas exportáveis.
+10. **Relatorios**: agrega indicadores financeiros (custos direto/indireto/outros), analise de incidentes (listas + export PDF/DOCX), comparativo de movimentos (grafico + tabela mensal com variacao %) e o relatorio de colisoes com imagens/miniaturas.
 11. **Usuarios**: cadastro de usuários do sistema, aeroportos permitidos e reset de senha padrão.
 
 Cada modulo possui sua rota no Vue Router, evitando concentrar todos os CRUDs em uma unica pagina conforme solicitado.
@@ -263,6 +289,9 @@ Cada modulo possui sua rota no Vue Router, evitando concentrar todos os CRUDs em
 - `POST /api/kpis/did`: chama `wildlife_kpi.kpi_did_sr10k` para comparar locais controle vs tratamento.
 - `POST /api/kpis/ba-espacial`: utiliza `wildlife_kpi.kpi_ba_spatial` e retorna SR, limites e taxa de avistamentos antes/depois por buffer.
 - `GET /api/relatorios/*`: replicas das views `rpt_*` com periodo dinamico.
+- `GET /api/relatorios/movimentos-periodo`: compara anos selecionados com os anos anteriores e retorna totais mensais/anuais (usa o mesmo payload da tabela/grafico do frontend).
+- `GET /api/relatorios/colisoes-imagens` + `/export`: devolve a grade com miniaturas e gera PDF/DOCX a partir dos blobs salvos no banco.
+- `GET /api/relatorios/incidentes/export`: exporta a analise de incidentes (ano/categoria/especie/fase/tipo) em PDF ou DOCX.
 - `GET /api/analytics/financeiro`: agrega custos de colisões (diretos, indiretos, outros) por ano, categoria taxonômica, tipo de incidente e dano.
 - `GET /api/analytics/incidentes`: distribuições complementares (ano, categoria, espécie, fase de voo, tipo de incidente) para análises exigidas pelos manuais.
 

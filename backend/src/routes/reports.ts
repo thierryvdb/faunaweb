@@ -224,6 +224,34 @@ export async function reportsRoutes(app: FastifyInstance) {
     reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.pdf`);
     return reply.send(buffer);
   });
+
+  app.get('/api/relatorios/incidentes/export', async (request, reply) => {
+    const filtros = periodoSchema
+      .extend({
+        formato: z.enum(['pdf', 'docx'])
+      })
+      .parse(request.query ?? {});
+    const { inicio, fim } = periodosComDefaults(filtros);
+    const dados = await obterAnaliseIncidentes(filtros.airportId ?? null, inicio, fim);
+    const possuiDados = Object.values(dados).some((lista) => lista.length);
+    if (!possuiDados) {
+      return reply.code(404).send({ mensagem: 'Sem dados para o período informado' });
+    }
+    const nomeArquivoBase = `analise-incidentes-${inicio}-a-${fim}`;
+    if (filtros.formato === 'docx') {
+      const buffer = await gerarDocxIncidentes(dados, { inicio, fim });
+      reply.header(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
+      reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.docx`);
+      return reply.send(buffer);
+    }
+    const buffer = await gerarPdfIncidentes(dados, { inicio, fim });
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.pdf`);
+    return reply.send(buffer);
+  });
 }
 
 function periodosComDefaults(filtros: { inicio?: string; fim?: string }) {
