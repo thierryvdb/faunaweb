@@ -20,7 +20,7 @@
         <h3>Taxa com dano</h3>
         <ul>
           <li v-for="item in dados?.aeroportos" :key="item.airport_id">
-            {{ item.nome }} — {{ item.pct_strikes_com_dano ?? '—' }} %
+            {{ item.nome }} ï¿½ {{ item.pct_strikes_com_dano ?? 0 }} %
           </li>
         </ul>
       </div>

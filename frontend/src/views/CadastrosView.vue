@@ -55,7 +55,7 @@
           <input v-model="localForm.code" required />
         </label>
         <label>
-          Pista/FAixa (opcional)
+          Pista/Faixa (opcional)
           <input v-model="localForm.runway_ref" />
         </label>
         <label>
@@ -111,11 +111,11 @@
       <h3>Quadrantes operacionais</h3>
       <form class="form" @submit.prevent="salvarQuadrante">
         <label>
-          C�digo
+          Código
           <input v-model="formQuadrante.code" maxlength="16" required />
         </label>
         <label>
-          Descri��o
+          Descrição
           <input v-model="formQuadrante.description" />
         </label>
         <div class="acoes-form">
