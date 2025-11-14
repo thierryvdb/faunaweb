@@ -48,9 +48,16 @@ export async function registerRoutes(app: FastifyInstance) {
     usersRoutes
   ];
 
+  const displaySymbol = Symbol.for('fastify.display-name');
   plugins.forEach((plugin, idx) => {
     if (typeof plugin !== 'function') {
       throw new Error(`Plugin na posição ${idx} é inválido: ${plugin}`);
+    }
+    if (!plugin[displaySymbol]) {
+      Object.defineProperty(plugin, displaySymbol, {
+        value: plugin.name || `anonymous-plugin-${idx}`,
+        enumerable: false
+      });
     }
   });
 
