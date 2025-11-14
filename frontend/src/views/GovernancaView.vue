@@ -116,6 +116,15 @@
           <input type="date" v-model="formComunicado.response_due_at" />
         </label>
         <label class="wide">
+          Anexo (PDF ou DOCX)
+          <input type="file" ref="inputAnexoComunicado" @change="selecionarAnexoComunicado" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+          <small>Formatos aceitos: PDF ou DOCX. Até 5MB.</small>
+          <div class="arquivo-anexo" v-if="arquivoComunicado">
+            {{ arquivoComunicado.name }}
+            <button type="button" class="link" @click="removerAnexoComunicado">Remover anexo</button>
+          </div>
+        </label>
+        <label class="wide">
           Observações
           <textarea rows="2" v-model="formComunicado.notes"></textarea>
         </label>
@@ -131,6 +140,7 @@
               <th>Assunto</th>
               <th>Status</th>
               <th>Protocolo</th>
+              <th>Anexo</th>
             </tr>
           </thead>
           <tbody>
@@ -142,9 +152,20 @@
                 {{ item.protocol_code || '-' }}<br>
                 <small>Enviado: {{ item.sent_at || '-' }}</small>
               </td>
+              <td>
+                <button
+                  v-if="item.has_attachment"
+                  type="button"
+                  class="btn btn-secondary pequeno"
+                  @click="baixarAnexoComunicado(item.notice_id)"
+                >
+                  Baixar
+                </button>
+                <span v-else>-</span>
+              </td>
             </tr>
             <tr v-if="!comunicados.length">
-              <td colspan="4">Nenhuma comunicação lançada.</td>
+              <td colspan="5">Nenhuma comunicação lançada.</td>
             </tr>
           </tbody>
         </table>
@@ -496,6 +517,8 @@ const formComunicado = reactive({
   notes: ''
 });
 const salvandoComunicado = ref(false);
+const arquivoComunicado = ref<File | null>(null);
+const inputAnexoComunicado = ref<HTMLInputElement | null>(null);
 
 const formTreinamento = reactive({
   airport_id: 1,
@@ -577,11 +600,19 @@ async function carregarComunicados() {
 async function salvarComunicado() {
   salvandoComunicado.value = true;
   try {
-    await ApiService.criarComunicadoExterno({
+    const payload = {
       ...formComunicado,
       airport_id: airportIdAtual(),
       status: formComunicado.status || 'enviado'
-    });
+    };
+    let corpo: Record<string, any> | FormData = payload;
+    if (arquivoComunicado.value) {
+      const formData = new FormData();
+      formData.append('dados', JSON.stringify(payload));
+      formData.append('anexo', arquivoComunicado.value);
+      corpo = formData;
+    }
+    await ApiService.criarComunicadoExterno(corpo);
     Object.assign(formComunicado, {
       target_entity: '',
       subject: '',
@@ -591,9 +622,65 @@ async function salvarComunicado() {
       response_due_at: '',
       notes: ''
     });
+    removerAnexoComunicado();
     await carregarComunicados();
   } finally {
     salvandoComunicado.value = false;
+  }
+}
+
+function selecionarAnexoComunicado(event: Event) {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file) {
+    arquivoComunicado.value = null;
+    return;
+  }
+  const mime = file.type;
+  const permitido =
+    mime === 'application/pdf' ||
+    mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    file.name.toLowerCase().endsWith('.pdf') ||
+    file.name.toLowerCase().endsWith('.docx');
+  if (!permitido) {
+    alert('Anexo inválido. Selecione um arquivo PDF ou DOCX.');
+    target.value = '';
+    arquivoComunicado.value = null;
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    alert('O anexo deve ter no máximo 5MB.');
+    target.value = '';
+    arquivoComunicado.value = null;
+    return;
+  }
+  arquivoComunicado.value = file;
+}
+
+function removerAnexoComunicado() {
+  arquivoComunicado.value = null;
+  if (inputAnexoComunicado.value) {
+    inputAnexoComunicado.value.value = '';
+  }
+}
+
+async function baixarAnexoComunicado(noticeId: number) {
+  try {
+    const resposta = await ApiService.baixarAnexoComunicado(noticeId);
+    const contentType = resposta.headers['content-type'] ?? 'application/octet-stream';
+    const nomeArquivo =
+      resposta.headers['content-disposition']?.split('filename=').pop()?.replace(/"/g, '') ?? 'anexo';
+    const blob = new Blob([resposta.data], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nomeArquivo;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (e: any) {
+    alert(e?.message ?? 'Não foi possível baixar o anexo.');
   }
 }
 
@@ -775,8 +862,11 @@ onMounted(async () => {
 .grid label { display: flex; flex-direction: column; gap: .35rem; font-size: .9rem; }
 .grid textarea, .grid input, .grid select { padding: .45rem .6rem; border: 1px solid #cbd5f5; border-radius: 6px; }
 .grid .wide { grid-column: span 2; }
+.arquivo-anexo { display: flex; gap: .5rem; align-items: center; font-size: .85rem; color: #475569; }
 .btn { padding: .55rem 1.2rem; border: none; border-radius: 6px; background: #0f172a; color: #fff; cursor: pointer; }
 .btn.principal { background: #0ea5e9; }
+.btn.btn-secondary { background: #475569; }
+.btn.pequeno { padding: .3rem .65rem; font-size: .8rem; }
 .tabela table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .tabela th, .tabela td { border-bottom: 1px solid #e5e7eb; padding: .6rem; vertical-align: top; }
 .tabela th { text-align: left; background: #f8fafc; }

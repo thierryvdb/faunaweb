@@ -30,6 +30,10 @@ const corpo = z.object({
   severity_weight: z.coerce.number().optional(),
   aircraft_registration: z.string().optional(),
   aircraft_type: z.string().optional(),
+  aircraft_model_id: z.preprocess(
+    (val) => (val === '' || val === undefined ? undefined : val),
+    z.union([z.coerce.number().int().positive(), z.null()])
+  ).optional(),
   engine_type_id: z.coerce.number().optional(),
   near_miss: z.boolean().optional(),
   pilot_alerted: z.boolean().optional(),
@@ -169,6 +173,31 @@ async function salvarCustos(client: any, strikeId: number, custos?: CustosPayloa
   }
 }
 
+async function obterModeloAeronave(
+  executor: { query: (sql: string, valores: any[]) => Promise<{ rows: any[] }> },
+  id: number
+) {
+  const { rows } = await executor.query(
+    `SELECT aircraft_model_id, manufacturer, model, engine_type_id
+       FROM wildlife.lu_aircraft_model
+      WHERE aircraft_model_id=$1`,
+    [id]
+  );
+  return rows[0] ?? null;
+}
+
+function nomeModeloAeronave(modelo: { manufacturer: string; model: string }) {
+  return `${modelo.manufacturer} ${modelo.model}`.trim();
+}
+
+function aplicarCampo(pares: Array<[string, any]>, campo: string, valor: any) {
+  const idx = pares.findIndex(([c]) => c === campo);
+  if (idx >= 0) {
+    pares.splice(idx, 1);
+  }
+  pares.push([campo, valor]);
+}
+
 async function salvarFotos(client: any, strikeId: number, fotos: FotoUpload[], options?: { normalizadas?: boolean }) {
   if (!fotos.length) {
     await client.query('DELETE FROM wildlife.fact_strike_foto WHERE strike_id=$1', [strikeId]);
@@ -251,7 +280,7 @@ export async function strikesRoutes(app: FastifyInstance) {
               s.latitude_dec, s.longitude_dec, s.precip_id, s.wind_id, s.vis_id, s.phase_id, s.species_id,
               s.id_confidence, s.quantity, s.damage_id, s.ingestion, s.effect_id, s.part_id, s.time_out_hours,
               s.cost_brl, s.sample_collected, s.severity_weight,
-              s.aircraft_registration, s.aircraft_type, s.engine_type_id, s.near_miss, s.pilot_alerted,
+              s.aircraft_registration, s.aircraft_type, s.aircraft_model_id, s.engine_type_id, s.near_miss, s.pilot_alerted,
               s.flight_delay, s.delay_minutes,
               s.est_mass_id, s.est_mass_grams,
               s.reported_by_user_id, s.reporter_name, s.reporter_contact,
@@ -261,10 +290,20 @@ export async function strikesRoutes(app: FastifyInstance) {
               s.photo_url, s.photo_filename, s.photo_mime,
               (s.photo_blob IS NOT NULL OR fotos_extra.tem_foto) AS photo_upload_disponivel,
               cost.custo_direto, cost.custo_indireto, cost.custo_outros,
+              am.manufacturer AS aircraft_model_manufacturer,
+              am.model AS aircraft_model_model,
+              am.category AS aircraft_model_category,
+              am.engine_type_id AS aircraft_model_engine_type_id,
+              am.wingspan_m AS aircraft_model_wingspan_m,
+              am.length_m AS aircraft_model_length_m,
+              am.height_m AS aircraft_model_height_m,
+              am.seating_capacity AS aircraft_model_seating_capacity,
+              am.mtow_kg AS aircraft_model_mtow_kg,
               s.source_ref, s.notes
        FROM wildlife.fact_strike s
        LEFT JOIN wildlife.dim_location l ON l.location_id = s.location_id
        LEFT JOIN wildlife.fact_attractor fa ON fa.attractor_id = s.related_attractor_id
+       LEFT JOIN wildlife.lu_aircraft_model am ON am.aircraft_model_id = s.aircraft_model_id
        LEFT JOIN LATERAL (
          SELECT
            SUM(CASE WHEN cost_type = 'direto' THEN amount_brl ELSE 0 END)::numeric(14,2) AS custo_direto,
@@ -322,6 +361,7 @@ export async function strikesRoutes(app: FastifyInstance) {
         'severity_weight',
         'aircraft_registration',
         'aircraft_type',
+        'aircraft_model_id',
         'engine_type_id',
         'near_miss',
         'pilot_alerted',
@@ -352,6 +392,21 @@ export async function strikesRoutes(app: FastifyInstance) {
       ] as const;
 
       const photoUrlNormalizada = typeof body.photo_url === 'string' ? body.photo_url.trim() : '';
+      let aircraftModelId = body.aircraft_model_id ?? null;
+      let aircraftTypeNome = body.aircraft_type ?? null;
+      let engineTypeIdFinal = body.engine_type_id ?? null;
+
+      if (aircraftModelId) {
+        const modelo = await obterModeloAeronave(client, aircraftModelId);
+        if (!modelo) {
+          throw request.server.httpErrors.badRequest('Aeronave selecionada nao encontrada');
+        }
+        aircraftModelId = Number(modelo.aircraft_model_id);
+        aircraftTypeNome = nomeModeloAeronave(modelo);
+        if (!engineTypeIdFinal && modelo.engine_type_id) {
+          engineTypeIdFinal = modelo.engine_type_id;
+        }
+      }
 
       const valoresMapa: Record<(typeof colunas)[number], any> = {
         airport_id: body.airport_id,
@@ -378,8 +433,9 @@ export async function strikesRoutes(app: FastifyInstance) {
         sample_collected: body.sample_collected ?? null,
         severity_weight: body.severity_weight ?? null,
         aircraft_registration: body.aircraft_registration ?? null,
-        aircraft_type: body.aircraft_type ?? null,
-        engine_type_id: body.engine_type_id ?? null,
+        aircraft_type: aircraftTypeNome,
+        aircraft_model_id: aircraftModelId,
+        engine_type_id: engineTypeIdFinal ?? null,
         near_miss: body.near_miss ?? null,
         pilot_alerted: body.pilot_alerted ?? null,
         flight_delay: body.flight_delay ?? null,
@@ -462,7 +518,13 @@ export async function strikesRoutes(app: FastifyInstance) {
       pares.push(['cost_brl', soma > 0 ? soma : null]);
     }
 
-    if (!pares.length && !body.parts && !fotosNormalizadas.length && body.custos === undefined) {
+    if (
+      !pares.length &&
+      !body.parts &&
+      !fotosNormalizadas.length &&
+      body.custos === undefined &&
+      body.aircraft_model_id === undefined
+    ) {
       return reply.code(400).send({ mensagem: 'Informe dados para atualizar' });
     }
 
@@ -470,6 +532,22 @@ export async function strikesRoutes(app: FastifyInstance) {
       const existente = await client.query('SELECT 1 FROM wildlife.fact_strike WHERE strike_id=$1 FOR UPDATE', [id]);
       if (!existente.rowCount) {
         return false;
+      }
+
+      if (body.aircraft_model_id !== undefined) {
+        if (body.aircraft_model_id === null) {
+          aplicarCampo(pares, 'aircraft_model_id', null);
+        } else {
+          const modelo = await obterModeloAeronave(client, body.aircraft_model_id);
+          if (!modelo) {
+            throw request.server.httpErrors.badRequest('Aeronave selecionada nao encontrada');
+          }
+          aplicarCampo(pares, 'aircraft_model_id', modelo.aircraft_model_id);
+          aplicarCampo(pares, 'aircraft_type', nomeModeloAeronave(modelo));
+          if (!pares.some(([campo]) => campo === 'engine_type_id') && modelo.engine_type_id) {
+            aplicarCampo(pares, 'engine_type_id', modelo.engine_type_id);
+          }
+        }
       }
 
       if (pares.length) {

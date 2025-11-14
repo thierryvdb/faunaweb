@@ -41,6 +41,82 @@
       </ul>
     </div>
     <div class="card">
+      <h3>Modelos de aeronaves</h3>
+      <form class="form" @submit.prevent="salvarAeronave">
+        <label>
+          Fabricante
+          <input v-model="formAeronave.manufacturer" required />
+        </label>
+        <label>
+          Modelo
+          <input v-model="formAeronave.model" required />
+        </label>
+        <label>
+          Categoria
+          <input v-model="formAeronave.category" placeholder="ex.: narrowbody, regional, helicoptero" />
+        </label>
+        <label>
+          Tipo de motor
+          <select v-model.number="formAeronave.engine_type_id">
+            <option value="">Selecione</option>
+            <option v-for="m in lookups.tipos_motor" :key="m.id" :value="m.id">{{ m.name }}</option>
+          </select>
+        </label>
+        <div class="linha-dupla">
+          <label>
+            Envergadura (m)
+            <input type="number" step="0.01" v-model.number="formAeronave.wingspan_m" />
+          </label>
+          <label>
+            Comprimento (m)
+            <input type="number" step="0.01" v-model.number="formAeronave.length_m" />
+          </label>
+        </div>
+        <div class="linha-dupla">
+          <label>
+            Altura (m)
+            <input type="number" step="0.01" v-model.number="formAeronave.height_m" />
+          </label>
+          <label>
+            Passageiros
+            <input type="number" v-model.number="formAeronave.seating_capacity" />
+          </label>
+        </div>
+        <label>
+          MTOW (kg)
+          <input type="number" step="0.1" v-model.number="formAeronave.mtow_kg" />
+        </label>
+        <label>
+          Observações
+          <textarea rows="2" v-model="formAeronave.notes"></textarea>
+        </label>
+        <div class="acoes-form">
+          <button class="btn btn-primary" type="submit">
+            {{ formAeronave.id ? 'Atualizar' : 'Cadastrar' }}
+          </button>
+          <button v-if="formAeronave.id" class="btn btn-secondary" type="button" @click="resetarFormAeronave">Cancelar</button>
+        </div>
+      </form>
+      <ul class="lista-aeronaves">
+        <li v-for="a in aeronaves" :key="a.id">
+          <div>
+            <strong>{{ a.manufacturer }} {{ a.model }}</strong>
+            <span v-if="a.category"> - {{ a.category }}</span>
+            <p class="detalhes">
+              Motor: {{ lookups.tipos_motor.find((m: any) => m.id === a.engine_type_id)?.name ?? 's/ registro' }}
+              <span v-if="a.wingspan_m"> · Envergadura: {{ a.wingspan_m }} m</span>
+              <span v-if="a.length_m"> · Comprimento: {{ a.length_m }} m</span>
+            </p>
+          </div>
+          <div class="acoes-quadrante">
+            <button class="btn btn-secondary" type="button" @click="editarAeronave(a)">Editar</button>
+            <button class="btn btn-secondary" type="button" @click="removerAeronave(a.id)">Remover</button>
+          </div>
+        </li>
+        <li v-if="!aeronaves.length">Nenhum modelo cadastrado.</li>
+      </ul>
+    </div>
+    <div class="card">
       <h3>Locais operacionais</h3>
       <form class="form" @submit.prevent="salvarLocal">
         <label>
@@ -156,6 +232,7 @@ const aeroportos = ref<any[]>([]);
 const especies = ref<any[]>([]);
 const lookups = ref<any>({ grupos_taxonomicos: [] });
 const quadrantes = ref<any[]>([]);
+const aeronaves = ref<any[]>([]);
 
 const novoAero = ref({ icao_code: '', name: '', city: '' });
 const novaEspecie = ref({ common_name: '', group_id: undefined as any });
@@ -166,6 +243,20 @@ const equipesSelecionadas = ref<any[]>([]);
 const formQuadrante = ref<{ id: number | null; code: string; description: string }>({ id: null, code: '', description: '' });
 const salvandoQuadrante = ref(false);
 const resetandoQuadrantes = ref(false);
+const formAeronave = ref({
+  id: null as number | null,
+  manufacturer: '',
+  model: '',
+  nickname: '',
+  category: '',
+  engine_type_id: undefined as number | undefined,
+  wingspan_m: null as number | null,
+  length_m: null as number | null,
+  height_m: null as number | null,
+  seating_capacity: null as number | null,
+  mtow_kg: null as number | null,
+  notes: ''
+});
 
 async function carregar() {
   const cad = await ApiService.getCadastros();
@@ -173,6 +264,7 @@ async function carregar() {
   especies.value = cad.especies;
   lookups.value = cad.lookups;
   quadrantes.value = cad.quadrantes ?? [];
+  aeronaves.value = cad.aeronaves ?? [];
   if (!novaEspecie.value.group_id && lookups.value.grupos_taxonomicos?.length) {
     novaEspecie.value.group_id = lookups.value.grupos_taxonomicos[0].id;
   }
@@ -257,6 +349,75 @@ async function resetarQuadrantes() {
 
 async function carregarQuadrantes() {
   quadrantes.value = await ApiService.getQuadrantes();
+}
+
+async function carregarAeronaves() {
+  aeronaves.value = await ApiService.getAeronaves();
+}
+
+function resetarFormAeronave() {
+  formAeronave.value = {
+    id: null,
+    manufacturer: '',
+    model: '',
+    nickname: '',
+    category: '',
+    engine_type_id: undefined,
+    wingspan_m: null,
+    length_m: null,
+    height_m: null,
+    seating_capacity: null,
+    mtow_kg: null,
+    notes: ''
+  };
+}
+
+async function salvarAeronave() {
+  const payload = {
+    manufacturer: formAeronave.value.manufacturer,
+    model: formAeronave.value.model,
+    nickname: formAeronave.value.nickname || undefined,
+    category: formAeronave.value.category || undefined,
+    engine_type_id: formAeronave.value.engine_type_id,
+    wingspan_m: formAeronave.value.wingspan_m || undefined,
+    length_m: formAeronave.value.length_m || undefined,
+    height_m: formAeronave.value.height_m || undefined,
+    seating_capacity: formAeronave.value.seating_capacity || undefined,
+    mtow_kg: formAeronave.value.mtow_kg || undefined,
+    notes: formAeronave.value.notes || undefined
+  };
+  if (formAeronave.value.id) {
+    await ApiService.atualizarAeronave(formAeronave.value.id, payload);
+  } else {
+    await ApiService.criarAeronave(payload);
+  }
+  resetarFormAeronave();
+  await carregarAeronaves();
+}
+
+function editarAeronave(modelo: any) {
+  formAeronave.value = {
+    id: modelo.id,
+    manufacturer: modelo.manufacturer,
+    model: modelo.model,
+    nickname: modelo.nickname ?? '',
+    category: modelo.category ?? '',
+    engine_type_id: modelo.engine_type_id ?? undefined,
+    wingspan_m: modelo.wingspan_m ?? null,
+    length_m: modelo.length_m ?? null,
+    height_m: modelo.height_m ?? null,
+    seating_capacity: modelo.seating_capacity ?? null,
+    mtow_kg: modelo.mtow_kg ?? null,
+    notes: modelo.notes ?? ''
+  };
+}
+
+async function removerAeronave(id: number) {
+  await ApiService.removerAeronave(id);
+  if (formAeronave.value.id === id) {
+    resetarFormAeronave();
+  }
+  await carregarAeronaves();
 }
 
 function editarQuadrante(q: any) {
@@ -412,6 +573,35 @@ li {
 .acoes-quadrante {
   display: flex;
   gap: 0.5rem;
+}
+
+.linha-dupla {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.lista-aeronaves {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lista-aeronaves li {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lista-aeronaves .detalhes {
+  margin: 0.2rem 0 0;
+  color: #475569;
+  font-size: 0.85rem;
 }
 
 button.link {

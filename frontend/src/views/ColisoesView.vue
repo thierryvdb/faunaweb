@@ -197,8 +197,24 @@
           <input type="text" v-model="novo.aircraft_registration" />
         </label>
         <label>
+          Modelo cadastrado
+          <select v-model="novo.aircraft_model_id">
+            <option :value="null">Selecione</option>
+            <option v-for="a in aeronaves" :key="a.id" :value="a.id">
+              {{ a.manufacturer }} {{ a.model }}{{ a.category ? ` - ${a.category}` : '' }}
+            </option>
+          </select>
+        </label>
+        <div class="aeronave-resumo" v-if="modeloSelecionado">
+          <p><strong>Motor catálogo:</strong> {{ nomeMotorPorId(modeloSelecionado.engine_type_id) }}</p>
+          <p>
+            <span v-if="modeloSelecionado.wingspan_m">Envergadura: {{ modeloSelecionado.wingspan_m }} m</span>
+            <span v-if="modeloSelecionado.length_m"> · Comprimento: {{ modeloSelecionado.length_m }} m</span>
+          </p>
+        </div>
+        <label>
           Tipo de aeronave
-          <input type="text" v-model="novo.aircraft_type" />
+          <input type="text" v-model="novo.aircraft_type" placeholder="Descrição livre, se necessário" />
         </label>
         <label>
           Tipo de motor
@@ -313,7 +329,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
+import { ref, onMounted, watch, onBeforeUnmount, computed } from 'vue';
 import QuadrantMapPicker from '@/components/QuadrantMapPicker.vue';
 import DataTable from '@/components/DataTable.vue';
 import LoadingState from '@/components/LoadingState.vue';
@@ -328,6 +344,7 @@ const colunas = [
   { titulo: 'Período', campo: 'periodo_label' },
   { titulo: 'Fase', campo: 'fase_nome' },
   { titulo: 'Dano', campo: 'dano_nome' },
+  { titulo: 'Aeronave', campo: 'aircraft_type' },
   { titulo: 'Piloto alertado', campo: 'pilot_alerted_label' },
   { titulo: 'Quase-colisão', campo: 'near_miss_label' },
   { titulo: 'Atrativo', campo: 'related_attractor_desc' },
@@ -343,6 +360,7 @@ const lookups = ref<any>({ fases_voo: [], classes_dano: [], visibilidade: [], ve
 const locais = ref<any[]>([]);
 const atrativos = ref<any[]>([]);
 const especies = ref<any[]>([]);
+const aeronaves = ref<any[]>([]);
 const quadrantes = ref<any[]>([]);
 const carregando = ref(false);
 const erro = ref<string | null>(null);
@@ -366,6 +384,7 @@ function criarEstadoNovo() {
     quantity: undefined as any,
     id_confidence: undefined as any,
     damage_id: undefined as any,
+    aircraft_model_id: null as any,
     engine_type_id: undefined as any,
     near_miss: false,
     pilot_alerted: false,
@@ -397,7 +416,25 @@ function criarEstadoNovo() {
   };
 }
 
+function aplicarModeloSelecionado(id: number) {
+  const modelo = aeronaves.value.find((item: any) => item.id === id);
+  if (!modelo) return;
+  novo.value.aircraft_type = `${modelo.manufacturer} ${modelo.model}`;
+  if (modelo.engine_type_id) {
+    novo.value.engine_type_id = modelo.engine_type_id;
+  }
+}
+
+function nomeMotorPorId(id?: number | null) {
+  if (!id) return '-';
+  return lookups.value.tipos_motor?.find((item: any) => item.id === id)?.name ?? '-';
+}
+
 const novo = ref<any>(criarEstadoNovo());
+const modeloSelecionado = computed(() => {
+  if (!novo.value.aircraft_model_id) return null;
+  return aeronaves.value.find((item: any) => item.id === novo.value.aircraft_model_id) ?? null;
+});
 const editandoId = ref<number | null>(null);
 const partesSelecionadas = ref<number[]>([]);
 const fotosArquivos = ref<File[]>([]);
@@ -508,6 +545,11 @@ async function salvar() {
     } else if (payload.photo_url) {
       payload.photo_url = (payload.photo_url as string).trim();
     }
+    if (payload.aircraft_model_id !== undefined && payload.aircraft_model_id !== null && payload.aircraft_model_id !== '') {
+      payload.aircraft_model_id = Number(payload.aircraft_model_id);
+    } else {
+      payload.aircraft_model_id = null;
+    }
     const corpo = montarCorpoComArquivo(payload);
     if (editandoId.value) {
       await api.put(`/api/colisoes/${editandoId.value}`, corpo);
@@ -561,6 +603,7 @@ async function editar(registro: any) {
     quantity: registro.quantity,
     id_confidence: registro.id_confidence,
     damage_id: registro.damage_id,
+    aircraft_model_id: registro.aircraft_model_id ?? null,
     engine_type_id: registro.engine_type_id,
     near_miss: !!registro.near_miss,
     pilot_alerted: !!registro.pilot_alerted,
@@ -608,6 +651,29 @@ async function editar(registro: any) {
 }
 
 watch(
+  () => novo.value.aircraft_model_id,
+  (valor) => {
+    if (valor === '' || valor === undefined) {
+      novo.value.aircraft_model_id = null;
+      return;
+    }
+    if (valor === null) {
+      return;
+    }
+    if (typeof valor === 'string') {
+      const convertido = Number(valor);
+      if (Number.isFinite(convertido)) {
+        novo.value.aircraft_model_id = convertido;
+      } else {
+        novo.value.aircraft_model_id = null;
+      }
+      return;
+    }
+    aplicarModeloSelecionado(valor);
+  }
+);
+
+watch(
   () => novo.value.airport_id,
   () => {
     carregarLocais();
@@ -638,6 +704,7 @@ onMounted(async () => {
   especies.value = cad.especies;
   lookups.value = cad.lookups;
   quadrantes.value = cad.quadrantes ?? [];
+  aeronaves.value = cad.aeronaves ?? [];
   const user = ApiService.getUser<any>();
   if (user?.aeroporto_id) {
     novo.value.airport_id = user.aeroporto_id;
@@ -670,5 +737,7 @@ select, input, textarea { padding: 0.45rem 0.5rem; border: 1px solid #cbd5f5; bo
 .campo-atraso { display: flex; gap: 1rem; align-items: center; font-size: .85rem; }
 .campo-atraso span { font-weight: 600; color: #0f172a; }
 .custos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.75rem; }
+.aeronave-resumo { font-size: 0.85rem; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem 0.75rem; }
+.aeronave-resumo p { margin: 0.15rem 0; }
 </style>
 

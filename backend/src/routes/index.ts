@@ -16,6 +16,7 @@ import { complianceRoutes } from './compliance';
 import { analyticsRoutes } from './analytics';
 import { usersRoutes } from './users';
 import { quadrantsRoutes } from './quadrants';
+import { aircraftModelsRoutes } from './aircraftModels';
 
 export async function registerRoutes(app: FastifyInstance) {
   await app.register(authRoutes);
@@ -33,6 +34,7 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(locationsRoutes);
   await app.register(teamsRoutes);
   await app.register(speciesRoutes);
+  await app.register(aircraftModelsRoutes);
   await app.register(movementsRoutes);
   await app.register(sightingsRoutes);
   await app.register(strikesRoutes);

@@ -173,34 +173,22 @@
             <thead>
               <tr>
                 <th>Mês</th>
-                <th>
-                  {{ relatorioMovimentos?.comparativos?.anoInicial?.ano ?? filtroMovimentos.anoInicial }}
-                </th>
-                <th>
-                  vs {{ relatorioMovimentos?.comparativos?.anoInicial?.ano_referencia ?? filtroMovimentos.anoInicial - 1 }}
-                </th>
-                <th>
-                  {{ relatorioMovimentos?.comparativos?.anoFinal?.ano ?? filtroMovimentos.anoFinal }}
-                </th>
-                <th>
-                  vs {{ relatorioMovimentos?.comparativos?.anoFinal?.ano_referencia ?? filtroMovimentos.anoFinal - 1 }}
-                </th>
+                <template v-for="comp in comparativoAnos" :key="`head-${comp.ano}`">
+                  <th>{{ comp.ano }}</th>
+                  <th>vs {{ comp.ano_referencia }}</th>
+                </template>
               </tr>
             </thead>
             <tbody>
               <tr v-for="linha in comparativoMeses" :key="`mov-${linha.mes}`">
                 <td>{{ linha.mesNome }}</td>
-                <td>{{ formatInt(linha.anoInicialTotal) }}</td>
-                <td>
-                  {{ linha.anoInicialVar !== null ? `${formatNumber(linha.anoInicialVar)} %` : '-' }}
-                </td>
-                <td>{{ formatInt(linha.anoFinalTotal) }}</td>
-                <td>
-                  {{ linha.anoFinalVar !== null ? `${formatNumber(linha.anoFinalVar)} %` : '-' }}
-                </td>
+                <template v-for="serie in linha.series" :key="`serie-${linha.mes}-${serie.ano}`">
+                  <td>{{ formatInt(serie.total) }}</td>
+                  <td>{{ serie.variacao !== null ? `${formatNumber(serie.variacao)} %` : '-' }}</td>
+                </template>
               </tr>
               <tr v-if="!comparativoMeses.length">
-                <td colspan="5">Sem dados para o intervalo informado.</td>
+                <td :colspan="comparativoColspan">Sem dados para o intervalo informado.</td>
               </tr>
             </tbody>
           </table>
@@ -526,27 +514,28 @@ const chartMovOptions = {
   }
 };
 
+const comparativoAnos = computed(() => {
+  const comps = relatorioMovimentos.value?.comparativos;
+  return Array.isArray(comps) ? comps : [];
+});
+
 const comparativoMeses = computed(() => {
-  if (!relatorioMovimentos.value?.comparativos) return [];
-  const comp = relatorioMovimentos.value.comparativos ?? {};
-  const inicial = comp.anoInicial?.meses ?? [];
-  const final = comp.anoFinal?.meses ?? [];
-  const mapIni = new Map(inicial.map((m: any) => [m.mes, m]));
-  const mapFim = new Map(final.map((m: any) => [m.mes, m]));
+  if (!comparativoAnos.value.length) return [];
   return NOMES_MESES.map((nome, idx) => {
     const mes = idx + 1;
-    const ini = mapIni.get(mes);
-    const fim = mapFim.get(mes);
-    return {
-      mes,
-      mesNome: nome,
-      anoInicialTotal: ini?.total_atual ?? 0,
-      anoInicialVar: ini?.variacao_pct ?? null,
-      anoFinalTotal: fim?.total_atual ?? 0,
-      anoFinalVar: fim?.variacao_pct ?? null
-    };
+    const series = comparativoAnos.value.map((comp: any) => {
+      const dadoMes = comp?.meses?.find((m: any) => m.mes === mes) ?? null;
+      return {
+        ano: comp.ano,
+        total: dadoMes?.total_atual ?? 0,
+        variacao: dadoMes?.variacao_pct ?? null
+      };
+    });
+    return { mes, mesNome: nome, series };
   });
 });
+
+const comparativoColspan = computed(() => 1 + comparativoAnos.value.length * 2);
 
 onMounted(async () => {
   await Promise.all([carregarFinanceiro(), carregarIncidentes(), carregarAeroportos()]);

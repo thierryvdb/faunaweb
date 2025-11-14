@@ -1,6 +1,92 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest } from 'fastify';
+import { MultipartFile } from '@fastify/multipart';
 import { z } from 'zod';
 import { db } from '../services/db';
+
+const NOTICE_ALLOWED_MIME = new Set([
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+]);
+const NOTICE_MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
+
+type NoticeAttachment = {
+  buffer: Buffer;
+  filename: string;
+  mimetype: string;
+  size: number;
+};
+
+async function bufferFromPart(part: MultipartFile) {
+  const chunks: Buffer[] = [];
+  for await (const chunk of part.file) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
+async function parseNoticePayload<T extends z.ZodTypeAny>(
+  request: FastifyRequest,
+  schema: T
+): Promise<{ body: z.infer<T>; attachment: NoticeAttachment | null }> {
+  if (!request.isMultipart()) {
+    const body = schema.parse(request.body ?? {});
+    return { body, attachment: null };
+  }
+
+  const parts = request.parts();
+  let payload: any = {};
+  let attachment: NoticeAttachment | null = null;
+
+  for await (const part of parts) {
+    if (part.type === 'file') {
+      if (part.fieldname !== 'anexo') {
+        continue;
+      }
+      if (!part.mimetype || !NOTICE_ALLOWED_MIME.has(part.mimetype)) {
+        throw request.server.httpErrors.badRequest('Formato de anexo inválido. Use PDF ou DOCX.');
+      }
+      const buffer = await bufferFromPart(part);
+      if (!buffer.length) {
+        continue;
+      }
+      if (buffer.length > NOTICE_MAX_FILE_BYTES) {
+        throw request.server.httpErrors.badRequest('Anexo excede o limite de 5MB.');
+      }
+      attachment = {
+        buffer,
+        filename: part.filename ?? 'anexo',
+        mimetype: part.mimetype,
+        size: buffer.length
+      };
+      continue;
+    }
+
+    if (part.fieldname === 'dados') {
+      try {
+        payload = JSON.parse(part.value);
+      } catch {
+        throw request.server.httpErrors.badRequest('Campo "dados" deve conter JSON válido.');
+      }
+    } else {
+      payload[part.fieldname] = part.value;
+    }
+  }
+
+  if (!Object.keys(payload).length) {
+    throw request.server.httpErrors.badRequest('Dados da comunicação não informados.');
+  }
+
+  const body = schema.parse(payload);
+  return { body, attachment };
+}
+
+async function salvarAnexoComunicado(client: any, noticeId: number, arquivo: NoticeAttachment) {
+  await client.query(
+    `INSERT INTO wildlife.fact_external_notice_file (notice_id, filename, mime_type, file_size, file_data)
+     VALUES ($1,$2,$3,$4,$5)`,
+    [noticeId, arquivo.filename, arquivo.mimetype, arquivo.size, arquivo.buffer]
+  );
+}
 
 const observationSchema = z.object({
   tipo: z.string(),
@@ -551,10 +637,16 @@ export async function complianceRoutes(app: FastifyInstance) {
     }
     const where = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : '';
     const { rows } = await db.query(
-      `SELECT n.*, f.municipality, a.icao_code
+      `SELECT n.*, f.municipality, a.icao_code, COALESCE(anx.has_attachment, FALSE) AS has_attachment
        FROM wildlife.fact_external_notice n
        JOIN wildlife.airport a ON a.airport_id = n.airport_id
        LEFT JOIN wildlife.fact_asa_focus f ON f.asa_focus_id = n.asa_focus_id
+       LEFT JOIN LATERAL (
+         SELECT TRUE AS has_attachment
+         FROM wildlife.fact_external_notice_file ffile
+         WHERE ffile.notice_id = n.notice_id
+         LIMIT 1
+       ) anx ON TRUE
        ${where}
        ORDER BY n.sent_at DESC NULLS LAST
        LIMIT 200`,
@@ -564,45 +656,70 @@ export async function complianceRoutes(app: FastifyInstance) {
   });
 
   app.post('/api/comunicados-externos', async (request, reply) => {
-    const body = noticeSchema.parse(request.body);
-    const { rows } = await db.query(
-      `INSERT INTO wildlife.fact_external_notice (
-        airport_id, asa_focus_id, target_entity, subject, protocol_code, status,
-        sent_at, response_due_at, response_received_at, notes
-      ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10
-      ) RETURNING notice_id AS id`,
-      [
-        body.airport_id,
-        body.asa_focus_id ?? null,
-        body.target_entity,
-        body.subject ?? null,
-        body.protocol_code ?? null,
-        body.status ?? null,
-        body.sent_at ?? null,
-        body.response_due_at ?? null,
-        body.response_received_at ?? null,
-        body.notes ?? null
-      ]
-    );
-    return reply.code(201).send({ id: rows[0].id });
+    const { body, attachment } = await parseNoticePayload(request, noticeSchema);
+    const criado = await db.transaction(async (client) => {
+      const { rows } = await client.query(
+        `INSERT INTO wildlife.fact_external_notice (
+          airport_id, asa_focus_id, target_entity, subject, protocol_code, status,
+          sent_at, response_due_at, response_received_at, notes
+        ) VALUES (
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10
+        ) RETURNING notice_id AS id`,
+        [
+          body.airport_id,
+          body.asa_focus_id ?? null,
+          body.target_entity,
+          body.subject ?? null,
+          body.protocol_code ?? null,
+          body.status ?? null,
+          body.sent_at ?? null,
+          body.response_due_at ?? null,
+          body.response_received_at ?? null,
+          body.notes ?? null
+        ]
+      );
+      const id = rows[0].id as number;
+      if (attachment) {
+        await salvarAnexoComunicado(client, id, attachment);
+      }
+      return id;
+    });
+    return reply.code(201).send({ id: criado });
   });
 
   app.put('/api/comunicados-externos/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
-    const body = noticeSchema.partial().parse(request.body ?? {});
+    const { body, attachment } = await parseNoticePayload(request, noticeSchema.partial());
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
-    if (!pares.length) {
+    if (!pares.length && !attachment) {
       return reply.code(400).send({ mensagem: 'Nenhum campo informado' });
     }
-    const sets = pares.map(([campo], idx) => `${campo}=$${idx + 1}`);
-    const valores = pares.map(([, valor]) => valor);
-    valores.push(id);
-    const { rowCount } = await db.query(
-      `UPDATE wildlife.fact_external_notice SET ${sets.join(', ')}, updated_at=now() WHERE notice_id=$${valores.length}`,
-      valores
-    );
-    if (!rowCount) {
+
+    const atualizado = await db.transaction(async (client) => {
+      const existente = await client.query('SELECT notice_id FROM wildlife.fact_external_notice WHERE notice_id=$1 FOR UPDATE', [id]);
+      if (!existente.rowCount) {
+        return false;
+      }
+
+      if (pares.length) {
+        const sets = pares.map(([campo], idx) => `${campo}=$${idx + 1}`);
+        const valores = pares.map(([, valor]) => valor);
+        valores.push(id);
+        await client.query(
+          `UPDATE wildlife.fact_external_notice SET ${sets.join(', ')}, updated_at=now() WHERE notice_id=$${pares.length + 1}`,
+          valores
+        );
+      }
+
+      if (attachment) {
+        await client.query('DELETE FROM wildlife.fact_external_notice_file WHERE notice_id=$1', [id]);
+        await salvarAnexoComunicado(client, id, attachment);
+      }
+
+      return true;
+    });
+
+    if (!atualizado) {
       return reply.code(404).send({ mensagem: 'Comunicado nao encontrado' });
     }
     return { id };
@@ -612,6 +729,25 @@ export async function complianceRoutes(app: FastifyInstance) {
     const { id } = idParams.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_external_notice WHERE notice_id=$1', [id]);
     return reply.code(204).send();
+  });
+
+  app.get('/api/comunicados-externos/:id/anexo', async (request, reply) => {
+    const { id } = idParams.parse(request.params);
+    const { rows } = await db.query(
+      `SELECT filename, mime_type, file_data
+         FROM wildlife.fact_external_notice_file
+        WHERE notice_id=$1
+        ORDER BY uploaded_at DESC
+        LIMIT 1`,
+      [id]
+    );
+    if (!rows.length) {
+      return reply.code(404).send({ mensagem: 'Anexo nao encontrado' });
+    }
+    const arquivo = rows[0];
+    reply.header('Content-Type', arquivo.mime_type);
+    reply.header('Content-Disposition', `attachment; filename="${arquivo.filename}"`);
+    return reply.send(arquivo.file_data);
   });
 
   // Treinamentos

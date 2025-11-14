@@ -186,9 +186,13 @@ export const ApiService = {
     const { data } = await api.get('/api/comunicados-externos', { params });
     return data;
   },
-  async criarComunicadoExterno(payload: Record<string, any>) {
-    const { data } = await api.post('/api/comunicados-externos', payload);
+  async criarComunicadoExterno(payload: Record<string, any> | FormData) {
+    const config = payload instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined;
+    const { data } = await api.post('/api/comunicados-externos', payload, config);
     return data;
+  },
+  async baixarAnexoComunicado(id: number) {
+    return api.get(`/api/comunicados-externos/${id}/anexo`, { responseType: 'blob' });
   },
   async getTreinamentos(params?: Record<string, any>) {
     const { data } = await api.get('/api/treinamentos-fauna', { params });
@@ -272,6 +276,21 @@ export const ApiService = {
     const { data } = await api.get('/api/quadrantes');
     return data;
   },
+  async getAeronaves() {
+    const { data } = await api.get('/api/aeronaves');
+    return data;
+  },
+  async criarAeronave(payload: Record<string, any>) {
+    const { data } = await api.post('/api/aeronaves', payload);
+    return data;
+  },
+  async atualizarAeronave(id: number, payload: Record<string, any>) {
+    const { data } = await api.put(`/api/aeronaves/${id}`, payload);
+    return data;
+  },
+  async removerAeronave(id: number) {
+    await api.delete(`/api/aeronaves/${id}`);
+  },
   async criarQuadrante(payload: { code: string; description?: string }) {
     const { data } = await api.post('/api/quadrantes', payload);
     return data;
@@ -311,17 +330,19 @@ export const ApiService = {
     return data;
   },
   async getCadastros() {
-    const [aeroportos, especies, lookups, quadrantes] = await Promise.all([
+    const [aeroportos, especies, lookups, quadrantes, aeronaves] = await Promise.all([
       api.get('/api/aeroportos'),
       api.get('/api/especies'),
       api.get('/api/lookups'),
-      api.get('/api/quadrantes')
+      api.get('/api/quadrantes'),
+      api.get('/api/aeronaves')
     ]);
     return {
       aeroportos: aeroportos.data,
       especies: especies.data,
       lookups: lookups.data,
-      quadrantes: quadrantes.data
+      quadrantes: quadrantes.data,
+      aeronaves: aeronaves.data
     };
   }
 };

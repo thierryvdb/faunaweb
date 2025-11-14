@@ -3,6 +3,8 @@ import { z } from 'zod';
 import PDFDocument from 'pdfkit';
 import { Document, HeadingLevel, ImageRun, Packer, Paragraph } from 'docx';
 import sharp from 'sharp';
+import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
+import { ChartConfiguration } from 'chart.js';
 import { db } from '../services/db';
 
 const periodoSchema = z.object({
@@ -168,10 +170,10 @@ export async function reportsRoutes(app: FastifyInstance) {
       };
     };
 
-    const comparativos = {
-      anoInicial: montarComparativo(filtros.anoInicial),
-      anoFinal: montarComparativo(filtros.anoFinal)
-    };
+    const comparativos = [];
+    for (let ano = filtros.anoInicial; ano <= filtros.anoFinal; ano++) {
+      comparativos.push(montarComparativo(ano));
+    }
 
     return {
       periodo: {
@@ -402,6 +404,14 @@ function bufferParaBase64(buffer: Buffer, mime?: string | null) {
 
 const REPORT_IMAGE_WIDTH = 800;
 const REPORT_IMAGE_HEIGHT = 600;
+const REPORT_CHART_WIDTH = 800;
+const REPORT_CHART_HEIGHT = 400;
+
+const graficoColisoesRenderer = new ChartJSNodeCanvas({
+  width: REPORT_CHART_WIDTH,
+  height: REPORT_CHART_HEIGHT,
+  backgroundColour: 'white'
+});
 
 async function prepararImagemParaRelatorio(foto: FotoRelatorio) {
   if (!foto?.blob) return null;
@@ -418,6 +428,54 @@ async function prepararImagemParaRelatorio(foto: FotoRelatorio) {
   }
 }
 
+function gerarSerieColisoesPorDia(colisoes: ColisaoImagem[]) {
+  const mapa = new Map<string, number>();
+  for (const item of colisoes) {
+    if (!item.date_utc) continue;
+    mapa.set(item.date_utc, (mapa.get(item.date_utc) ?? 0) + 1);
+  }
+  return Array.from(mapa.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([data, total]) => ({ data, total }));
+}
+
+async function gerarGraficoColisoes(colisoes: ColisaoImagem[]) {
+  const serie = gerarSerieColisoesPorDia(colisoes);
+  if (!serie.length) return null;
+  const labels = serie.map((p) => p.data);
+  const valores = serie.map((p) => p.total);
+  const configuracao: ChartConfiguration<'bar'> = {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Colisões',
+          data: valores,
+          backgroundColor: '#0ea5e9'
+        }
+      ]
+    },
+    options: {
+      responsive: false,
+      plugins: {
+        legend: { display: false },
+        title: { display: false }
+      },
+      scales: {
+        x: {
+          ticks: { font: { size: 10 } }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { precision: 0 }
+        }
+      }
+    }
+  };
+  return graficoColisoesRenderer.renderToBuffer(configuracao);
+}
+
 async function gerarDocxColisoes(colisoes: ColisaoImagem[], periodo: { inicio: string; fim: string }) {
   const children: Paragraph[] = [
     new Paragraph({
@@ -427,6 +485,7 @@ async function gerarDocxColisoes(colisoes: ColisaoImagem[], periodo: { inicio: s
     new Paragraph(`Periodo: ${periodo.inicio} a ${periodo.fim}`),
     new Paragraph(' ')
   ];
+  const graficoBuffer = await gerarGraficoColisoes(colisoes);
 
   for (const item of colisoes) {
     children.push(
@@ -479,6 +538,25 @@ async function gerarDocxColisoes(colisoes: ColisaoImagem[], periodo: { inicio: s
     children.push(new Paragraph(' '));
   }
 
+  if (graficoBuffer) {
+    children.push(
+      new Paragraph({
+        text: 'Gráfico de colisões por dia',
+        heading: HeadingLevel.HEADING_2
+      })
+    );
+    children.push(
+      new Paragraph({
+        children: [
+          new ImageRun({
+            data: graficoBuffer,
+            transformation: { width: REPORT_CHART_WIDTH, height: REPORT_CHART_HEIGHT }
+          })
+        ]
+      })
+    );
+  }
+
   const doc = new Document({
     sections: [
       {
@@ -501,6 +579,7 @@ async function gerarPdfColisoes(colisoes: ColisaoImagem[], periodo: { inicio: st
       doc.fontSize(18).text('Relatorio de colisoes com imagens', { align: 'center' });
       doc.moveDown();
       doc.fontSize(12).text(`Periodo: ${periodo.inicio} a ${periodo.fim}`);
+      const graficoBuffer = await gerarGraficoColisoes(colisoes);
 
       for (let index = 0; index < colisoes.length; index++) {
         const item = colisoes[index];
@@ -549,6 +628,16 @@ async function gerarPdfColisoes(colisoes: ColisaoImagem[], periodo: { inicio: st
           doc.text(`Foto (URL): ${item.photo_url}`);
         } else {
           doc.text('Sem imagem fornecida.');
+        }
+      }
+      if (graficoBuffer) {
+        doc.addPage();
+        doc.fontSize(14).text('Gráfico de colisões por dia', { underline: true });
+        doc.moveDown();
+        try {
+          doc.image(graficoBuffer, { fit: [REPORT_CHART_WIDTH, REPORT_CHART_HEIGHT], align: 'center' });
+        } catch {
+          doc.text('Nao foi possivel exibir o grafico.');
         }
       }
       doc.end();

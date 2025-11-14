@@ -34,7 +34,16 @@
     </header>
 
     <LoadingState :carregando="carregando" :erro="erro">
-      <p class="periodo" v-if="periodo">Período retornado: {{ periodo.inicio }} até {{ periodo.fim }} — {{ dados.length }} registros</p>
+      <p class="periodo" v-if="periodo">Período retornado: {{ periodo.inicio }} até {{ periodo.fim }} – {{ dados.length }} registros</p>
+      <section v-if="chartData" class="grafico-bloco">
+        <div class="grafico-head">
+          <h3>Colisões por dia</h3>
+          <span>{{ totalRegistros }} registros</span>
+        </div>
+        <div class="grafico-wrapper">
+          <Bar :data="chartData" :options="chartOptions" />
+        </div>
+      </section>
       <div v-if="dados.length" class="grid-cards">
         <article v-for="item in dados" :key="item.id" class="card">
           <header>
@@ -68,13 +77,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import LoadingState from '@/components/LoadingState.vue';
 import { ApiService } from '@/services/api';
+import { Bar } from 'vue-chartjs';
+import { Chart, registerables } from 'chart.js';
+
+Chart.register(...registerables);
 
 const hoje = new Date();
 const fimPadrao = hoje.toISOString().slice(0, 10);
 const inicioPadrao = new Date(hoje.getFullYear(), hoje.getMonth() - 1, hoje.getDate()).toISOString().slice(0, 10);
+
+type ItemRelatorio = {
+  id: number;
+  date_utc: string;
+  time_local?: string | null;
+  event_type?: string | null;
+  aeroporto?: string | null;
+  airport_id: number;
+  location_nome?: string | null;
+  location_id: number;
+  especie?: string | null;
+  dano?: string | null;
+  notes?: string | null;
+  foto_base64?: string | null;
+  fotos_base64?: string[];
+  photo_url?: string | null;
+};
 
 const filtros = ref<{ airportId: string | number | ''; inicio: string; fim: string }>({
   airportId: '',
@@ -82,11 +112,50 @@ const filtros = ref<{ airportId: string | number | ''; inicio: string; fim: stri
   fim: fimPadrao
 });
 const aeroportos = ref<any[]>([]);
-const dados = ref<any[]>([]);
+const dados = ref<ItemRelatorio[]>([]);
 const periodo = ref<{ inicio: string; fim: string } | null>(null);
 const carregando = ref(false);
 const exportando = ref(false);
 const erro = ref<string | null>(null);
+
+const totalRegistros = computed(() => dados.value.length);
+
+function montarSerieDiaria() {
+  const mapa = new Map<string, number>();
+  for (const item of dados.value) {
+    if (!item.date_utc) continue;
+    mapa.set(item.date_utc, (mapa.get(item.date_utc) ?? 0) + 1);
+  }
+  return Array.from(mapa.entries()).sort(([a], [b]) => a.localeCompare(b));
+}
+
+const chartData = computed(() => {
+  const serie = montarSerieDiaria();
+  if (!serie.length) return null;
+  return {
+    labels: serie.map(([data]) => data),
+    datasets: [
+      {
+        label: 'Colisões',
+        data: serie.map(([, total]) => total),
+        backgroundColor: '#0ea5e9',
+        borderRadius: 6
+      }
+    ]
+  };
+});
+
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: {
+    y: {
+      beginAtZero: true,
+      ticks: { precision: 0 }
+    }
+  }
+};
 
 async function carregar() {
   carregando.value = true;
@@ -100,7 +169,7 @@ async function carregar() {
       params.airportId = filtros.value.airportId;
     }
     const resposta = await ApiService.getRelatorioColisoesImagens(params);
-    dados.value = resposta.dados ?? [];
+    dados.value = (resposta.dados ?? []) as ItemRelatorio[];
     periodo.value = resposta.periodo ?? null;
   } catch (e: any) {
     erro.value = e?.message ?? 'Falha ao buscar o relatório';
@@ -167,11 +236,16 @@ onMounted(async () => {
 .filtros label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; }
 .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 6px; background: #0f172a; color: #fff; cursor: pointer; }
 .btn-secondary { background: #475569; }
-.grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
-.card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 0.4rem; }
-.card header { display: flex; justify-content: space-between; font-weight: 600; }
-.galeria-imagens { display: flex; flex-direction: column; gap: 0.75rem; }
-.imagem img { width: 100%; border-radius: 10px; border: 1px solid #dbeafe; object-fit: cover; max-height: 240px; }
+.grafico-bloco { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+.grafico-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.grafico-head h3 { margin: 0; font-size: 1rem; }
+.grafico-head span { font-size: 0.85rem; color: #475569; }
+.grafico-wrapper { height: 220px; }
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.9rem; }
+.card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.85rem; }
+.card header { display: flex; flex-direction: column; gap: 0.15rem; font-weight: 600; }
+.galeria-imagens { display: flex; flex-direction: column; gap: 0.5rem; }
+.imagem img { width: 100%; border-radius: 10px; border: 1px solid #dbeafe; object-fit: cover; max-height: 160px; }
 .sem-dados { text-align: center; color: #475569; }
 .periodo { font-size: 0.9rem; color: #475569; }
 @media (max-width: 640px) {
