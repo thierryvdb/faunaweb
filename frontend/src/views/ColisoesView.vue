@@ -2,7 +2,7 @@
   <div class="grid" style="grid-template-columns: 3fr 2fr; gap: 1.5rem; flex-wrap: wrap;">
     <div class="card">
       <header class="cabecalho">
-        <h3>Colis├╡es registradas</h3>
+        <h3>Colisões registradas</h3>
         <button class="btn btn-secondary" @click="carregar">Atualizar</button>
       </header>
       <div class="filtros">
@@ -23,19 +23,19 @@
         <button class="btn btn-primary" @click="carregar">Filtrar</button>
       </div>
       <LoadingState :carregando="carregando" :erro="erro">
-        <DataTable :colunas="colunas" :dados="lista" vazio="Sem colis├╡es">
+        <DataTable :colunas="colunas" :dados="lista" vazio="Sem colisões">
           <template #date_br="{ valor }">{{ valor ?? '-' }}</template>
           <template #location_nome="{ valor }">{{ valor ?? '-' }}</template>
           <template #fase_nome="{ valor }">{{ valor ?? '-' }}</template>
           <template #dano_nome="{ valor }">{{ valor ?? '-' }}</template>
           <template #evento_label="{ linha }">
-            {{ linha ? (linha.event_type === 'colisao_outro_animal' ? 'Colis├úo (outro animal)' : (linha.event_type === 'quase_colisao' ? 'Quase-colis├úo' : 'Colis├úo (ave)')) : '-' }}
+            {{ linha ? (linha.event_type === 'colisao_outro_animal' ? 'Colisão (outro animal)' : (linha.event_type === 'quase_colisao' ? 'Quase-colisão' : 'Colisão (ave)')) : '-' }}
           </template>
           <template #periodo_label="{ linha }">
             {{ lookups.periodos_dia.find((p: any) => p.id === linha.time_period_id)?.name ?? '-' }}
           </template>
-          <template #pilot_alerted_label="{ linha }">{{ linha.pilot_alerted == null ? '-' : (linha.pilot_alerted ? 'Sim' : 'N├úo') }}</template>
-          <template #near_miss_label="{ linha }">{{ linha.near_miss == null ? '-' : (linha.near_miss ? 'Sim' : 'N├úo') }}</template>
+          <template #pilot_alerted_label="{ linha }">{{ linha.pilot_alerted == null ? '-' : (linha.pilot_alerted ? 'Sim' : 'Não') }}</template>
+          <template #near_miss_label="{ linha }">{{ linha.near_miss == null ? '-' : (linha.near_miss ? 'Sim' : 'Não') }}</template>
           <template #foto_info="{ valor }">{{ valor ?? '-' }}</template>
           <template #acoes="{ linha }">
             <button class="btn btn-secondary" @click="editar(linha)">Editar</button>
@@ -45,7 +45,7 @@
     </div>
     <div class="card">
       <header class="cabecalho">
-        <h3>{{ editandoId ? 'Editar colis├úo' : 'Registrar colis├úo' }}</h3>
+        <h3>{{ editandoId ? 'Editar colisão' : 'Registrar colisão' }}</h3>
         <button v-if="editandoId" class="btn btn-secondary" type="button" @click="cancelarEdicao">Cancelar</button>
       </header>
       <form class="form" @submit.prevent="salvar">
@@ -92,7 +92,7 @@
           <QuadrantMapPicker :selected="novo.quadrant ?? ''" @select="aplicarQuadrante" />
         </div>
         <label>
-          Per├¡odo
+          Período
           <select v-model.number="novo.time_period_id">
             <option :value="undefined">Selecione</option>
             <option v-for="p in lookups.periodos_dia" :key="p.id" :value="p.id">{{ p.name }}</option>
@@ -101,9 +101,9 @@
         <label>
           Tipo de evento
           <select v-model="novo.event_type">
-            <option value="colisao_ave">Colis├úo com ave</option>
-            <option value="colisao_outro_animal">Colis├úo com outro animal</option>
-            <option value="quase_colisao">Quase-colis├úo</option>
+            <option value="colisao_ave">Colisão com ave</option>
+            <option value="colisao_outro_animal">Colisão com outro animal</option>
+            <option value="quase_colisao">Quase-colisão</option>
           </select>
         </label>
         <label>
@@ -128,16 +128,16 @@
           </select>
         </label>
         <label>
-          Precipita├º├úo
+          Precipitação
           <select v-model.number="novo.precip_id">
             <option :value="undefined">Selecione</option>
             <option v-for="p in lookups.precipitacao" :key="p.id" :value="p.id">{{ p.name }}</option>
           </select>
         </label>
         <label>
-          Esp├⌐cie
+          Espécie
           <select v-model.number="novo.species_id">
-            <option :value="undefined">N├úo identificada</option>
+            <option :value="undefined">Não identificada</option>
             <option v-for="e in especies" :key="e.id" :value="e.id">{{ e.common_name }}</option>
           </select>
         </label>
@@ -146,13 +146,13 @@
           <input type="number" min="1" v-model.number="novo.quantity" />
         </label>
         <label>
-          Confian├ºa na identifica├º├úo
+          Confiança na identificação
           <select v-model="novo.id_confidence">
             <option :value="undefined">Selecione</option>
             <option value="Alta">Alta</option>
-            <option value="Media">M├⌐dia</option>
+            <option value="Media">Média</option>
             <option value="Baixa">Baixa</option>
-            <option value="Nao_identificada">N├úo identificada</option>
+            <option value="Nao_identificada">Não identificada</option>
           </select>
         </label>
         <label>
@@ -171,11 +171,11 @@
           <input type="number" min="0" step="1" v-model.number="novo.aircraft_speed_kt" />
         </label>
         <label>
-          Consequ├¬ncia operacional
+          Consequência operacional
           <input type="text" v-model="novo.operational_consequence" />
         </label>
         <label>
-          Danos vis├¡veis (notas)
+          Danos visíveis (notas)
           <input type="text" v-model="novo.visible_damage_notes" />
         </label>
         <label>
@@ -189,11 +189,11 @@
           <input type="checkbox" v-model="novo.pilot_alerted" />
         </label>
         <label>
-          Quase-colis├úo
+          Quase-colisão
           <input type="checkbox" v-model="novo.near_miss" />
         </label>
         <label>
-          Matr├¡cula da aeronave
+          Matrícula da aeronave
           <input type="text" v-model="novo.aircraft_registration" />
         </label>
         <label>
@@ -212,11 +212,11 @@
           <input type="text" v-model="novo.investigated_by" />
         </label>
         <label>
-          Carca├ºa encontrada
+          Carcaça encontrada
           <input type="checkbox" v-model="novo.carcass_found" />
         </label>
         <label>
-          A├º├╡es tomadas
+          Ações tomadas
           <textarea rows="2" v-model="novo.actions_taken"></textarea>
         </label>
         <div class="foto-section">
@@ -235,20 +235,20 @@
             </div>
             <div v-if="fotosPreview.length" class="fotos-preview-list">
               <div class="foto-thumb-item" v-for="(preview, idx) in fotosPreview" :key="preview">
-                <img :src="preview" alt="Pr├⌐-visualiza├º├úo" />
+                <img :src="preview" alt="Pré-visualização" />
                 <button class="btn btn-secondary" type="button" @click="removerFoto(idx)">Remover</button>
               </div>
             </div>
           </div>
           <div v-else class="foto-url">
             <input type="url" v-model="novo.photo_url" placeholder="https://exemplo.com/foto.jpg" />
-            <small>Use links HTTPS acess├¡veis externamente.</small>
+            <small>Use links HTTPS acessíveis externamente.</small>
           </div>
         </div>
         <div class="campo-atraso">
           <span>Causou atraso no voo?</span>
           <label><input type="radio" value="sim" v-model="flightDelayChoice" /> Sim</label>
-          <label><input type="radio" value="nao" v-model="flightDelayChoice" /> N├úo</label>
+          <label><input type="radio" value="nao" v-model="flightDelayChoice" /> Não</label>
         </div>
         <label v-if="flightDelayChoice === 'sim'">
           Tempo de atraso (minutos)
@@ -269,7 +269,7 @@
           </label>
         </div>
         <label>
-          Dentro do aer├│dromo
+          Dentro do aeródromo
           <input type="checkbox" v-model="novo.inside_aerodrome" />
         </label>
         <label>
@@ -280,7 +280,7 @@
           </select>
         </label>
         <label>
-          Notas de gest├úo de risco
+          Notas de gestão de risco
           <textarea rows="2" v-model="novo.risk_mgmt_notes"></textarea>
         </label>
         <label>
@@ -325,15 +325,15 @@ const colunas = [
   { titulo: 'Hora', campo: 'time_local' },
   { titulo: 'Local', campo: 'location_nome' },
   { titulo: 'Evento', campo: 'evento_label' },
-  { titulo: 'Per├¡odo', campo: 'periodo_label' },
+  { titulo: 'Período', campo: 'periodo_label' },
   { titulo: 'Fase', campo: 'fase_nome' },
   { titulo: 'Dano', campo: 'dano_nome' },
   { titulo: 'Piloto alertado', campo: 'pilot_alerted_label' },
-  { titulo: 'Quase-colis├úo', campo: 'near_miss_label' },
+  { titulo: 'Quase-colisão', campo: 'near_miss_label' },
   { titulo: 'Atrativo', campo: 'related_attractor_desc' },
   { titulo: 'Foto', campo: 'foto_info' },
   { titulo: 'Notas', campo: 'notes' },
-  { titulo: 'A├º├╡es', campo: 'acoes' }
+  { titulo: 'Ações', campo: 'acoes' }
 ];
 
 const filtros = ref<{ airportId?: number; fase?: number }>({});
@@ -468,17 +468,17 @@ async function carregar() {
       dano_nome: lookups.value.classes_dano.find((d: any) => d.id === item.damage_id)?.name ?? null,
       evento_label:
         item.event_type === 'colisao_outro_animal'
-          ? 'Colis├úo (outro animal)'
+          ? 'Colisão (outro animal)'
           : item.event_type === 'quase_colisao'
-            ? 'Quase-colis├úo'
-            : 'Colis├úo (ave)',
+            ? 'Quase-colisão'
+            : 'Colisão (ave)',
       periodo_label: lookups.value.periodos_dia.find((p: any) => p.id === item.time_period_id)?.name ?? null,
-      pilot_alerted_label: item.pilot_alerted == null ? null : item.pilot_alerted ? 'Sim' : 'N├úo',
-      near_miss_label: item.near_miss == null ? null : item.near_miss ? 'Sim' : 'N├úo',
+      pilot_alerted_label: item.pilot_alerted == null ? null : item.pilot_alerted ? 'Sim' : 'Não',
+      near_miss_label: item.near_miss == null ? null : item.near_miss ? 'Sim' : 'Não',
       foto_info: item.photo_upload_disponivel ? 'Arquivo' : item.photo_url ? 'URL' : '-'
     }));
   } catch (e: any) {
-    erro.value = e?.message ?? 'Falha ao buscar colis├╡es';
+    erro.value = e?.message ?? 'Falha ao buscar colisões';
   } finally {
     carregando.value = false;
   }
