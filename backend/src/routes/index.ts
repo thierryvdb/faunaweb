@@ -28,21 +28,33 @@ export async function registerRoutes(app: FastifyInstance) {
     await app.authenticate(request, reply);
   });
 
-  await app.register(lookupsRoutes);
-  await app.register(quadrantsRoutes);
-  await app.register(airportsRoutes);
-  await app.register(locationsRoutes);
-  await app.register(teamsRoutes);
-  await app.register(speciesRoutes);
-  await app.register(aircraftModelsRoutes);
-  await app.register(movementsRoutes);
-  await app.register(sightingsRoutes);
-  await app.register(strikesRoutes);
-  await app.register(controlActionsRoutes);
-  await app.register(attractorsRoutes);
-  await app.register(kpisRoutes);
-  await app.register(reportsRoutes);
-  await app.register(complianceRoutes);
-  await app.register(analyticsRoutes);
-  await app.register(usersRoutes);
+  const plugins = [
+    lookupsRoutes,
+    quadrantsRoutes,
+    airportsRoutes,
+    locationsRoutes,
+    teamsRoutes,
+    speciesRoutes,
+    aircraftModelsRoutes,
+    movementsRoutes,
+    sightingsRoutes,
+    strikesRoutes,
+    controlActionsRoutes,
+    attractorsRoutes,
+    kpisRoutes,
+    reportsRoutes,
+    complianceRoutes,
+    analyticsRoutes,
+    usersRoutes
+  ];
+
+  plugins.forEach((plugin, idx) => {
+    if (typeof plugin !== 'function') {
+      throw new Error(`Plugin na posição ${idx} é inválido: ${plugin}`);
+    }
+  });
+
+  for (const plugin of plugins) {
+    await app.register(plugin);
+  }
 }
