@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npm run dev:*)",
       "Bash(node -e \"console.log(Object.keys(require(''./src/routes/lookups.ts'')))\")",
-      "Bash(node --loader tsx:*)"
+      "Bash(node --loader tsx:*)",
+      "Bash(npm install:*)",
+      "Bash(test:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
