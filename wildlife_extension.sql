@@ -508,7 +508,7 @@ FROM (VALUES
   ('Urubu-de-cabeça-preta','Coragyps atratus','Aves','medio', 1500.00,'Necrófago; alto risco em resíduos e carcaças'),
   ('Carcará','Caracara plancus','Aves','medio', 1200.00,'Aproveita carcaças; frequente em áreas abertas'),
   ('Quero-quero','Vanellus chilensis','Aves','pequeno', 300.00,'Territorial; comum em gramados baixos'),
-  ('Garça-branca-grande','Ardea alba','Aves','medio', 1000.00,'Atrativa por lâminas d\'água/drenagem'),
+  ('Garça-branca-grande','Ardea alba','Aves','medio', 1000.00,'Atrativa por lâminas d''água/drenagem'),
   ('Garça-vaqueira','Bubulcus ibis','Aves','pequeno', 350.00,'Associa-se a gramados e insetos'),
   ('Pomba-asa-branca','Patagioenas picazuro','Aves','pequeno', 250.00,'Granívora; bandos'),
   ('Andorinha-pequena-de-casa','Pygochelidon cyanoleuca','Aves','muito_peq', 18.00,'Ágil; atividade crepuscular/diurna'),
