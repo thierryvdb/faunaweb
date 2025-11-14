@@ -545,30 +545,30 @@ onMounted(async () => {
 
 <style scoped>
 .painel { display: flex; flex-direction: column; gap: 2rem; }
-.bloco { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+.bloco { background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
 .bloco-topo { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .filtros { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
-.filtros label { display: flex; flex-direction: column; gap: .25rem; font-size: .9rem; }
-.btn { padding: .55rem 1.2rem; border: none; border-radius: 6px; background: #0f172a; color: #fff; cursor: pointer; }
-.btn-secondary { background: #475569; }
-.tabela table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-.tabela th, .tabela td { border-bottom: 1px solid #e5e7eb; padding: .6rem; text-align: left; }
-.tabela th { background: #f8fafc; }
+.filtros label { display: flex; flex-direction: column; gap: .25rem; font-size: .9rem; color: var(--color-text-primary); }
+.btn { padding: .55rem 1.2rem; border: none; border-radius: 6px; background: var(--color-btn-secondary-bg); color: var(--color-btn-secondary-text); cursor: pointer; }
+.btn-secondary { background: var(--color-btn-secondary-bg); color: var(--color-btn-secondary-text); }
+.tabela table { width: 100%; border-collapse: collapse; font-size: .9rem; color: var(--color-text-primary); }
+.tabela th, .tabela td { border-bottom: 1px solid var(--color-border); padding: .6rem; text-align: left; }
+.tabela th { background: var(--color-bg-secondary); color: var(--color-text-primary); }
 .tabela.scroll { overflow-x: auto; }
 .grid-analise { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; }
-.grid-analise h3 { margin-bottom: .35rem; font-size: 1rem; }
-.grid-analise ul { margin: 0; padding-left: 1.1rem; font-size: .9rem; color: #0f172a; }
+.grid-analise h3 { margin-bottom: .35rem; font-size: 1rem; color: var(--color-text-primary); }
+.grid-analise ul { margin: 0; padding-left: 1.1rem; font-size: .9rem; color: var(--color-text-primary); }
 .grid-mov { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
-.card-mov { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1rem; }
-.card-mov h3 { margin: 0 0 .5rem; }
-.card-mov table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-.card-mov th, .card-mov td { border-bottom: 1px solid #e2e8f0; padding: .35rem; text-align: left; }
-.card-mov th { background: #eef2ff; }
+.card-mov { background: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: 12px; padding: 1rem; }
+.card-mov h3 { margin: 0 0 .5rem; color: var(--color-text-primary); }
+.card-mov table { width: 100%; border-collapse: collapse; font-size: .85rem; color: var(--color-text-primary); }
+.card-mov th, .card-mov td { border-bottom: 1px solid var(--color-border); padding: .35rem; text-align: left; }
+.card-mov th { background: var(--color-bg-primary); color: var(--color-text-primary); }
 .erro { color: #b91c1c; }
-.periodo { font-size: .9rem; color: #475569; }
+.periodo { font-size: .9rem; color: var(--color-text-secondary); }
 .colisoes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
-.colisao-header { display: flex; justify-content: space-between; font-size: .9rem; }
-.foto-thumb { margin-top: .5rem; display: flex; flex-direction: column; gap: .35rem; font-size: .85rem; }
-.foto-thumb img { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; border: 1px solid #dbeafe; }
+.colisao-header { display: flex; justify-content: space-between; font-size: .9rem; color: var(--color-text-primary); }
+.foto-thumb { margin-top: .5rem; display: flex; flex-direction: column; gap: .35rem; font-size: .85rem; color: var(--color-text-secondary); }
+.foto-thumb img { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; border: 1px solid var(--color-border); }
 .grafico-colisoes { margin-top: 1rem; }
 </style>

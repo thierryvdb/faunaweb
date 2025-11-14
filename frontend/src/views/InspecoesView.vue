@@ -482,18 +482,18 @@ onMounted(async () => {
 
 <style scoped>
 .painel { display: flex; flex-direction: column; gap: 2rem; }
-.bloco { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+.bloco { background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
 .bloco-topo { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .filtros { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
-.grid label { display: flex; flex-direction: column; gap: .35rem; font-size: .9rem; }
-.grid textarea, .grid input, .grid select { padding: .45rem .6rem; border: 1px solid #cbd5f5; border-radius: 6px; }
+.grid label { display: flex; flex-direction: column; gap: .35rem; font-size: .9rem; color: var(--color-text-primary); }
+.grid textarea, .grid input, .grid select { padding: .45rem .6rem; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-bg-card); color: var(--color-text-primary); }
 .grid .wide { grid-column: span 2; }
-.btn { padding: .55rem 1.2rem; border: none; border-radius: 6px; background: #0f172a; color: #fff; cursor: pointer; }
-.btn.principal { background: #0ea5e9; }
-.tabela table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-.tabela th, .tabela td { border-bottom: 1px solid #e5e7eb; padding: .6rem; vertical-align: top; }
-.tabela th { text-align: left; background: #f8fafc; }
+.btn { padding: .55rem 1.2rem; border: none; border-radius: 6px; background: var(--color-btn-secondary-bg); color: var(--color-btn-secondary-text); cursor: pointer; }
+.btn.principal { background: var(--color-primary); color: #fff; }
+.tabela table { width: 100%; border-collapse: collapse; font-size: .9rem; color: var(--color-text-primary); }
+.tabela th, .tabela td { border-bottom: 1px solid var(--color-border); padding: .6rem; vertical-align: top; }
+.tabela th { text-align: left; background: var(--color-bg-secondary); color: var(--color-text-primary); }
 @media (max-width: 768px) {
   .grid .wide { grid-column: span 1; }
 }
