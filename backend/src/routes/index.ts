@@ -51,11 +51,11 @@ export async function registerRoutes(app: FastifyInstance) {
 
   for (const [idx, plugin] of plugins.entries()) {
     if (typeof plugin !== 'function') {
-      throw new Error(`Plugin na posição ${idx} é inválido: ${plugin}`);
+      throw new Error(`Route plugin at position ${idx} is invalid: ${plugin}`);
     }
-    const wrapped = fp(plugin, {
-      name: plugin.name || `route-plugin-${idx}`
-    });
+    const pluginName = plugin.name || `route-plugin-${idx}`;
+    const wrapped = fp(plugin, { name: pluginName });
+    app.log.info({ plugin: pluginName }, 'Registering plugin');
     await app.register(wrapped);
   }
 }
