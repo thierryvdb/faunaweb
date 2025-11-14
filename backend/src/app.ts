@@ -8,6 +8,20 @@ import { registerRoutes } from './routes';
 export function buildApp() {
   const app = Fastify({ logger: true });
 
+  // Validate plugin imports
+  if (typeof cors !== 'function') {
+    throw new Error(`@fastify/cors is ${typeof cors}, expected function`);
+  }
+  if (typeof multipart !== 'function') {
+    throw new Error(`@fastify/multipart is ${typeof multipart}, expected function`);
+  }
+  if (typeof jwt !== 'function') {
+    throw new Error(`@fastify/jwt is ${typeof jwt}, expected function`);
+  }
+  if (typeof registerRoutes !== 'function') {
+    throw new Error(`registerRoutes is ${typeof registerRoutes}, expected function`);
+  }
+
   app.register(cors, { origin: true });
   app.register(multipart, {
     attachFieldsToBody: false,
@@ -32,10 +46,8 @@ export function buildApp() {
 
   app.get('/status', async () => ({ mensagem: 'API operacional' }));
 
-  // Register routes - wrap in async plugin
-  app.register(async (instance) => {
-    await registerRoutes(instance);
-  });
+  // Register all application routes
+  app.register(registerRoutes);
 
   return app;
 }
