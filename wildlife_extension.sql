@@ -58,14 +58,14 @@ CREATE TABLE IF NOT EXISTS lu_aircraft_model (
   UNIQUE (manufacturer, model)
 );
 
-DO $
+DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_aircraft_model_upd') THEN
     CREATE TRIGGER trg_aircraft_model_upd
       BEFORE UPDATE ON lu_aircraft_model
       FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   END IF;
-END $;
+END $$;
 
 INSERT INTO lu_aircraft_model (manufacturer, model, nickname, category, engine_type_id, wingspan_m, length_m, height_m, seating_capacity, mtow_kg, notes)
 VALUES
