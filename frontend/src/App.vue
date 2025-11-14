@@ -33,6 +33,7 @@
 
         <div class="acoes-topo">
           <button
+            v-if="canToggle"
             class="btn-theme"
             @click="toggleDarkMode"
             :title="isDark ? 'Modo claro' : 'Modo escuro'"
@@ -107,7 +108,7 @@ const titulos: Record<string, string> = {
 const tituloPagina = computed(() => titulos[route.path] ?? 'Painel');
 
 // Dark mode
-const { isDark, toggle: toggleDarkMode } = useDarkMode();
+const { isDark, toggle: toggleDarkMode, canToggle } = useDarkMode();
 
 // Menu mobile
 const menuAberto = ref(false);
