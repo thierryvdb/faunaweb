@@ -122,6 +122,24 @@ docker exec -i fauna-db \
 
 O backend ja esta configurado (ver `.env`) para conectar em `localhost:5432` com essas credenciais expostas pelo container.
 
+## 4.1 Stack completo (frontend + backend + banco)
+
+O repositório agora inclui Dockerfiles dedicados (ackend/Dockerfile, rontend/Dockerfile) e um docker-compose.yml que sobe a stack inteira:
+
+`ash
+# na raiz do repo
+docker compose up -d --build
+`
+
+Serviços:
+
+- **db**: Postgres 15 + PostGIS com os scripts wildlife_full_package.sql e wildlife_extension.sql rodando automaticamente. Porta 5432.
+- **backend**: Fastify servindo http://localhost:3333, já configurado para falar com o serviço db e com JWT_SECRET=supersegredo (ajuste no docker-compose.yml conforme necessário).
+- **frontend**: SPA buildada pelo Vite e servida via Nginx em http://localhost:8080. O Nginx faz proxy de /api para o serviço ackend.
+
+Para apontar o frontend para outro host/porta, passe --build-arg VITE_API_URL="https://meu-host/api" no serviço rontend (ex.: docker compose build frontend --build-arg VITE_API_URL=https://api.exemplo.com).
+
+Acompanhe os logs com docker compose logs -f <serviço> e finalize tudo com docker compose down. Use docker compose down -v se quiser descartar o volume auna-db-data e recriar o banco do zero.
 ## 5. Instalar dependencias do backend e frontend
 
 As pastas `backend/` e `frontend/` possuem `package.json` separados. Rode os comandos abaixo uma Ãºnica vez (ou apÃ³s atualizar dependÃªncias) para instalar tudo que o Node precisa.
@@ -301,3 +319,5 @@ Cada modulo possui sua rota no Vue Router, evitando concentrar todos os CRUDs em
 - Implementar autenticacao/perfis para auditar alteracoes.
 - Evoluir formularios de colisoes/avistamentos com componentes especificos para itens, upload de fotos e geolocalizacao.
 - Criar dashboards adicionais usando `kpi_ba_sr_tah` e mapas (Leaflet ou Mapbox).
+
+
