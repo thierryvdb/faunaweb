@@ -6,7 +6,8 @@
       "Bash(node --loader tsx:*)",
       "Bash(npm install:*)",
       "Bash(test:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(psql:*)"
     ],
     "deny": [],
     "ask": []
