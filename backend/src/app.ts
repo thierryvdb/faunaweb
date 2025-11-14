@@ -32,7 +32,10 @@ export function buildApp() {
 
   app.get('/status', async () => ({ mensagem: 'API operacional' }));
 
-  app.register(registerRoutes);
+  // Register routes - wrap in async plugin
+  app.register(async (instance) => {
+    await registerRoutes(instance);
+  });
 
   return app;
 }
