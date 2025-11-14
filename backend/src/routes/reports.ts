@@ -6,6 +6,12 @@ import sharp from 'sharp';
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
 import { ChartConfiguration } from 'chart.js';
 import { db } from '../services/db';
+import {
+  FinanceiroDataset,
+  FinanceiroAgrupamentoItem,
+  FinanceiroAgrupamentos,
+  gerarFinanceiroDataset
+} from '../services/financeiro';
 
 const periodoSchema = z.object({
   airportId: z.coerce.number().optional(),
@@ -183,6 +189,34 @@ export async function reportsRoutes(app: FastifyInstance) {
       meses,
       comparativos
     };
+  });
+
+  app.get('/api/relatorios/financeiro/export', async (request, reply) => {
+    const filtros = periodoSchema
+      .extend({
+        formato: z.enum(['pdf', 'docx'])
+      })
+      .parse(request.query ?? {});
+    const { inicio, fim } = periodosComDefaults(filtros);
+    const dataset = await gerarFinanceiroDataset({
+      airportId: filtros.airportId ?? null,
+      inicio,
+      fim
+    });
+    const nomeBase = `relatorio-financeiro-${inicio}-a-${fim}`;
+    if (filtros.formato === 'pdf') {
+      const buffer = await gerarPdfFinanceiroRelatorio(dataset, { inicio, fim });
+      reply.header('Content-Type', 'application/pdf');
+      reply.header('Content-Disposition', `attachment; filename="${nomeBase}.pdf"`);
+      return reply.send(buffer);
+    }
+    const buffer = await gerarDocxFinanceiroRelatorio(dataset, { inicio, fim });
+    reply.header(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    );
+    reply.header('Content-Disposition', `attachment; filename="${nomeBase}.docx"`);
+    return reply.send(buffer);
   });
 
   app.get('/api/relatorios/colisoes-imagens', async (request) => {
@@ -648,4 +682,381 @@ async function gerarPdfColisoes(colisoes: ColisaoImagem[], periodo: { inicio: st
       reject(err);
     });
   });
+}
+
+async function gerarPdfFinanceiroRelatorio(
+  dataset: FinanceiroDataset,
+  periodo: { inicio: string; fim: string }
+) {
+  return await new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margins: { top: 40, left: 40, right: 40, bottom: 40 } });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', (err) => reject(err));
+
+    const processar = async () => {
+      doc.fontSize(18).text('Indicadores financeiros de colisoes', { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(12).text(`Periodo analisado: ${periodo.inicio} a ${periodo.fim}`);
+      doc.moveDown();
+
+      doc.fontSize(11);
+      doc.text(`Eventos analisados: ${dataset.totais.eventos}`);
+      doc.text(`Custo total estimado: ${formatarMoedaBR(dataset.totais.custo_total)}`);
+      doc.text(`Custos diretos: ${formatarMoedaBR(dataset.totais.custo_direto)}`);
+      doc.text(`Custos indiretos: ${formatarMoedaBR(dataset.totais.custo_indireto)}`);
+      doc.text(`Outros custos: ${formatarMoedaBR(dataset.totais.custo_outros)}`);
+      doc.moveDown();
+
+      doc.fontSize(14).text('Resumo por ano/categoria/tipo/dano', { underline: true });
+      doc.moveDown(0.3);
+      if (!dataset.dados.length) {
+        doc.fontSize(11).text('Sem registros financeiros no periodo informado.');
+      } else {
+        doc.fontSize(11);
+        for (const linha of dataset.dados.slice(0, 30)) {
+          doc.text(
+            `${linha.ano} | ${linha.categoria} | ${linha.tipo_incidente} | ${linha.dano} -> Eventos: ${
+              linha.eventos
+            } | Custo: ${formatarMoedaBR(linha.custo_total)} | Severidade media: ${linha.severidade_media}`
+          );
+        }
+      }
+
+      doc.addPage();
+      doc.fontSize(14).text('Distribuicoes financeiras', { underline: true });
+      doc.moveDown();
+      renderizarAgrupamentoPdf(doc, 'Por tipo de incidente', dataset.agrupamentos.porTipo);
+      renderizarAgrupamentoPdf(doc, 'Por categoria taxonomica', dataset.agrupamentos.porCategoria);
+      renderizarAgrupamentoPdf(doc, 'Por dano reportado', dataset.agrupamentos.porDano);
+      renderizarAgrupamentoPdf(doc, 'Por severidade', dataset.agrupamentos.porSeveridade);
+
+      const graficos = await gerarGraficosFinanceiro(dataset.agrupamentos);
+      if (graficos.porTipo || graficos.porCategoria || graficos.porSeveridade) {
+        doc.addPage();
+        doc.fontSize(14).text('Graficos', { underline: true });
+        doc.moveDown();
+        if (graficos.porTipo) {
+          doc.fontSize(12).text('Custo total por tipo de incidente');
+          doc.moveDown(0.3);
+          doc.image(graficos.porTipo, { fit: [REPORT_CHART_WIDTH, REPORT_CHART_HEIGHT], align: 'center' });
+          doc.moveDown();
+        }
+        if (graficos.porCategoria) {
+          doc.fontSize(12).text('Custo total por categoria taxonomica');
+          doc.moveDown(0.3);
+          doc.image(graficos.porCategoria, {
+            fit: [REPORT_CHART_WIDTH, REPORT_CHART_HEIGHT],
+            align: 'center'
+          });
+          doc.moveDown();
+        }
+        if (graficos.porSeveridade) {
+          doc.fontSize(12).text('Distribuicao por severidade');
+          doc.moveDown(0.3);
+          doc.image(graficos.porSeveridade, {
+            fit: [REPORT_CHART_WIDTH, REPORT_CHART_HEIGHT],
+            align: 'center'
+          });
+          doc.moveDown();
+        }
+      }
+
+      doc.addPage();
+      doc.fontSize(14).text('Incidentes detalhados', { underline: true });
+      doc.moveDown();
+      if (!dataset.incidentes.length) {
+        doc.fontSize(11).text('Nao ha incidentes registrados no periodo informado.');
+      } else {
+        doc.fontSize(11);
+        for (const incidente of dataset.incidentes.slice(0, 40)) {
+          doc.text(
+            `${incidente.data} ${incidente.hora ?? ''} | ${incidente.tipo_incidente} | ${incidente.dano} | ` +
+              `Severidade ${incidente.severidade} | ${formatarMoedaBR(incidente.custo_total)}`
+          );
+          doc.text(`Descricao: ${incidente.descricao}`);
+          doc.moveDown(0.6);
+        }
+      }
+
+      doc.end();
+    };
+
+    processar().catch((err) => {
+      doc.destroy();
+      reject(err);
+    });
+  });
+}
+
+async function gerarDocxFinanceiroRelatorio(
+  dataset: FinanceiroDataset,
+  periodo: { inicio: string; fim: string }
+) {
+  const children: Paragraph[] = [];
+  children.push(
+    new Paragraph({
+      text: 'Indicadores financeiros de colisoes',
+      heading: HeadingLevel.HEADING_1
+    })
+  );
+  children.push(new Paragraph(`Periodo analisado: ${periodo.inicio} a ${periodo.fim}`));
+  children.push(new Paragraph(' '));
+  children.push(new Paragraph(`Eventos analisados: ${dataset.totais.eventos}`));
+  children.push(new Paragraph(`Custo total estimado: ${formatarMoedaBR(dataset.totais.custo_total)}`));
+  children.push(new Paragraph(`Custos diretos: ${formatarMoedaBR(dataset.totais.custo_direto)}`));
+  children.push(new Paragraph(`Custos indiretos: ${formatarMoedaBR(dataset.totais.custo_indireto)}`));
+  children.push(new Paragraph(`Outros custos: ${formatarMoedaBR(dataset.totais.custo_outros)}`));
+  children.push(new Paragraph(' '));
+
+  children.push(
+    new Paragraph({
+      text: 'Resumo por combinacao',
+      heading: HeadingLevel.HEADING_2
+    })
+  );
+  if (!dataset.dados.length) {
+    children.push(new Paragraph('Sem registros financeiros no periodo.'));
+  } else {
+    for (const linha of dataset.dados.slice(0, 40)) {
+      children.push(
+        new Paragraph(
+          `${linha.ano} | ${linha.categoria} | ${linha.tipo_incidente} | ${linha.dano} -> Eventos: ${
+            linha.eventos
+          } | Custo: ${formatarMoedaBR(linha.custo_total)} | Severidade media: ${linha.severidade_media}`
+        )
+      );
+    }
+  }
+  children.push(new Paragraph(' '));
+
+  children.push(
+    new Paragraph({
+      text: 'Distribuicoes financeiras',
+      heading: HeadingLevel.HEADING_2
+    })
+  );
+  adicionarAgrupamentoDocx(children, 'Por tipo de incidente', dataset.agrupamentos.porTipo);
+  adicionarAgrupamentoDocx(children, 'Por categoria taxonomica', dataset.agrupamentos.porCategoria);
+  adicionarAgrupamentoDocx(children, 'Por dano reportado', dataset.agrupamentos.porDano);
+  adicionarAgrupamentoDocx(children, 'Por severidade', dataset.agrupamentos.porSeveridade);
+
+  const graficos = await gerarGraficosFinanceiro(dataset.agrupamentos);
+  if (graficos.porTipo || graficos.porCategoria || graficos.porSeveridade) {
+    children.push(new Paragraph(' '));
+    children.push(
+      new Paragraph({
+        text: 'Graficos',
+        heading: HeadingLevel.HEADING_2
+      })
+    );
+    if (graficos.porTipo) {
+      children.push(new Paragraph('Custo total por tipo de incidente'));
+      children.push(
+        new Paragraph({
+          children: [
+            new ImageRun({
+              data: graficos.porTipo,
+              transformation: { width: REPORT_CHART_WIDTH, height: REPORT_CHART_HEIGHT }
+            })
+          ]
+        })
+      );
+    }
+    if (graficos.porCategoria) {
+      children.push(new Paragraph('Custo total por categoria'));
+      children.push(
+        new Paragraph({
+          children: [
+            new ImageRun({
+              data: graficos.porCategoria,
+              transformation: { width: REPORT_CHART_WIDTH, height: REPORT_CHART_HEIGHT }
+            })
+          ]
+        })
+      );
+    }
+    if (graficos.porSeveridade) {
+      children.push(new Paragraph('Distribuicao por severidade'));
+      children.push(
+        new Paragraph({
+          children: [
+            new ImageRun({
+              data: graficos.porSeveridade,
+              transformation: { width: REPORT_CHART_WIDTH, height: REPORT_CHART_HEIGHT }
+            })
+          ]
+        })
+      );
+    }
+  }
+
+  children.push(new Paragraph(' '));
+  children.push(
+    new Paragraph({
+      text: 'Incidentes detalhados',
+      heading: HeadingLevel.HEADING_2
+    })
+  );
+  if (!dataset.incidentes.length) {
+    children.push(new Paragraph('Nao ha incidentes registrados no periodo selecionado.'));
+  } else {
+    for (const incidente of dataset.incidentes.slice(0, 60)) {
+      children.push(
+        new Paragraph(
+          `${incidente.data} ${incidente.hora ?? ''} | ${incidente.tipo_incidente} | ${incidente.dano} | ` +
+            `Severidade ${incidente.severidade} | ${formatarMoedaBR(incidente.custo_total)}`
+        )
+      );
+      children.push(new Paragraph(`Descricao: ${incidente.descricao}`));
+      children.push(new Paragraph(' '));
+    }
+  }
+
+  const doc = new Document({
+    sections: [
+      {
+        children
+      }
+    ]
+  });
+  return Packer.toBuffer(doc);
+}
+
+function renderizarAgrupamentoPdf(
+  doc: PDFKit.PDFDocument,
+  titulo: string,
+  itens: FinanceiroAgrupamentoItem[]
+) {
+  doc.fontSize(13).text(titulo, { underline: true });
+  doc.moveDown(0.2);
+  if (!itens.length) {
+    doc.fontSize(11).text('Sem dados suficientes.');
+    doc.moveDown();
+    return;
+  }
+  doc.fontSize(11);
+  for (const item of itens.slice(0, 8)) {
+    doc.text(
+      `${item.chave}: Eventos ${item.eventos} (${item.percentual_eventos}%) | Custo ${formatarMoedaBR(
+        item.custo_total
+      )} (${item.percentual_custos}%) | Severidade media ${item.severidade_media}`
+    );
+  }
+  doc.moveDown();
+}
+
+function adicionarAgrupamentoDocx(
+  children: Paragraph[],
+  titulo: string,
+  itens: FinanceiroAgrupamentoItem[]
+) {
+  children.push(
+    new Paragraph({
+      text: titulo,
+      heading: HeadingLevel.HEADING_3
+    })
+  );
+  if (!itens.length) {
+    children.push(new Paragraph('Sem dados suficientes.'));
+    return;
+  }
+  for (const item of itens.slice(0, 8)) {
+    children.push(
+      new Paragraph(
+        `${item.chave}: Eventos ${item.eventos} (${item.percentual_eventos}%) | Custo ${formatarMoedaBR(
+          item.custo_total
+        )} (${item.percentual_custos}%) | Severidade media ${item.severidade_media}`
+      )
+    );
+  }
+}
+
+async function gerarGraficosFinanceiro(agrupamentos: FinanceiroAgrupamentos) {
+  const buffers: {
+    porTipo: Buffer | null;
+    porCategoria: Buffer | null;
+    porSeveridade: Buffer | null;
+  } = {
+    porTipo: null,
+    porCategoria: null,
+    porSeveridade: null
+  };
+
+  if (agrupamentos.porTipo.length) {
+    const itens = agrupamentos.porTipo.slice(0, 8);
+    const config: ChartConfiguration<'bar'> = {
+      type: 'bar',
+      data: {
+        labels: itens.map((i) => i.chave),
+        datasets: [
+          {
+            label: 'Custo total (R$)',
+            data: itens.map((i) => i.custo_total),
+            backgroundColor: '#2563eb'
+          }
+        ]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    };
+    buffers.porTipo = await graficoColisoesRenderer.renderToBuffer(config);
+  }
+
+  if (agrupamentos.porCategoria.length) {
+    const itens = agrupamentos.porCategoria.slice(0, 8);
+    const config: ChartConfiguration<'bar'> = {
+      type: 'bar',
+      data: {
+        labels: itens.map((i) => i.chave),
+        datasets: [
+          {
+            label: 'Custo total (R$)',
+            data: itens.map((i) => i.custo_total),
+            backgroundColor: '#7c3aed'
+          }
+        ]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    };
+    buffers.porCategoria = await graficoColisoesRenderer.renderToBuffer(config);
+  }
+
+  if (agrupamentos.porSeveridade.length) {
+    const itens = agrupamentos.porSeveridade.slice(0, 6);
+    const config: ChartConfiguration<'doughnut'> = {
+      type: 'doughnut',
+      data: {
+        labels: itens.map((i) => i.chave),
+        datasets: [
+          {
+            label: 'Eventos (%)',
+            data: itens.map((i) => i.percentual_eventos),
+            backgroundColor: ['#22c55e', '#f97316', '#a855f7', '#ef4444', '#0ea5e9', '#facc15']
+          }
+        ]
+      },
+      options: {
+        plugins: { legend: { position: 'bottom' } }
+      }
+    };
+    buffers.porSeveridade = await graficoColisoesRenderer.renderToBuffer(config);
+  }
+
+  return buffers;
+}
+
+const currencyFormatterBR = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL'
+});
+
+function formatarMoedaBR(valor: number) {
+  return currencyFormatterBR.format(Number(valor ?? 0));
 }

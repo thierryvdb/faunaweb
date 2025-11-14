@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { db } from '../services/db';
+import { gerarFinanceiroDataset } from '../services/financeiro';
 
 const periodoSchema = z.object({
   airportId: z.coerce.number().optional(),
@@ -20,52 +21,12 @@ export async function analyticsRoutes(app: FastifyInstance) {
   app.get('/api/analytics/financeiro', async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
-    const { rows } = await db.query(
-      `WITH strikes AS (
-         SELECT s.airport_id,
-                date_part('year', s.date_utc)::int AS ano,
-                COALESCE(tg.name, 'Nao classificado') AS categoria,
-                COALESCE(s.event_type, 'desconhecido') AS tipo_incidente,
-                COALESCE(dc.name, 'Sem dano') AS dano,
-                s.severity_weight,
-                COALESCE(cost.cost_direto, 0) AS custo_direto,
-                COALESCE(cost.cost_indireto, 0) AS custo_indireto,
-                COALESCE(cost.cost_outros, 0) +
-                  CASE WHEN cost.has_cost THEN 0 ELSE COALESCE(s.cost_brl, 0) END AS custo_outros,
-                CASE WHEN cost.has_cost THEN COALESCE(cost.cost_total, 0) ELSE COALESCE(s.cost_brl, 0) END AS custo_total
-         FROM wildlife.fact_strike s
-         LEFT JOIN wildlife.dim_species sp ON sp.species_id = s.species_id
-         LEFT JOIN wildlife.lu_taxon_group tg ON tg.group_id = sp.group_id
-         LEFT JOIN wildlife.lu_damage_class dc ON dc.damage_id = s.damage_id
-         LEFT JOIN LATERAL (
-            SELECT
-              SUM(CASE WHEN cost_type = 'direto' THEN amount_brl ELSE 0 END) AS cost_direto,
-              SUM(CASE WHEN cost_type = 'indireto' THEN amount_brl ELSE 0 END) AS cost_indireto,
-              SUM(CASE WHEN cost_type NOT IN ('direto','indireto') THEN amount_brl ELSE 0 END) AS cost_outros,
-              SUM(amount_brl) AS cost_total,
-              COUNT(*) > 0 AS has_cost
-            FROM wildlife.fact_strike_cost c
-            WHERE c.strike_id = s.strike_id
-         ) cost ON true
-         WHERE s.date_utc BETWEEN $2 AND $3
-           AND ($1::bigint IS NULL OR s.airport_id = $1)
-       )
-       SELECT ano,
-              categoria,
-              tipo_incidente,
-              dano,
-              COUNT(*)::bigint AS eventos,
-              AVG(severity_weight)::numeric(10,2) AS severidade_media,
-              SUM(custo_direto)::numeric(18,2)   AS custo_direto,
-              SUM(custo_indireto)::numeric(18,2) AS custo_indireto,
-              SUM(custo_outros)::numeric(18,2)   AS custo_outros,
-              SUM(custo_total)::numeric(18,2)    AS custo_total
-       FROM strikes
-       GROUP BY ano, categoria, tipo_incidente, dano
-       ORDER BY ano DESC, custo_total DESC`,
-      [filtros.airportId ?? null, inicio, fim]
-    );
-    return { periodo: { inicio, fim }, dados: rows };
+    const dataset = await gerarFinanceiroDataset({
+      airportId: filtros.airportId ?? null,
+      inicio,
+      fim
+    });
+    return { periodo: { inicio, fim }, ...dataset };
   });
 
   app.get('/api/analytics/incidentes', async (request) => {
