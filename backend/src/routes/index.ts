@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import fp from 'fastify-plugin';
 import { lookupsRoutes } from './lookups';
 import { airportsRoutes } from './airports';
 import { locationsRoutes } from './locations';
@@ -48,20 +49,13 @@ export async function registerRoutes(app: FastifyInstance) {
     usersRoutes
   ];
 
-  const displaySymbol = Symbol.for('fastify.display-name');
-  plugins.forEach((plugin, idx) => {
+  for (const [idx, plugin] of plugins.entries()) {
     if (typeof plugin !== 'function') {
       throw new Error(`Plugin na posição ${idx} é inválido: ${plugin}`);
     }
-    if (!plugin[displaySymbol]) {
-      Object.defineProperty(plugin, displaySymbol, {
-        value: plugin.name || `anonymous-plugin-${idx}`,
-        enumerable: false
-      });
-    }
-  });
-
-  for (const plugin of plugins) {
-    await app.register(plugin);
+    const wrapped = fp(plugin, {
+      name: plugin.name || `route-plugin-${idx}`
+    });
+    await app.register(wrapped);
   }
 }
