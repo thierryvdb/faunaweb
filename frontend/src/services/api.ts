@@ -104,6 +104,10 @@ export const ApiService = {
     const { data } = await api.get('/api/relatorios/pareto-especies', { params });
     return data;
   },
+  async getPainelResumo(params?: Record<string, any>) {
+    const { data } = await api.get('/api/analytics/painel-resumo', { params });
+    return data;
+  },
   async getFases(params?: Record<string, any>) {
     const { data } = await api.get('/api/relatorios/fases-voo', { params });
     return data;
