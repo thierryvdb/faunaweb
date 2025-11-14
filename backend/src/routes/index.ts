@@ -49,16 +49,8 @@ async function routes(app: FastifyInstance) {
     { name: "usersRoutes", handler: usersRoutes },
   ];
 
-  const displaySymbol = Symbol.for("fastify.display-name");
+  // Register all protected routes
   for (const route of protectedRoutes) {
-    if (!route.handler[displaySymbol]) {
-      Object.defineProperty(route.handler, displaySymbol, {
-        value: route.name,
-        enumerable: false,
-        configurable: true,
-      });
-    }
-
     await app.register(
       fp(route.handler, {
         name: route.name,
