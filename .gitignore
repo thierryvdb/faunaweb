@@ -33,3 +33,24 @@ yarn-error.log*
 # Temporary files
 *.tmp
 .cache/
+
+# Mobile app
+/mobile_app/node_modules/
+/mobile_app/dist/
+/mobile_app/.vscode/
+/mobile_app/.ionic/
+/mobile_app/.sass-cache/
+/mobile_app/.sourcemaps/
+/mobile_app/.capacitor/
+/mobile_app/platforms/
+/mobile_app/plugins/
+/mobile_app/www/
+/mobile_app/android/.gradle/
+/mobile_app/android/.idea/
+/mobile_app/android/local.properties
+/mobile_app/android/capacitor-cordova-android-plugins/
+/mobile_app/android/app/build/
+/mobile_app/android/app/src/main/assets/public/
+/mobile_app/android/app/src/main/assets/capacitor.config.json
+/mobile_app/android/app/src/main/assets/capacitor.plugins.json
+/mobile_app/android/app/src/main/res/xml/config.xml

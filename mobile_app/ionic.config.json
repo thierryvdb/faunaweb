@@ -1,0 +1,7 @@
+{
+  "name": "fauna-mobile",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite"
+}
