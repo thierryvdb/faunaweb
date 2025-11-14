@@ -18,11 +18,42 @@ import { usersRoutes } from './users';
 import { quadrantsRoutes } from './quadrants';
 import { aircraftModelsRoutes } from './aircraftModels';
 
+// Validate all imports at module load time
+const allRoutes = {
+  authRoutes,
+  lookupsRoutes,
+  quadrantsRoutes,
+  airportsRoutes,
+  locationsRoutes,
+  teamsRoutes,
+  speciesRoutes,
+  aircraftModelsRoutes,
+  movementsRoutes,
+  sightingsRoutes,
+  strikesRoutes,
+  controlActionsRoutes,
+  attractorsRoutes,
+  kpisRoutes,
+  reportsRoutes,
+  complianceRoutes,
+  analyticsRoutes,
+  usersRoutes
+};
+
+// Check for undefined imports immediately
+for (const [name, handler] of Object.entries(allRoutes)) {
+  if (typeof handler !== 'function') {
+    console.error(`❌ ERROR: ${name} is ${typeof handler} (expected function)`);
+    console.error(`   Value:`, handler);
+    throw new Error(`Route import failed: ${name} is ${typeof handler}, expected function`);
+  }
+}
+
+console.log('✅ All route handlers validated successfully');
+
 export async function registerRoutes(app: FastifyInstance) {
   // Register auth routes first (no authentication required)
-  if (typeof authRoutes !== 'function') {
-    throw new Error(`authRoutes is ${typeof authRoutes}, expected function`);
-  }
+  console.log('Registering authRoutes...');
   await app.register(authRoutes);
 
   // Add authentication hook for all other routes
@@ -55,9 +86,9 @@ export async function registerRoutes(app: FastifyInstance) {
   ];
 
   for (const route of protectedRoutes) {
-    if (typeof route.handler !== 'function') {
-      throw new Error(`${route.name} is ${typeof route.handler}, expected function`);
-    }
+    console.log(`Registering ${route.name}...`);
     await app.register(route.handler);
   }
+
+  console.log('✅ All routes registered successfully');
 }
