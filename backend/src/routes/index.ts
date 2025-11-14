@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import fp from 'fastify-plugin';
 import { lookupsRoutes } from './lookups';
 import { airportsRoutes } from './airports';
 import { locationsRoutes } from './locations';
@@ -85,9 +86,17 @@ export async function registerRoutes(app: FastifyInstance) {
     { name: 'usersRoutes', handler: usersRoutes }
   ];
 
+  const displaySymbol = Symbol.for('fastify.display-name');
   for (const route of protectedRoutes) {
+    const handler = route.handler;
+    if (!handler[displaySymbol]) {
+      Object.defineProperty(handler, displaySymbol, {
+        value: route.name,
+        enumerable: false
+      });
+    }
     console.log(`Registering ${route.name}...`);
-    await app.register(route.handler);
+    await app.register(fp(handler, { name: route.name }));
   }
 
   console.log('✅ All routes registered successfully');
