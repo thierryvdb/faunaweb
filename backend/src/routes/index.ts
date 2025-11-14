@@ -1,5 +1,4 @@
 import { FastifyInstance } from 'fastify';
-import fp from 'fastify-plugin';
 import { lookupsRoutes } from './lookups';
 import { airportsRoutes } from './airports';
 import { locationsRoutes } from './locations';
@@ -19,9 +18,11 @@ import { usersRoutes } from './users';
 import { quadrantsRoutes } from './quadrants';
 import { aircraftModelsRoutes } from './aircraftModels';
 
-async function routes(app: FastifyInstance) {
+export async function registerRoutes(app: FastifyInstance) {
+  // Register auth routes first (no authentication required)
   await app.register(authRoutes);
 
+  // Add authentication hook for all other routes
   app.addHook('onRequest', async (request, reply) => {
     if (request.url.startsWith('/api/auth') || request.url === '/status') {
       return;
@@ -29,35 +30,22 @@ async function routes(app: FastifyInstance) {
     await app.authenticate(request, reply);
   });
 
-  const plugins = [
-    lookupsRoutes,
-    quadrantsRoutes,
-    airportsRoutes,
-    locationsRoutes,
-    teamsRoutes,
-    speciesRoutes,
-    aircraftModelsRoutes,
-    movementsRoutes,
-    sightingsRoutes,
-    strikesRoutes,
-    controlActionsRoutes,
-    attractorsRoutes,
-    kpisRoutes,
-    reportsRoutes,
-    complianceRoutes,
-    analyticsRoutes,
-    usersRoutes
-  ];
-
-  for (const [idx, plugin] of plugins.entries()) {
-    if (typeof plugin !== 'function') {
-      throw new Error(`Route plugin at position ${idx} is invalid: ${plugin}`);
-    }
-    const pluginName = plugin.name || `route-plugin-${idx}`;
-    const wrapped = fp(plugin, { name: pluginName });
-    app.log.info({ plugin: pluginName }, 'Registering plugin');
-    await app.register(wrapped);
-  }
+  // Register all protected route handlers
+  await app.register(lookupsRoutes);
+  await app.register(quadrantsRoutes);
+  await app.register(airportsRoutes);
+  await app.register(locationsRoutes);
+  await app.register(teamsRoutes);
+  await app.register(speciesRoutes);
+  await app.register(aircraftModelsRoutes);
+  await app.register(movementsRoutes);
+  await app.register(sightingsRoutes);
+  await app.register(strikesRoutes);
+  await app.register(controlActionsRoutes);
+  await app.register(attractorsRoutes);
+  await app.register(kpisRoutes);
+  await app.register(reportsRoutes);
+  await app.register(complianceRoutes);
+  await app.register(analyticsRoutes);
+  await app.register(usersRoutes);
 }
-
-export const registerRoutes = fp(routes, { name: 'registerRoutes' });
