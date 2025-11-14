@@ -187,10 +187,15 @@ export async function reportsRoutes(app: FastifyInstance) {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const dados = await buscarColisoesComImagens(filtros.airportId ?? null, inicio, fim);
-    const resposta = dados.map(({ photo_blob, ...resto }) => ({
-      ...resto,
-      foto_base64: photo_blob ? bufferParaBase64(photo_blob, resto.photo_mime) : null
-    }));
+    const resposta = dados.map((item) => {
+      const { photo_blob, fotos, ...resto } = item;
+      const fotosBase64 = fotos.map((foto) => bufferParaBase64(foto.blob, foto.mime));
+      return {
+        ...resto,
+        foto_base64: fotosBase64[0] ?? (photo_blob ? bufferParaBase64(photo_blob, item.photo_mime) : null),
+        fotos_base64: fotosBase64
+      };
+    });
     return {
       periodo: { inicio, fim },
       total: resposta.length,
@@ -262,6 +267,12 @@ function periodosComDefaults(filtros: { inicio?: string; fim?: string }) {
   };
 }
 
+type FotoRelatorio = {
+  blob: Buffer;
+  mime: string | null;
+  filename: string | null;
+};
+
 type ColisaoImagem = {
   id: number;
   date_utc: string;
@@ -278,6 +289,7 @@ type ColisaoImagem = {
   photo_filename: string | null;
   photo_mime: string | null;
   photo_blob: Buffer | null;
+  fotos: FotoRelatorio[];
 };
 
 async function buscarColisoesComImagens(airportId: number | null, inicio: string, fim: string): Promise<ColisaoImagem[]> {
@@ -309,7 +321,7 @@ async function buscarColisoesComImagens(airportId: number | null, inicio: string
     [airportId ?? null, inicio, fim]
   );
 
-  return rows.map((row: any) => ({
+  const itens = rows.map((row: any) => ({
     id: Number(row.strike_id),
     date_utc: formatarData(row.date_utc),
     time_local: formatarHora(row.time_local),
@@ -324,8 +336,48 @@ async function buscarColisoesComImagens(airportId: number | null, inicio: string
     photo_url: row.photo_url ?? null,
     photo_filename: row.photo_filename ?? null,
     photo_mime: row.photo_mime ?? null,
-    photo_blob: row.photo_blob ?? null
+    photo_blob: row.photo_blob ?? null,
+    fotos: [] as FotoRelatorio[]
   }));
+
+  if (!itens.length) {
+    return itens;
+  }
+
+  const ids = itens.map((item) => item.id);
+  const mapa = new Map<number, ColisaoImagem>();
+  itens.forEach((item) => mapa.set(item.id, item));
+
+  const { rows: fotosExtra } = await db.query(
+    `SELECT strike_id, foto_idx, photo_blob, photo_filename, photo_mime
+     FROM wildlife.fact_strike_foto
+     WHERE strike_id = ANY($1::bigint[])
+     ORDER BY strike_id, foto_idx`,
+    [ids]
+  );
+
+  for (const foto of fotosExtra) {
+    if (!foto.photo_blob) continue;
+    const alvo = mapa.get(Number(foto.strike_id));
+    if (!alvo) continue;
+    alvo.fotos.push({
+      blob: foto.photo_blob,
+      filename: foto.photo_filename ?? null,
+      mime: foto.photo_mime ?? null
+    });
+  }
+
+  for (const item of itens) {
+    if (!item.fotos.length && item.photo_blob) {
+      item.fotos.push({
+        blob: item.photo_blob,
+        filename: item.photo_filename ?? null,
+        mime: item.photo_mime ?? null
+      });
+    }
+  }
+
+  return itens;
 }
 
 function formatarData(valor: any) {
@@ -348,20 +400,21 @@ function bufferParaBase64(buffer: Buffer, mime?: string | null) {
   return `data:${tipo};base64,${buffer.toString('base64')}`;
 }
 
-async function prepararImagemParaRelatorio(item: ColisaoImagem) {
-  if (!item.photo_blob) return null;
-  const mime = (item.photo_mime ?? '').toLowerCase();
-  if (mime && (mime.includes('png') || mime.includes('jpeg') || mime.includes('jpg'))) {
-    return item.photo_blob;
-  }
+const REPORT_IMAGE_WIDTH = 800;
+const REPORT_IMAGE_HEIGHT = 600;
+
+async function prepararImagemParaRelatorio(foto: FotoRelatorio) {
+  if (!foto?.blob) return null;
   try {
-    return await sharp(item.photo_blob).png().toBuffer();
+    return await sharp(foto.blob)
+      .resize(REPORT_IMAGE_WIDTH, REPORT_IMAGE_HEIGHT, {
+        fit: 'contain',
+        background: { r: 255, g: 255, b: 255, alpha: 1 }
+      })
+      .png()
+      .toBuffer();
   } catch {
-    // se a conversão falhar, tenta devolver o buffer original
-    if (mime) {
-      return item.photo_blob;
-    }
-    return null;
+    return foto.blob;
   }
 }
 
@@ -391,18 +444,33 @@ async function gerarDocxColisoes(colisoes: ColisaoImagem[], periodo: { inicio: s
     if (item.notes) {
       children.push(new Paragraph(`Notas: ${item.notes}`));
     }
-    const imagemBuffer = await prepararImagemParaRelatorio(item);
-    if (imagemBuffer) {
-      children.push(
-        new Paragraph({
-          children: [
-            new ImageRun({
-              data: imagemBuffer,
-              transformation: { width: 400, height: 260 }
-            })
-          ]
-        })
-      );
+    const fotosParaRenderizar = item.fotos.length
+      ? item.fotos
+      : item.photo_blob
+      ? [
+          {
+            blob: item.photo_blob,
+            mime: item.photo_mime ?? null,
+            filename: item.photo_filename ?? null
+          }
+        ]
+      : [];
+
+    if (fotosParaRenderizar.length) {
+      for (const foto of fotosParaRenderizar) {
+        const imagemBuffer = await prepararImagemParaRelatorio(foto);
+        if (!imagemBuffer) continue;
+        children.push(
+          new Paragraph({
+            children: [
+              new ImageRun({
+                data: imagemBuffer,
+                transformation: { width: REPORT_IMAGE_WIDTH, height: REPORT_IMAGE_HEIGHT }
+              })
+            ]
+          })
+        );
+      }
     } else if (item.photo_url) {
       children.push(new Paragraph(`Foto (URL): ${item.photo_url}`));
     } else {
@@ -454,12 +522,28 @@ async function gerarPdfColisoes(colisoes: ColisaoImagem[], periodo: { inicio: st
           doc.text(`Notas: ${item.notes}`);
         }
         doc.moveDown(0.5);
-        const imagemBuffer = await prepararImagemParaRelatorio(item);
-        if (imagemBuffer) {
-          try {
-            doc.image(imagemBuffer, { fit: [460, 300], align: 'center' });
-          } catch {
-            doc.text('Nao foi possivel exibir a imagem (formato nao suportado).');
+        const fotosParaRenderizar = item.fotos.length
+          ? item.fotos
+          : item.photo_blob
+          ? [
+              {
+                blob: item.photo_blob,
+                mime: item.photo_mime ?? null,
+                filename: item.photo_filename ?? null
+              }
+            ]
+          : [];
+
+        if (fotosParaRenderizar.length) {
+          for (const foto of fotosParaRenderizar) {
+            const imagemBuffer = await prepararImagemParaRelatorio(foto);
+            if (!imagemBuffer) continue;
+            try {
+              doc.image(imagemBuffer, { fit: [REPORT_IMAGE_WIDTH, REPORT_IMAGE_HEIGHT], align: 'center' });
+            } catch {
+              doc.text('Nao foi possivel exibir a imagem (formato nao suportado).');
+            }
+            doc.moveDown(0.5);
           }
         } else if (item.photo_url) {
           doc.text(`Foto (URL): ${item.photo_url}`);

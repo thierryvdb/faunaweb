@@ -48,7 +48,12 @@
           <p><strong>Dano:</strong> {{ item.dano ?? 'Não informado' }}</p>
           <p v-if="item.notes"><strong>Notas:</strong> {{ item.notes }}</p>
           <div class="imagem">
-            <img v-if="item.foto_base64" :src="item.foto_base64" alt="Imagem da colisão" />
+            <template v-if="item.fotos_base64?.length">
+              <div class="galeria-imagens">
+                <img v-for="(foto, idx) in item.fotos_base64" :key="idx" :src="foto" alt="Imagem da colisão" />
+              </div>
+            </template>
+            <img v-else-if="item.foto_base64" :src="item.foto_base64" alt="Imagem da colisão" />
             <p v-else-if="item.photo_url">
               Foto externa:
               <a :href="item.photo_url" target="_blank" rel="noreferrer">{{ item.photo_url }}</a>
@@ -165,6 +170,7 @@ onMounted(async () => {
 .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
 .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 0.4rem; }
 .card header { display: flex; justify-content: space-between; font-weight: 600; }
+.galeria-imagens { display: flex; flex-direction: column; gap: 0.75rem; }
 .imagem img { width: 100%; border-radius: 10px; border: 1px solid #dbeafe; object-fit: cover; max-height: 240px; }
 .sem-dados { text-align: center; color: #475569; }
 .periodo { font-size: 0.9rem; color: #475569; }
