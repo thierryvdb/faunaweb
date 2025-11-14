@@ -19,7 +19,7 @@ import { usersRoutes } from './users';
 import { quadrantsRoutes } from './quadrants';
 import { aircraftModelsRoutes } from './aircraftModels';
 
-export async function registerRoutes(app: FastifyInstance) {
+async function routes(app: FastifyInstance) {
   await app.register(authRoutes);
 
   app.addHook('onRequest', async (request, reply) => {
@@ -59,3 +59,5 @@ export async function registerRoutes(app: FastifyInstance) {
     await app.register(wrapped);
   }
 }
+
+export const registerRoutes = fp(routes, { name: 'registerRoutes' });
