@@ -112,13 +112,13 @@ export async function reportsRoutes(app: FastifyInstance) {
 
     const { rows } = await db.query(
       `SELECT
-         EXTRACT(YEAR FROM date_utc)::int AS ano,
-         EXTRACT(MONTH FROM date_utc)::int AS mes,
-         SUM(COALESCE(movements_in_day, 1))::bigint AS total
-       FROM wildlife.fact_movement
-       WHERE date_utc >= $2::date
-         AND date_utc < $3::date
-         AND ($1::bigint IS NULL OR airport_id = $1)
+         EXTRACT(YEAR FROM m.day)::int AS ano,
+         EXTRACT(MONTH FROM m.day)::int AS mes,
+         SUM(m.movements)::bigint AS total
+       FROM wildlife_kpi.v_movements_daily m
+       WHERE m.day >= $2::date
+         AND m.day < $3::date
+         AND ($1::bigint IS NULL OR m.airport_id = $1)
        GROUP BY 1, 2`,
       [filtros.airportId ?? null, inicioConsulta, fimConsulta]
     );
