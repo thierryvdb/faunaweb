@@ -68,6 +68,121 @@ O backend expÃƒÂƒÃ‚Âµe as novas rotas (`/api/inspecoes`, `/api/carcacas
   - `GET /api/relatorios/incidentes/export`: exporta em PDF ou DOCX as distribuicoes mostradas na pagina Analise de incidentes (ano, categoria, especie, fase de voo e tipo de incidente).
 - **Conformidade com o Manual**: inspeÃƒÂƒÃ‚Â§ÃƒÂƒÃ‚Âµes ASA, auditorias ambientais, focos externos, comunicaÃƒÂƒÃ‚Â§ÃƒÂƒÃ‚Âµes e treinamentos com alertas de validade cobrem os itens do Programa de Gerenciamento de Risco da Fauna (PGRF) e dos indicadores BAIST.
 
+### 2.4 Sistema de Controle de Acesso Baseado em Funções (RBAC)
+
+O sistema implementa controle granular de permissões para diferentes perfis de usuário, garantindo segurança e auditoria adequadas.
+
+#### Perfis de Acesso Disponíveis
+
+- **Admin**: Acesso total ao sistema (CRUD completo + relatórios + gestão de usuários)
+- **Viewer**: Acesso somente leitura e visualização de relatórios (sem permissão para criar, editar ou excluir)
+
+#### Estrutura do Banco de Dados
+
+Arquivo: `wildlife_full_package.sql:2223-2262`
+
+- **Tabela `lu_user_role`**: Define perfis com permissões granulares
+  - `can_create`: Permissão para criar novos registros
+  - `can_read`: Permissão para visualizar dados
+  - `can_update`: Permissão para atualizar registros existentes
+  - `can_delete`: Permissão para excluir registros
+  - `can_access_reports`: Permissão para acessar relatórios e análises
+- **Campo `role_id` em `app_user`**: Vincula cada usuário ao seu perfil de acesso
+- Usuários existentes são automaticamente configurados como admin na primeira execução do script SQL atualizado
+
+#### Backend - Middlewares de Autorização
+
+Arquivo: `backend/src/utils/auth.ts`
+
+Middlewares disponíveis para proteção de rotas:
+- `requireCreate`: Valida permissão para criar registros (retorna HTTP 403 se negado)
+- `requireRead`: Valida permissão para visualizar dados
+- `requireUpdate`: Valida permissão para atualizar registros
+- `requireDelete`: Valida permissão para excluir registros
+- `requireReportAccess`: Valida acesso a relatórios e análises
+
+Todas as rotas de dados (`/api/atrativos`, `/api/avistamentos`, `/api/colisoes`, `/api/acoes-controle`, `/api/inspecoes`, etc.) são protegidas por middlewares de autorização. Rotas de relatórios (`/api/relatorios/*`, `/api/analytics/*`) exigem `requireReportAccess`.
+
+Exemplo de uso no backend:
+```typescript
+app.get('/api/atrativos', { preHandler: [app.authenticate, requireRead] }, async (request) => {
+  // handler protegido
+});
+
+app.post('/api/atrativos', { preHandler: [app.authenticate, requireCreate] }, async (request, reply) => {
+  // apenas admins podem criar
+});
+```
+
+#### Frontend - Controle Dinâmico de Interface
+
+Arquivo: `frontend/src/composables/usePermissions.ts`
+
+Componentes Vue utilizam o composable `usePermissions()` para controle reativo da interface:
+- Oculta botões de criação/edição/exclusão conforme permissões do usuário
+- Remove colunas de ação de tabelas para usuários sem permissão
+- Esconde formulários de cadastro para usuários viewer
+- Desabilita funcionalidades não autorizadas antes de enviar requisições
+
+Exemplo de uso no frontend:
+```typescript
+// Importar composable
+import { usePermissions } from '@/composables/usePermissions';
+
+// Usar no componente
+const { canCreate, canUpdate, canDelete } = usePermissions();
+
+// No template
+<button v-if="canCreate" @click="novoRegistro">+ Novo</button>
+<button v-if="canUpdate" @click="editar">Editar</button>
+```
+
+Componentes já adaptados: `AtrativosView.vue`, `ASAView.vue`.
+
+#### Autenticação JWT com Permissões
+
+Arquivos: `backend/src/routes/auth.ts`, `frontend/src/services/api.ts`
+
+O token JWT agora inclui:
+- `role_id` e `role_name`: Identificação do perfil do usuário
+- `permissions`: Objeto completo com todas as permissões booleanas
+- Renovação automática de permissões em:
+  - Login (`POST /api/auth/login`)
+  - Troca de aeroporto (`POST /api/auth/switch-airport`)
+  - Alteração de senha (`POST /api/auth/change-password`)
+
+O frontend armazena as permissões no localStorage junto com os dados do usuário, permitindo controle reativo da interface sem requisições adicionais ao backend.
+
+#### Como Configurar Perfis
+
+1. Aplicar o schema SQL atualizado:
+```bash
+psql -d fauna -f wildlife_full_package.sql
+```
+
+O script cria automaticamente:
+- Tabela `lu_user_role` com perfis admin e viewer
+- Campo `role_id` em `app_user`
+- Configura usuários existentes como admin
+
+2. Para criar um usuário viewer via SQL:
+```sql
+INSERT INTO wildlife.app_user (name, username, password_hash, airport_id, role_id)
+VALUES ('Visualizador', 'viewer', crypt('senha123', gen_salt('bf')), 1,
+        (SELECT role_id FROM wildlife.lu_user_role WHERE role_name = 'viewer'));
+```
+
+3. Ou usar a interface de Usuários no frontend (disponível para admins) para criar e gerenciar usuários com diferentes perfis.
+
+#### Expansão Futura
+
+O sistema foi projetado para fácil expansão:
+- Adicionar novos perfis (ex: `operador`, `gerente`, `auditor`) inserindo na tabela `lu_user_role`
+- Implementar permissões por módulo específico (ex: `can_edit_strikes`, `can_edit_sightings`)
+- Criar interface administrativa completa para gestão de usuários, perfis e permissões
+- Adicionar auditoria de ações (log de quem criou/editou/excluiu cada registro)
+- Implementar aprovação de mudanças críticas (workflow de revisão)
+
 ## 3. Pre-requisitos
 
 - Node.js >= 20 (testado com Node 24.x)
@@ -244,9 +359,25 @@ Variavel opcional `VITE_API_URL` pode apontar para outro host; caso vazio utiliz
 
 ## 9. Endpoints principais
 
+### Autenticação e Autorização
+
+| Metodo | Rota | Permissão | Descricao |
+| ------ | ---- | --------- | --------- |
+| POST | `/api/auth/login` | Pública | Login com username/senha, retorna JWT com permissões |
+| POST | `/api/auth/switch-airport` | Autenticado | Troca aeroporto ativo, renova JWT com permissões |
+| POST | `/api/auth/change-password` | Autenticado | Troca senha do usuário logado, renova JWT |
+
+### Dados Operacionais (CRUD Protegido)
+
+Todas as rotas abaixo exigem autenticação JWT. Permissões específicas:
+- **GET** (leitura): `can_read`
+- **POST** (criação): `can_create`
+- **PUT** (atualização): `can_update`
+- **DELETE** (exclusão): `can_delete`
+
 | Metodo | Rota | Descricao |
 | ------ | ---- | --------- |
-| GET | `/api/lookups` | Dominios padrao para formularios |
+| GET | `/api/lookups` | Dominios padrao para formularios (somente leitura) |
 | CRUD | `/api/aeroportos`, `/api/aeroportos/:id` | Cadastro de aeroportos |
 | CRUD | `/api/aeroportos/:airportId/locais` | Locais operacionais |
 | CRUD | `/api/aeroportos/:airportId/equipes` | Equipes de fauna por aeroporto |
@@ -255,51 +386,81 @@ Variavel opcional `VITE_API_URL` pode apontar para outro host; caso vazio utiliz
 | CRUD | `/api/avistamentos` | Avistamentos + itens |
 | CRUD | `/api/colisoes` | Colisoes com fauna |
 | CRUD | `/api/acoes-controle` | Acoes de manejo |
-| CRUD | `/api/atrativos` | Gestao de atrativos |
+| CRUD | `/api/atrativos` | Gestao de atrativos com categorias de ações (ativa/passiva) |
+| CRUD | `/api/inspecoes` | Inspeções do sítio/ASA com observações e quadrantes |
+| CRUD | `/api/carcacas` | Registro de coleta/destino de carcaças |
+| CRUD | `/api/auditorias-ambientais` | Auditorias de resíduos, esgoto e sistemas de proteção |
+| CRUD | `/api/asa-focos` | Focos atrativos na ASA com protocolos e follow-ups |
+| CRUD | `/api/comunicados-externos` | Ofícios, prazos e respostas de órgãos externos |
+| CRUD | `/api/treinamentos-fauna` | Sessões de treinamento realizadas |
+| CRUD | `/api/pessoal` | Cadastro de pessoas por função |
+| CRUD | `/api/treinamentos-conclusoes` | Conclusões individuais com validade |
+
+### Relatórios e Análises (Requer can_access_reports)
+
+| Metodo | Rota | Descricao |
+| ------ | ---- | --------- |
 | GET | `/api/kpis/resumo` | KPIs dinamicos por periodo/ICAO |
 | POST | `/api/kpis/did` | Difference-in-Differences para uma acao |
 | POST | `/api/kpis/ba-espacial` | Buffer Analysis espacial |
-| GET | `/api/relatorios/*` | Pareto de especies, fases de voo, partes com dano, janela BA |
-| GET | `/api/relatorios/movimentos-periodo` | Totais mensais/anuais com variacao percentual contra anos adjacentes |
-| GET | `/api/relatorios/colisoes-imagens` (`/export`) | Lista colisoes com miniaturas e exporta PDF/DOCX |
-| GET | `/api/relatorios/incidentes/export` | Exporta em PDF/DOCX a analise de incidentes exibida no frontend |
-| CRUD | `/api/inspecoes` | InspeÃƒÂƒÃ‚Â§ÃƒÂƒÃ‚Âµes do sÃƒÂƒÃ‚Â­tio/ASA com observaÃƒÂƒÃ‚Â§ÃƒÂƒÃ‚Âµes e quadrantes |
-| CRUD | `/api/carcacas` | Registro de coleta/destino de carcaÃƒÂƒÃ‚Â§as |
-| CRUD | `/api/auditorias-ambientais` | Auditorias de resÃƒÂƒÃ‚Â­duos, esgoto e sistemas de proteÃƒÂƒÃ‚Â§ÃƒÂƒÃ‚Â£o |
-| CRUD | `/api/asa-focos` | Focos atrativos na ASA com protocolos e follow-ups |
-| CRUD | `/api/comunicados-externos` | OfÃƒÂƒÃ‚Â­cios, prazos e respostas de ÃƒÂƒÃ‚Â³rgÃƒÂƒÃ‚Â£os externos |
-| CRUD | `/api/treinamentos-fauna` | SessÃƒÂƒÃ‚Âµes de treinamento realizadas |
-| CRUD | `/api/pessoal` | Cadastro de pessoas por funÃƒÂƒÃ‚Â§ÃƒÂƒÃ‚Â£o |
-| CRUD | `/api/treinamentos-conclusoes` | ConclusÃƒÂƒÃ‚Âµes individuais com validade |
-| GET | `/api/treinamentos/status` | Resumo de status por funÃƒÂƒÃ‚Â§ÃƒÂƒÃ‚Â£o e pendÃƒÂƒÃ‚Âªncias prÃƒÂƒÃ‚Â³ximas |
-| GET | `/api/analytics/financeiro` | Indicadores financeiros de colisÃƒÂƒÃ‚Âµes por ano/categoria |
-| GET | `/api/analytics/incidentes` | DistribuiÃƒÂƒÃ‚Â§ÃƒÂƒÃ‚Âµes avanÃƒÂƒÃ‚Â§adas por ano, espÃƒÂƒÃ‚Â©cie, tipo e dano |
-| CRUD | `/api/usuarios` | Cadastro de usu?rios e aeroportos permitidos |
-| POST | `/api/usuarios/:id/reset-senha` | Redefine a senha para o padr?o (`fauna1`) e for?a nova troca |
-| POST | `/api/usuarios/reset-senha` | Redefine a senha de m?ltiplos usu?rios para `fauna1` |
-| POST | `/api/auth/change-password` | Troca de senha pelo pr?prio usu?rio autenticado |
-| CRUD | `/api/usuarios` | Cadastro de usu?rios e aeroportos permitidos |
-| POST | `/api/usuarios/:id/reset-senha` | Redefine a senha para o padr?o (`fauna1`) e obriga nova troca |
-| POST | `/api/auth/change-password` | Troca de senha pelo pr?prio usu?rio autenticado |
+| GET | `/api/relatorios/pareto-especies` | Pareto de especies por strikes |
+| GET | `/api/relatorios/fases-voo` | Distribuição de strikes por fase de voo |
+| GET | `/api/relatorios/partes-dano` | Distribuição de danos por parte da aeronave |
+| GET | `/api/relatorios/ba-janela` | Janela padrão de Buffer Analysis |
+| GET | `/api/relatorios/movimentos-periodo` | Totais mensais/anuais com variacao percentual |
+| GET | `/api/relatorios/colisoes-imagens` | Lista colisoes com miniaturas |
+| GET | `/api/relatorios/colisoes-imagens/export` | Exporta PDF/DOCX de colisões com imagens |
+| GET | `/api/relatorios/incidentes/export` | Exporta PDF/DOCX analise de incidentes |
+| GET | `/api/relatorios/inspecoes-diarias/export` | Exporta PDF de inspeções diárias |
+| GET | `/api/relatorios/inspecoes-protecao/export` | Exporta PDF/DOCX de inspeções de proteção |
+| GET | `/api/relatorios/coletas-carcaca/export` | Exporta PDF/DOCX de coletas de carcaça |
+| GET | `/api/relatorios/inspecoes-lagos/export` | Exporta PDF/DOCX de inspeções de lagos |
+| GET | `/api/relatorios/inspecoes-areas-verdes/export` | Exporta PDF/DOCX de áreas verdes |
+| GET | `/api/relatorios/inspecoes-focos-atracao/export` | Exporta PDF/DOCX de focos de atração |
+| GET | `/api/relatorios/residuos-incineracao/export` | Exporta PDF/DOCX de resíduos |
+| GET | `/api/analytics/financeiro` | Indicadores financeiros de colisões por ano/categoria |
+| GET | `/api/analytics/incidentes` | Distribuições avançadas por ano, espécie, tipo e dano |
+| GET | `/api/treinamentos/status` | Resumo de status por função e pendências próximas |
 
+### Gestão de Usuários (Requer can_create/can_update)
 
-Todos os retornos utilizam textos em portugues e seguem validacao com Zod.
+| Metodo | Rota | Descricao |
+| ------ | ---- | --------- |
+| CRUD | `/api/usuarios` | Cadastro de usuários e aeroportos permitidos |
+| POST | `/api/usuarios/:id/reset-senha` | Redefine a senha para o padrão (`fauna1`) e obriga nova troca |
+| POST | `/api/usuarios/reset-senha` | Redefine a senha de múltiplos usuários para `fauna1` |
+
+Todos os retornos utilizam textos em portugues e seguem validacao com Zod. Respostas HTTP 403 indicam permissão negada.
 
 ## 10. Telas e fluxos de UI
 
-1. **Painel**: filtros de periodo, cards SR/10k por aeroporto, lista de taxa com dano e grafico Pareto (Chart.js).
-2. **Movimentos**: tabela paginada + formulario rapido de cadastro.
-3. **Avistamentos**: filtro por aeroporto/data, CRUD e integracao com itens; formulÃƒÂƒÃ‚Â¡rio usa selects para locais/equipes cadastrados e permite editar registros diretamente na tabela.
-4. **Colisoes**: filtro por fase e formulario completo (quadrante + mapa, latitude/longitude, upload multiplo com previews, custos direto/indireto/outros, flag e minutos de atraso de voo, URLs externas).
-5. **Acoes de Controle**: cadastro e painel rapido de BA espacial (chama `/api/kpis/ba-espacial`).
-6. **Atrativos**: status (ativo/mitigando/resolvido) com formulario dedicado.
-7. **Cadastros**: manutencao basica de aeroportos, especies, locais operacionais e equipes (CRUD completo por aeroporto), garantindo que avistamentos/colisoes usem IDs vÃƒÂƒÃ‚Â¡lidos.
-8. **Inspecoes/ASA**: concentra inspeÃƒÂƒÃ‚Â§ÃƒÂƒÃ‚Âµes do sÃƒÂƒÃ‚Â­tio/ASA, coleta de carcaÃƒÂƒÃ‚Â§as e auditorias ambientais com formulÃƒÂƒÃ‚Â¡rios orientados.
-9. **Governanca**: painel ÃƒÂƒÃ‚Âºnico para focos ASA, comunicados externos, gestÃƒÂƒÃ‚Â£o de treinamentos, cadastro de pessoal e status automÃƒÂƒÃ‚Â¡tico de validade por funÃƒÂƒÃ‚Â§ÃƒÂƒÃ‚Â£o.
-10. **Relatorios**: agrega indicadores financeiros (custos direto/indireto/outros), analise de incidentes (listas + export PDF/DOCX), comparativo de movimentos (grafico + tabela mensal com variacao %) e o relatorio de colisoes com imagens/miniaturas.
-11. **Usuarios**: cadastro de usuÃƒÂƒÃ‚Â¡rios do sistema, aeroportos permitidos e reset de senha padrÃƒÂƒÃ‚Â£o.
+Todas as telas possuem controle de acesso adaptativo baseado em permissões do usuário. Botões de criação/edição/exclusão são automaticamente ocultados para usuários sem permissão.
 
-Cada modulo possui sua rota no Vue Router, evitando concentrar todos os CRUDs em uma unica pagina conforme solicitado.
+1. **Painel**: filtros de periodo, cards SR/10k por aeroporto, lista de taxa com dano e grafico Pareto (Chart.js). Acessível para todos os perfis.
+
+2. **Movimentos**: tabela paginada + formulario rapido de cadastro. Interface adaptativa (formulários ocultos para viewers).
+
+3. **Avistamentos**: filtro por aeroporto/data, CRUD e integracao com itens; formulário usa selects para locais/equipes cadastrados e permite editar registros diretamente na tabela. Botões de edição ocultos para viewers.
+
+4. **Colisoes**: filtro por fase e formulario completo (quadrante + mapa, latitude/longitude, upload multiplo com previews, custos direto/indireto/outros, flag e minutos de atraso de voo, URLs externas). Interface adaptativa com controle de permissões.
+
+5. **Acoes de Controle**: cadastro e painel rapido de BA espacial (chama `/api/kpis/ba-espacial`). Formulários ocultos para viewers.
+
+6. **Atrativos**: classificação por categorias de ação (Ativa/Passiva) conforme Manual de Boas Práticas no Gerenciamento de Risco da Fauna. Interface totalmente adaptativa - formulário lateral oculto para viewers, coluna de ações removida da tabela se sem permissão.
+
+7. **ASA**: página dedicada para gestão de focos atrativos na Área de Segurança Aeroportuária, com modal de edição/criação. Botões de ação ocultos conforme permissões (viewers não veem "Novo Foco", "Editar" ou "Remover").
+
+8. **Cadastros**: manutencao basica de aeroportos, especies, locais operacionais e equipes (CRUD completo por aeroporto), garantindo que avistamentos/colisoes usem IDs válidos. Restrito a admins.
+
+9. **Inspecoes**: formulários completos para 7 tipos de inspeção (F1-F7): Inspeções ASA, Proteção de Cerca, Coletas de Carcaça, Lagos, Áreas Verdes, Focos de Atração e Resíduos/Incineração. Interface adaptativa.
+
+10. **Governanca**: painel dedicado para comunicados externos, gestão de treinamentos, cadastro de pessoal e status automático de validade por função. Interface adaptativa.
+
+11. **Relatorios**: agrega indicadores financeiros (custos direto/indireto/outros), analise de incidentes (listas + export PDF/DOCX), comparativo de movimentos (grafico + tabela mensal com variacao %) e o relatorio de colisoes com imagens/miniaturas. Requer permissão `can_access_reports`.
+
+12. **Usuarios**: cadastro de usuários do sistema, aeroportos permitidos, reset de senha padrão e gestão de perfis de acesso (admin/viewer). Restrito a admins.
+
+Cada modulo possui sua rota no Vue Router, evitando concentrar todos os CRUDs em uma unica pagina. Sistema de navegação adaptativo conforme perfil do usuário.
 
 ## 11. Relatorios e KPIs
 
@@ -315,10 +476,22 @@ Cada modulo possui sua rota no Vue Router, evitando concentrar todos os CRUDs em
 
 ## 12. Testes e proximos passos
 
-- Adicionar testes automatizados (Vitest para Vue e supertest para Fastify) validando principais fluxos.
-- Implementar autenticacao/perfis para auditar alteracoes.
-- Evoluir formularios de colisoes/avistamentos com componentes especificos para itens, upload de fotos e geolocalizacao.
-- Criar dashboards adicionais usando `kpi_ba_sr_tah` e mapas (Leaflet ou Mapbox).
+### Implementado
+
+- ✅ **Sistema RBAC completo**: Controle de acesso baseado em funções (admin/viewer) com middlewares de autorização no backend e controle reativo de interface no frontend
+- ✅ **Autenticação JWT**: Tokens incluem perfil e permissões do usuário, com renovação automática
+- ✅ **Interface adaptativa**: Componentes Vue ocultam/mostram funcionalidades baseado em permissões
+- ✅ **Proteção de rotas**: Todos os endpoints de dados e relatórios protegidos por middlewares de autorização
+
+### Próximos Passos
+
+- Adicionar testes automatizados (Vitest para Vue e supertest para Fastify) validando principais fluxos e sistema de permissões
+- Expandir sistema RBAC com novos perfis (operador, gerente, auditor) e permissões por módulo
+- Implementar auditoria de ações (log de quem criou/editou/excluiu cada registro) usando triggers PostgreSQL
+- Evoluir formularios de colisoes/avistamentos com componentes especificos para itens, upload de fotos e geolocalizacao
+- Criar dashboards adicionais usando `kpi_ba_sr_tah` e mapas (Leaflet ou Mapbox)
+- Adicionar interface administrativa para gestão de usuários, perfis e permissões
+- Implementar workflow de aprovação para mudanças críticas (opcional)
 
 
 

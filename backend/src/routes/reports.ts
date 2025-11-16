@@ -6,7 +6,6 @@ import sharp from 'sharp';
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
 import { ChartConfiguration } from 'chart.js';
 import { db } from '../services/db';
-import { requireReportAccess } from '../utils/auth';
 import {
   FinanceiroDataset,
   FinanceiroAgrupamentoItem,
@@ -36,7 +35,7 @@ const NOMES_MESES = [
 ];
 
 export async function reportsRoutes(app: FastifyInstance) {
-  app.get('/api/relatorios/pareto-especies', { preHandler: [app.authenticate, requireReportAccess] }, async (request) => {
+  app.get('/api/relatorios/pareto-especies', async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const { rows } = await db.query(
@@ -51,7 +50,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { periodo: { inicio, fim }, dados: rows };
   });
 
-  app.get('/api/relatorios/fases-voo', { preHandler: [app.authenticate, requireReportAccess] }, async (request) => {
+  app.get('/api/relatorios/fases-voo', async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const { rows } = await db.query(
@@ -66,7 +65,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { periodo: { inicio, fim }, dados: rows };
   });
 
-  app.get('/api/relatorios/partes-dano', { preHandler: [app.authenticate, requireReportAccess] }, async (request) => {
+  app.get('/api/relatorios/partes-dano', async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const { rows } = await db.query(
@@ -92,7 +91,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { periodo: { inicio, fim }, dados };
   });
 
-  app.get('/api/relatorios/ba-janela', { preHandler: [app.authenticate, requireReportAccess] }, async (request) => {
+  app.get('/api/relatorios/ba-janela', async (request) => {
     const filtros = z.object({ airportId: z.coerce.number().optional() }).parse(request.query ?? {});
     const { rows } = await db.query(
       `SELECT * FROM wildlife_kpi.kpi_ba_sr_tah WHERE $1::bigint IS NULL OR airport_id=$1 ORDER BY action_id DESC`,
@@ -101,7 +100,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { janela_padrao_dias: 30, dados: rows };
   });
 
-  app.get('/api/relatorios/movimentos-periodo', { preHandler: [app.authenticate, requireReportAccess] }, async (request) => {
+  app.get('/api/relatorios/movimentos-periodo', async (request) => {
     const filtros = z
       .object({
         airportId: z.coerce.number().optional(),
@@ -192,7 +191,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get('/api/relatorios/financeiro/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+  app.get('/api/relatorios/financeiro/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -220,7 +219,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return reply.send(buffer);
   });
 
-  app.get('/api/relatorios/colisoes-imagens', { preHandler: [app.authenticate, requireReportAccess] }, async (request) => {
+  app.get('/api/relatorios/colisoes-imagens', async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const dados = await buscarColisoesComImagens(filtros.airportId ?? null, inicio, fim);
@@ -240,7 +239,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get('/api/relatorios/colisoes-imagens/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+  app.get('/api/relatorios/colisoes-imagens/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -267,7 +266,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return reply.send(buffer);
   });
 
-  app.get('/api/relatorios/incidentes/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+  app.get('/api/relatorios/incidentes/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -296,7 +295,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   // Exportação PDF de Inspeções Diárias
-  app.get('/api/relatorios/inspecoes-diarias/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+  app.get('/api/relatorios/inspecoes-diarias/export', async (request, reply) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
 
@@ -399,7 +398,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   // Exportação PDF/DOCX de Inspeções de Proteção (F4)
-  app.get('/api/relatorios/inspecoes-protecao/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+  app.get('/api/relatorios/inspecoes-protecao/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -487,60 +486,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   // Exportação PDF/DOCX de Coletas de Carcaça (F5)
-  app.get('/api/relatorios/coletas-carcaca/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
-    const filtros = periodoSchema
-      .extend({
-        formato: z.enum(['pdf', 'docx'])
-      })
-      .parse(request.query ?? {});
-    const { inicio, fim } = periodosComDefaults(filtros);
-
-    let whereClause = 'WHERE c.collection_date BETWEEN $1 AND $2';
-    const params: any[] = [inicio, fim];
-
-    if (filtros.airportId) {
-      whereClause += ' AND c.airport_id = $3';
-      params.push(filtros.airportId);
-    }
-
-    const query = `
-      SELECT c.*,
-             a.icao_code,
-             a.name AS airport_name,
-             q.code AS quadrant_code
-      FROM wildlife.fact_carcass_collection c
-      LEFT JOIN wildlife.airport a ON a.airport_id = c.airport_id
-      LEFT JOIN wildlife.lu_quadrant q ON q.quadrant_id = c.quadrant_id
-      ${whereClause}
-      ORDER BY c.collection_date DESC
-    `;
-
-    const result = await db.query(query, params);
-    const coletas = result.rows;
-
-    if (!coletas.length) {
-      return reply.code(404).send({ mensagem: 'Nenhuma coleta encontrada para o período informado' });
-    }
-
-    const nomeArquivoBase = `coletas-carcaca-${inicio}-a-${fim}`;
-    if (filtros.formato === 'docx') {
-      const buffer = await gerarDocxColetasCarcaca(coletas, { inicio, fim });
-      reply.header(
-        'Content-Type',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-      );
-      reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.docx`);
-      return reply.send(buffer);
-    }
-
-    const buffer = await gerarPdfColetasCarcaca(coletas, { inicio, fim });
-    reply.header('Content-Type', 'application/pdf');
-    reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.pdf`);
-    return reply.send(buffer);
-  });
-
-  // Exportação PDF/DOCX de Coletas de Carcaça (F5)
-  app.get('/api/relatorios/coletas-carcaca/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+  app.get('/api/relatorios/coletas-carcaca/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -593,7 +539,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   // Exportação PDF/DOCX de Inspeções de Lagos
-  app.get('/api/relatorios/inspecoes-lagos/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+  app.get('/api/relatorios/inspecoes-lagos/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -649,7 +595,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   // Exportação PDF/DOCX de Manutenção de Áreas Verdes (F2)
-  app.get('/api/relatorios/inspecoes-areas-verdes/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+  app.get('/api/relatorios/inspecoes-areas-verdes/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -701,8 +647,8 @@ export async function reportsRoutes(app: FastifyInstance) {
     return reply.send(buffer);
   });
 
-  // Exportação PDF/DOCX de Monitoramento de Focos de Atração (F3)
-  app.get('/api/relatorios/inspecoes-focos-atracao/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+  // Exportação PDF/DOCX de Resíduos para Incineração
+  app.get('/api/relatorios/residuos-incineracao/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -710,36 +656,38 @@ export async function reportsRoutes(app: FastifyInstance) {
       .parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
 
-    let whereClause = 'WHERE i.inspection_date BETWEEN $1 AND $2';
+    let whereClause = 'WHERE w.record_date BETWEEN $1 AND $2';
     const params: any[] = [inicio, fim];
 
     if (filtros.airportId) {
-      whereClause += ' AND i.airport_id = $3';
+      whereClause += ' AND w.airport_id = $3';
       params.push(filtros.airportId);
     }
 
     const query = `
-      SELECT i.*,
+      SELECT w.*,
              a.icao_code,
              a.name AS airport_name,
-             s.name as season_name
-      FROM wildlife.fact_attraction_focus_inspection i
-      LEFT JOIN wildlife.airport a ON a.airport_id = i.airport_id
-      LEFT JOIN wildlife.lu_year_season s ON s.season_id = i.season_id
+             ps.name AS physical_state_name,
+             tr.name AS treatment_name
+      FROM wildlife.fact_incineration_waste w
+      LEFT JOIN wildlife.airport a ON a.airport_id = w.airport_id
+      LEFT JOIN wildlife.lu_waste_physical_state ps ON ps.state_id = w.physical_state_id
+      LEFT JOIN wildlife.lu_waste_treatment_type tr ON tr.treatment_id = w.treatment_id
       ${whereClause}
-      ORDER BY i.inspection_date DESC
+      ORDER BY w.record_date DESC
     `;
 
     const result = await db.query(query, params);
-    const inspecoes = result.rows;
+    const residuos = result.rows;
 
-    if (!inspecoes.length) {
-      return reply.code(404).send({ mensagem: 'Nenhum registro encontrado para o período informado' });
+    if (!residuos.length) {
+      return reply.code(404).send({ mensagem: 'Nenhum resíduo encontrado para o período informado' });
     }
 
-    const nomeArquivoBase = `monitoramento-focos-${inicio}-a-${fim}`;
+    const nomeArquivoBase = `residuos-incineracao-${inicio}-a-${fim}`;
     if (filtros.formato === 'docx') {
-      const buffer = await gerarDocxInspecoesFocosAtracao(inspecoes, { inicio, fim });
+      const buffer = await gerarDocxResiduosIncineracao(residuos, { inicio, fim });
       reply.header(
         'Content-Type',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -748,14 +696,14 @@ export async function reportsRoutes(app: FastifyInstance) {
       return reply.send(buffer);
     }
 
-    const buffer = await gerarPdfInspecoesFocosAtracao(inspecoes, { inicio, fim });
+    const buffer = await gerarPdfResiduosIncineracao(residuos, { inicio, fim });
     reply.header('Content-Type', 'application/pdf');
     reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.pdf`);
     return reply.send(buffer);
   });
 
   // Exportação PDF/DOCX de Resíduos para Incineração
-  app.get('/api/relatorios/residuos-incineracao/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+  app.get('/api/relatorios/residuos-incineracao/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -1745,12 +1693,6 @@ async function gerarPdfInspecoesDiarias(
   });
 }
 
-function formatarData(data: string) {
-  if (!data) return '';
-  const d = new Date(data + 'T00:00:00');
-  return d.toLocaleDateString('pt-BR');
-}
-
 // Função de geração de DOCX para Inspeções de Proteção (F4)
 async function gerarDocxInspecoesProtecao(
   inspecoes: any[],
@@ -2471,98 +2413,20 @@ async function gerarPdfInspecoesAreasVerdes(
   });
 }
 
-// Função de geração de DOCX para Monitoramento de Focos de Atração (F3)
-async function gerarDocxInspecoesFocosAtracao(
-  inspecoes: any[],
-  periodo: { inicio: string; fim: string }
-) {
-  const children: Paragraph[] = [
-    new Paragraph({ text: 'Relatório F3 – Monitoramento de Focos de Atração', heading: HeadingLevel.HEADING_1 }),
-    new Paragraph(`Período: ${periodo.inicio} a ${periodo.fim}`),
-    new Paragraph(`Total de registros: ${inspecoes.length}`),
-    new Paragraph(' ')
-  ];
-
-  for (const insp of inspecoes) {
-    children.push(new Paragraph({ text: `Registro #${insp.focus_inspection_id}`, heading: HeadingLevel.HEADING_2 }));
-
-    children.push(new Paragraph(`Data: ${formatarData(insp.inspection_date)}`));
-    children.push(new Paragraph(`Aeroporto: ${insp.airport_name} (${insp.icao_code})`));
-    children.push(new Paragraph(`Período do Ano: ${insp.season_name || 'N/A'}`));
-    children.push(new Paragraph(`Chuva nas últimas 24h: ${insp.rained_last_24h ? 'Sim' : 'Não'}`));
-    children.push(new Paragraph(' '));
-
-    if (insp.secondary_focuses?.length) {
-      children.push(new Paragraph({ text: 'Focos Secundários', heading: HeadingLevel.HEADING_3 }));
-      children.push(new Paragraph(`Registros: ${insp.secondary_focuses.length}`));
-    }
-    if (insp.green_area_focuses?.length) {
-      children.push(new Paragraph({ text: 'Áreas Verdes', heading: HeadingLevel.HEADING_3 }));
-      children.push(new Paragraph(`Registros: ${insp.green_area_focuses.length}`));
-    }
-    // Simplificado para o DOCX, detalhes completos podem ser adicionados
-
-    if (insp.general_observations) {
-      children.push(new Paragraph({ text: 'Observações Gerais', heading: HeadingLevel.HEADING_3 }));
-      children.push(new Paragraph(insp.general_observations));
-    }
-
-    children.push(new Paragraph('─'.repeat(80)));
-    children.push(new Paragraph(' '));
-  }
-
-  const doc = new Document({ sections: [{ children }] });
-  return Packer.toBuffer(doc);
-}
-
-// Função de geração de PDF para Monitoramento de Focos de Atração (F3)
-async function gerarPdfInspecoesFocosAtracao(
-  inspecoes: any[],
-  periodo: { inicio: string; fim: string }
-) {
-  return await new Promise<Buffer>((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margins: { top: 40, left: 40, right: 40, bottom: 40 } });
-    const chunks: Buffer[] = [];
-    doc.on('data', (chunk) => chunks.push(chunk));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', (err) => reject(err));
-
-    doc.fontSize(16).text('Relatório F3 – Monitoramento de Focos de Atração', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(12).text(`Período: ${periodo.inicio} a ${periodo.fim}`, { align: 'center' });
-    doc.moveDown(1.5);
-    // PDF simplificado por brevidade
-    doc.fontSize(10).text('Relatório detalhado disponível no formato DOCX.');
-    doc.end();
-  });
-}
-
 // Função de geração de DOCX para Resíduos de Incineração
 async function gerarDocxResiduosIncineracao(
   residuos: any[],
   periodo: { inicio: string; fim: string }
 ) {
   const children: Paragraph[] = [
-    new Paragraph({
-      text: 'Relatório de Resíduos Enviados para Incineração',
-      heading: HeadingLevel.HEADING_1
-    }),
-    new Paragraph({
-      text: `Período: ${periodo.inicio} a ${periodo.fim}`
-    }),
-    new Paragraph({
-      text: `Total de registros: ${residuos.length}`
-    }),
+    new Paragraph({ text: 'Relatório de Resíduos Enviados para Incineração', heading: HeadingLevel.HEADING_1 }),
+    new Paragraph(`Período: ${periodo.inicio} a ${periodo.fim}`),
+    new Paragraph(`Total de registros: ${residuos.length}`),
     new Paragraph(' ')
   ];
 
   for (const residuo of residuos) {
-    children.push(
-      new Paragraph({
-        text: `Registro #${residuo.waste_id}`,
-        heading: HeadingLevel.HEADING_2
-      })
-    );
+    children.push(new Paragraph({ text: `Registro #${residuo.waste_id}`, heading: HeadingLevel.HEADING_2 }));
 
     children.push(new Paragraph(`Aeroporto: ${residuo.airport_name} (${residuo.icao_code})`));
     children.push(new Paragraph(`Empresa: ${residuo.company_name}`));
@@ -2591,14 +2455,66 @@ async function gerarDocxResiduosIncineracao(
     children.push(new Paragraph(' '));
   }
 
-  const doc = new Document({
-    sections: [
-      {
-        children
-      }
-    ]
-  });
+  const doc = new Document({ sections: [{ children }] });
   return Packer.toBuffer(doc);
+}
+
+// Função de geração de PDF para Resíduos de Incineração
+async function gerarPdfResiduosIncineracao(
+  residuos: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  return await new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margins: { top: 40, left: 40, right: 40, bottom: 40 } });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', (err) => reject(err));
+
+    const processar = async () => {
+      doc.fontSize(18).text('Relatório de Resíduos Enviados para Incineração', { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(12).text(`Período: ${periodo.inicio} a ${periodo.fim}`, { align: 'center' });
+      doc.fontSize(10).text(`Total de registros: ${residuos.length}`, { align: 'center' });
+      doc.moveDown(1.5);
+
+      for (let index = 0; index < residuos.length; index++) {
+        const residuo = residuos[index];
+
+        if (index > 0) doc.addPage();
+
+        doc.fontSize(14).fillColor('#f39c12').text(`Registro #${residuo.waste_id}`, { underline: true });
+        doc.moveDown(0.5);
+
+        doc.fontSize(11).fillColor('#000000');
+        doc.text(`Aeroporto: ${residuo.airport_name} (${residuo.icao_code})`);
+        doc.text(`Empresa: ${residuo.company_name}`);
+        doc.text(`Data: ${formatarData(residuo.record_date)}`);
+        doc.text(`Voos internacionais: ${residuo.international_flights ? 'Sim' : 'Não'}`);
+
+        doc.moveDown();
+        doc.fontSize(12).fillColor('#f39c12').text('Caracterização do Resíduo').fillColor('#000000');
+        doc.fontSize(10);
+        if (residuo.waste_type) doc.text(`Tipo de resíduo: ${residuo.waste_type}`);
+        if (residuo.physical_state_name) doc.text(`Estado físico: ${residuo.physical_state_name}`);
+        if (residuo.origin) doc.text(`Origem: ${residuo.origin}`);
+
+        doc.moveDown();
+        doc.fontSize(12).fillColor('#f39c12').text('Quantificação').fillColor('#000000');
+        doc.fontSize(10);
+        if (residuo.weight_kg) doc.text(`Peso: ${residuo.weight_kg} kg`);
+        if (residuo.unit_quantity) doc.text(`Quantidade (unidades): ${residuo.unit_quantity}`);
+
+        if (index < residuos.length - 1) {
+          doc.fontSize(8).fillColor('#95a5a6').text('─'.repeat(80), { align: 'center' }).fillColor('#000000');
+        }
+      }
+
+      doc.end();
+    };
+
+    processar().catch(reject);
+  });
 }
 
 // Função de geração de PDF para Resíduos de Incineração
