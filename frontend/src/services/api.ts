@@ -1,4 +1,4 @@
-﻿import axios from 'axios';
+﻿﻿import axios from 'axios';
 
 const baseURL = import.meta.env.VITE_API_URL ?? '';
 
@@ -96,6 +96,45 @@ export const ApiService = {
   getUser,
   setUser,
   clearUser,
+
+  // Permissões
+  getUserPermissions() {
+    const user = getUser<any>();
+    return user?.permissions || {
+      can_create: false,
+      can_read: true,
+      can_update: false,
+      can_delete: false,
+      can_access_reports: false
+    };
+  },
+  hasPermission(permission: 'can_create' | 'can_read' | 'can_update' | 'can_delete' | 'can_access_reports'): boolean {
+    const permissions = this.getUserPermissions();
+    return permissions[permission] === true;
+  },
+  canCreate() {
+    return this.hasPermission('can_create');
+  },
+  canRead() {
+    return this.hasPermission('can_read');
+  },
+  canUpdate() {
+    return this.hasPermission('can_update');
+  },
+  canDelete() {
+    return this.hasPermission('can_delete');
+  },
+  canAccessReports() {
+    return this.hasPermission('can_access_reports');
+  },
+  isAdmin() {
+    const user = getUser<any>();
+    return user?.role_name === 'admin';
+  },
+  isViewer() {
+    const user = getUser<any>();
+    return user?.role_name === 'viewer';
+  },
   async getKpisResumo(params?: Record<string, any>) {
     const { data } = await api.get('/api/kpis/resumo', { params });
     return data;
@@ -162,6 +201,170 @@ export const ApiService = {
     const { data } = await api.post('/api/inspecoes', payload);
     return data;
   },
+  // Inspeções Diárias (Monitoramento Diário de Fauna - F1)
+  async getInspecoesDiarias(params?: Record<string, any>) {
+    const { data } = await api.get('/api/inspecoes-diarias', { params });
+    return data;
+  },
+  async getInspecaoDiaria(id: number) {
+    const { data } = await api.get(`/api/inspecoes-diarias/${id}`);
+    return data;
+  },
+  async criarInspecaoDiaria(payload: Record<string, any>) {
+    const { data } = await api.post('/api/inspecoes-diarias', payload);
+    return data;
+  },
+  async atualizarInspecaoDiaria(id: number, payload: Record<string, any>) {
+    const { data } = await api.put(`/api/inspecoes-diarias/${id}`, payload);
+    return data;
+  },
+  async removerInspecaoDiaria(id: number) {
+    await api.delete(`/api/inspecoes-diarias/${id}`);
+  },
+  async exportarInspecoesDiarias(params?: Record<string, any>) {
+    return api.get('/api/relatorios/inspecoes-diarias/export', {
+      params,
+      responseType: 'blob'
+    });
+  },
+  // Inspeções de Proteção F4 (Sistema de Proteção)
+  async getInspecoesProtecao(params?: Record<string, any>) {
+    const { data } = await api.get('/api/inspecoes-protecao', { params });
+    return data;
+  },
+  async getInspecaoProtecao(id: number) {
+    const { data } = await api.get(`/api/inspecoes-protecao/${id}`);
+    return data;
+  },
+  async criarInspecaoProtecao(formData: FormData) {
+    const { data } = await api.post('/api/inspecoes-protecao', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data;
+  },
+  async removerInspecaoProtecao(id: number) {
+    await api.delete(`/api/inspecoes-protecao/${id}`);
+  },
+  async exportarInspecoesProtecao(params?: Record<string, any>) {
+    return api.get('/api/relatorios/inspecoes-protecao/export', {
+      params,
+      responseType: 'blob'
+    });
+  },
+  // Coletas de Carcaça (F5)
+  async getColetasCarcaca(params?: Record<string, any>) {
+    const { data } = await api.get('/api/coletas-carcaca', { params });
+    return data;
+  },
+  async getColetaCarcaca(id: number) {
+    const { data } = await api.get(`/api/coletas-carcaca/${id}`);
+    return data;
+  },
+  async criarColetaCarcaca(formData: FormData) {
+    const { data } = await api.post('/api/coletas-carcaca', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data;
+  },
+  async removerColetaCarcaca(id: number) {
+    await api.delete(`/api/coletas-carcaca/${id}`);
+  },
+  async exportarColetasCarcaca(params?: Record<string, any>) {
+    return api.get('/api/relatorios/coletas-carcaca/export', {
+      params,
+      responseType: 'blob'
+    });
+  },
+  // Inspeções de Lagos e Áreas Alagadiças
+  async getInspecoesLagos(params?: Record<string, any>) {
+    const { data } = await api.get('/api/inspecoes-lagos', { params });
+    return data;
+  },
+  async criarInspecaoLago(formData: FormData) {
+    const { data } = await api.post('/api/inspecoes-lagos', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data;
+  },
+  async removerInspecaoLago(id: number) {
+    await api.delete(`/api/inspecoes-lagos/${id}`);
+  },
+  async exportarInspecoesLagos(params?: Record<string, any>) {
+    return api.get('/api/relatorios/inspecoes-lagos/export', {
+      params,
+      responseType: 'blob'
+    });
+  },
+  // Manutenção de Áreas Verdes (F2)
+  async getInspecoesAreasVerdes(params?: Record<string, any>) {
+    const { data } = await api.get('/api/inspecoes-areas-verdes', { params });
+    return data;
+  },
+  async criarInspecaoAreaVerde(payload: Record<string, any>) {
+    const { data } = await api.post('/api/inspecoes-areas-verdes', payload);
+    return data;
+  },
+  async atualizarInspecaoAreaVerde(id: number, payload: Record<string, any>) {
+    const { data } = await api.put(`/api/inspecoes-areas-verdes/${id}`, payload);
+    return data;
+  },
+  async removerInspecaoAreaVerde(id: number) {
+    await api.delete(`/api/inspecoes-areas-verdes/${id}`);
+  },
+  async exportarInspecoesAreasVerdes(params?: Record<string, any>) {
+    return api.get('/api/relatorios/inspecoes-areas-verdes/export', {
+      params,
+      responseType: 'blob'
+    });
+  },
+  // Resíduos para Incineração
+  async getResiduosIncineracao(params?: Record<string, any>) {
+    const { data } = await api.get('/api/residuos-incineracao', { params });
+    return data;
+  },
+  async getResiduoIncineracao(id: number) {
+    const { data } = await api.get(`/api/residuos-incineracao/${id}`);
+    return data;
+  },
+  async criarResiduoIncineracao(payload: Record<string, any>) {
+    const { data } = await api.post('/api/residuos-incineracao', payload);
+    return data;
+  },
+  async atualizarResiduoIncineracao(id: number, payload: Record<string, any>) {
+    const { data } = await api.put(`/api/residuos-incineracao/${id}`, payload);
+    return data;
+  },
+  async removerResiduoIncineracao(id: number) {
+    await api.delete(`/api/residuos-incineracao/${id}`);
+  },
+  async exportarResiduosIncineracao(params?: Record<string, any>) {
+    return api.get('/api/relatorios/residuos-incineracao/export', {
+      params,
+      responseType: 'blob'
+    });
+  },
+  // Monitoramento de Focos de Atração (F3)
+  async getInspecoesFocosAtracao(params?: Record<string, any>) {
+    const { data } = await api.get('/api/inspecoes-focos-atracao', { params });
+    return data;
+  },
+  async criarInspecaoFocoAtracao(payload: Record<string, any>) {
+    const { data } = await api.post('/api/inspecoes-focos-atracao', payload);
+    return data;
+  },
+  async atualizarInspecaoFocoAtracao(id: number, payload: Record<string, any>) {
+    const { data } = await api.put(`/api/inspecoes-focos-atracao/${id}`, payload);
+    return data;
+  },
+  async removerInspecaoFocoAtracao(id: number) {
+    await api.delete(`/api/inspecoes-focos-atracao/${id}`);
+  },
+  async exportarInspecoesFocosAtracao(params?: Record<string, any>) {
+    return api.get('/api/relatorios/inspecoes-focos-atracao/export', {
+      params,
+      responseType: 'blob'
+    });
+  },
   async getCarcacas(params?: Record<string, any>) {
     const { data } = await api.get('/api/carcacas', { params });
     return data;
@@ -184,6 +387,14 @@ export const ApiService = {
   },
   async criarAsaFoco(payload: Record<string, any>) {
     const { data } = await api.post('/api/asa-focos', payload);
+    return data;
+  },
+  async atualizarAsaFoco(id: number, payload: Record<string, any>) {
+    const { data } = await api.put(`/api/asa-focos/${id}`, payload);
+    return data;
+  },
+  async removerAsaFoco(id: number) {
+    const { data } = await api.delete(`/api/asa-focos/${id}`);
     return data;
   },
   async getComunicadosExternos(params?: Record<string, any>) {
@@ -350,4 +561,3 @@ export const ApiService = {
     };
   }
 };
-

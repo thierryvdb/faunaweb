@@ -1,4 +1,4 @@
-﻿import fp from "fastify-plugin";
+﻿﻿import fp from "fastify-plugin";
 import { FastifyInstance } from "fastify";
 import { lookupsRoutes } from "./lookups";
 import { airportsRoutes } from "./airports";
@@ -18,6 +18,13 @@ import { analyticsRoutes } from "./analytics";
 import { usersRoutes } from "./users";
 import { quadrantsRoutes } from "./quadrants";
 import { aircraftModelsRoutes } from "./aircraftModels";
+import { dailyInspectionsRoutes } from "./dailyInspections";
+import { protectionInspectionsRoutes } from "./protectionInspections";
+import { carcassCollectionRoutes } from "./carcassCollection"; // Already present, but confirming
+import { lakeInspectionsRoutes } from './lakeInspections';
+import { greenAreaInspectionsRoutes } from './greenAreaInspections';
+import { incinerationWasteRoutes } from "./incinerationWaste";
+import { attractionFocusInspectionsRoutes } from './attractionFocusInspections';
 
 async function routes(app: FastifyInstance) {
   await app.register(fp(authRoutes, { name: "authRoutes" }));
@@ -42,6 +49,13 @@ async function routes(app: FastifyInstance) {
     { name: "strikesRoutes", handler: strikesRoutes },
     { name: "controlActionsRoutes", handler: controlActionsRoutes },
     { name: "attractorsRoutes", handler: attractorsRoutes },
+    { name: "dailyInspectionsRoutes", handler: dailyInspectionsRoutes },
+    { name: "protectionInspectionsRoutes", handler: protectionInspectionsRoutes },
+    { name: "carcassCollectionRoutes", handler: carcassCollectionRoutes }, // Already present, but confirming
+    { name: "lakeInspectionsRoutes", handler: lakeInspectionsRoutes },
+    { name: "greenAreaInspectionsRoutes", handler: greenAreaInspectionsRoutes },
+    { name: "incinerationWasteRoutes", handler: incinerationWasteRoutes },
+    { name: "attractionFocusInspectionsRoutes", handler: attractionFocusInspectionsRoutes },
     { name: "kpisRoutes", handler: kpisRoutes },
     { name: "reportsRoutes", handler: reportsRoutes },
     { name: "complianceRoutes", handler: complianceRoutes },

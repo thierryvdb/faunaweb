@@ -114,24 +114,21 @@
           </select>
         </label>
         <label>
-          Visibilidade
-          <select v-model.number="novo.vis_id">
+          Condições do céu
+          <select v-model="novo.sky_condition">
             <option :value="undefined">Selecione</option>
-            <option v-for="v in lookups.visibilidade" :key="v.id" :value="v.id">{{ v.name }}</option>
-          </select>
-        </label>
-        <label>
-          Vento
-          <select v-model.number="novo.wind_id">
-            <option :value="undefined">Selecione</option>
-            <option v-for="v in lookups.vento" :key="v.id" :value="v.id">{{ v.name }}</option>
+            <option v-for="cond in opcoesCeu" :key="cond.value" :value="cond.value">
+              {{ cond.label }}
+            </option>
           </select>
         </label>
         <label>
           Precipitação
-          <select v-model.number="novo.precip_id">
+          <select v-model="novo.precip_condition">
             <option :value="undefined">Selecione</option>
-            <option v-for="p in lookups.precipitacao" :key="p.id" :value="p.id">{{ p.name }}</option>
+            <option v-for="p in opcoesPrecipitacao" :key="p.value" :value="p.value">
+              {{ p.label }}
+            </option>
           </select>
         </label>
         <label>
@@ -146,29 +143,11 @@
           <input type="number" min="1" v-model.number="novo.quantity" />
         </label>
         <label>
-          Confiança na identificação
-          <select v-model="novo.id_confidence">
-            <option :value="undefined">Selecione</option>
-            <option value="Alta">Alta</option>
-            <option value="Media">Média</option>
-            <option value="Baixa">Baixa</option>
-            <option value="Nao_identificada">Não identificada</option>
-          </select>
-        </label>
-        <label>
           Gravidade
           <select v-model.number="novo.damage_id">
             <option :value="undefined">Sem dano</option>
             <option v-for="d in lookups.classes_dano" :key="d.id" :value="d.id">{{ d.name }}</option>
           </select>
-        </label>
-        <label>
-          Altura do impacto (AGL, m)
-          <input type="number" min="0" step="1" v-model.number="novo.impact_height_agl_m" />
-        </label>
-        <label>
-          Velocidade da aeronave (kt)
-          <input type="number" min="0" step="1" v-model.number="novo.aircraft_speed_kt" />
         </label>
         <label>
           Consequência operacional
@@ -289,6 +268,24 @@
           <input type="checkbox" v-model="novo.inside_aerodrome" />
         </label>
         <label>
+          Localização no aeródromo
+          <select v-model.number="novo.aerodrome_location_id">
+            <option :value="undefined">Selecione</option>
+            <option v-for="loc in lookups.locais_aerodromo" :key="loc.id" :value="loc.id">
+              {{ loc.name }}
+            </option>
+          </select>
+        </label>
+        <label>
+          Fase da ocorrência
+          <select v-model.number="novo.occurrence_phase_id">
+            <option :value="undefined">Selecione</option>
+            <option v-for="fase in lookups.fases_ocorrencia" :key="fase.id" :value="fase.id">
+              {{ fase.name }}
+            </option>
+          </select>
+        </label>
+        <label>
           Atrativo relacionado
           <select v-model.number="novo.related_attractor_id">
             <option :value="undefined">Nenhum</option>
@@ -336,6 +333,19 @@ import LoadingState from '@/components/LoadingState.vue';
 import { ApiService, api } from '@/services/api';
 import type { QuadrantSelection } from '@/config/quadrantGrid';
 
+const opcoesCeu = [
+  { value: 'claro', label: 'Claro' },
+  { value: 'poucas_nuvens', label: 'Poucas nuvens' },
+  { value: 'encoberto', label: 'Encoberto' }
+] as const;
+
+const opcoesPrecipitacao = [
+  { value: 'nenhuma', label: 'Nenhuma' },
+  { value: 'nevoeiro', label: 'Nevoeiro' },
+  { value: 'chuva', label: 'Chuva' },
+  { value: 'chuva_recente', label: 'Chuva recente' }
+] as const;
+
 const colunas = [
   { titulo: 'Data', campo: 'date_br' },
   { titulo: 'Hora', campo: 'time_local' },
@@ -356,7 +366,19 @@ const colunas = [
 const filtros = ref<{ airportId?: number; fase?: number }>({});
 const lista = ref<any[]>([]);
 const aeroportos = ref<any[]>([]);
-const lookups = ref<any>({ fases_voo: [], classes_dano: [], visibilidade: [], vento: [], precipitacao: [], tipos_motor: [], periodos_dia: [], partes_aeronave: [], classes_massa: [] });
+const lookups = ref<any>({
+  fases_voo: [],
+  classes_dano: [],
+  visibilidade: [],
+  vento: [],
+  precipitacao: [],
+  tipos_motor: [],
+  periodos_dia: [],
+  partes_aeronave: [],
+  classes_massa: [],
+  locais_aerodromo: [],
+  fases_ocorrencia: []
+});
 const locais = ref<any[]>([]);
 const atrativos = ref<any[]>([]);
 const especies = ref<any[]>([]);
@@ -377,12 +399,10 @@ function criarEstadoNovo() {
     longitude_dec: undefined as any,
     quadrant: undefined as any,
     phase_id: undefined as any,
-    vis_id: undefined as any,
-    wind_id: undefined as any,
-    precip_id: undefined as any,
+    sky_condition: undefined as any,
+    precip_condition: undefined as any,
     species_id: undefined as any,
     quantity: undefined as any,
-    id_confidence: undefined as any,
     damage_id: undefined as any,
     aircraft_model_id: null as any,
     engine_type_id: undefined as any,
@@ -392,8 +412,8 @@ function criarEstadoNovo() {
     delay_minutes: undefined as number | undefined,
     aircraft_registration: '',
     aircraft_type: '',
-    impact_height_agl_m: undefined as any,
-    aircraft_speed_kt: undefined as any,
+    aerodrome_location_id: undefined as any,
+    occurrence_phase_id: undefined as any,
     operational_consequence: '',
     visible_damage_notes: '',
     investigated_by: '',
@@ -596,21 +616,19 @@ async function editar(registro: any) {
     longitude_dec: registro.longitude_dec,
     quadrant: registro.quadrant,
     phase_id: registro.phase_id,
-    vis_id: registro.vis_id,
-    wind_id: registro.wind_id,
-    precip_id: registro.precip_id,
+    sky_condition: registro.sky_condition ?? undefined,
+    precip_condition: registro.precip_condition ?? undefined,
     species_id: registro.species_id,
     quantity: registro.quantity,
-    id_confidence: registro.id_confidence,
     damage_id: registro.damage_id,
     aircraft_model_id: registro.aircraft_model_id ?? null,
     engine_type_id: registro.engine_type_id,
     near_miss: !!registro.near_miss,
     pilot_alerted: !!registro.pilot_alerted,
     aircraft_registration: registro.aircraft_registration ?? '',
+    aerodrome_location_id: registro.aerodrome_location_id,
+    occurrence_phase_id: registro.occurrence_phase_id,
     aircraft_type: registro.aircraft_type ?? '',
-    impact_height_agl_m: registro.impact_height_agl_m,
-    aircraft_speed_kt: registro.aircraft_speed_kt,
     operational_consequence: registro.operational_consequence ?? '',
     visible_damage_notes: registro.visible_damage_notes ?? '',
     investigated_by: registro.investigated_by ?? '',

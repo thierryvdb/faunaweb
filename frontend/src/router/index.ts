@@ -7,6 +7,14 @@ import AcoesView from '@/views/AcoesView.vue';
 import AtrativosView from '@/views/AtrativosView.vue';
 import CadastrosView from '@/views/CadastrosView.vue';
 import InspecoesView from '@/views/InspecoesView.vue';
+import InspecoesDiariasView from '@/views/InspecoesDiariasView.vue';
+import InspecoesProtecaoView from '@/views/InspecoesProtecaoView.vue';
+import ColetasCarcacaView from '@/views/ColetasCarcacaView.vue';
+import InspecoesLagosView from '@/views/InspecoesLagosView.vue';
+import InspecoesAreasVerdesView from '@/views/InspecoesAreasVerdesView.vue';
+import InspecoesFocosAtracaoView from '@/views/InspecoesFocosAtracaoView.vue';
+import ResiduosIncineracaoView from '@/views/ResiduosIncineracaoView.vue';
+import ASAView from '@/views/ASAView.vue';
 import GovernancaView from '@/views/GovernancaView.vue';
 import RelatoriosView from '@/views/RelatoriosView.vue';
 import RelatorioColisoesImagensView from '@/views/RelatorioColisoesImagensView.vue';
@@ -24,6 +32,14 @@ const router = createRouter({
     { path: '/atrativos', component: AtrativosView },
     { path: '/cadastros', component: CadastrosView },
     { path: '/inspecoes', component: InspecoesView },
+    { path: '/inspecoes-asa', component: InspecoesDiariasView },
+    { path: '/inspecoes-protecao', component: InspecoesProtecaoView },
+    { path: '/coletas-carcaca', component: ColetasCarcacaView },
+    { path: '/inspecoes-areas-verdes', component: InspecoesAreasVerdesView },
+    { path: '/inspecoes-focos-atracao', component: InspecoesFocosAtracaoView },
+    { path: '/residuos-incineracao', component: ResiduosIncineracaoView },
+    { path: '/inspecoes-lagos', component: InspecoesLagosView },
+    { path: '/asa', component: ASAView },
     { path: '/governanca', component: GovernancaView },
     { path: '/relatorios', component: RelatoriosView },
     { path: '/relatorios/colisoes-imagens', component: RelatorioColisoesImagensView },

@@ -8,7 +8,8 @@
       "Bash(test:*)",
       "Bash(chmod:*)",
       "Bash(psql:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

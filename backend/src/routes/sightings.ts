@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { db } from '../services/db';
+import { requireRead, requireCreate, requireUpdate, requireDelete } from '../utils/auth';
 
 const itemSchema = z.object({
   species_id: z.coerce.number(),
@@ -16,6 +17,8 @@ const corpo = z.object({
   time_period_id: z.coerce.number().optional(),
   event_type: z.literal('avistamento').optional(),
   location_id: z.coerce.number(),
+  aerodrome_location_id: z.coerce.number().optional(),
+  occurrence_phase_id: z.coerce.number().optional(),
   latitude_dec: z.number().optional(),
   longitude_dec: z.number().optional(),
   quadrant: z.string().optional(),
@@ -44,7 +47,7 @@ const corpo = z.object({
 const paramsId = z.object({ id: z.coerce.number() });
 
 export async function sightingsRoutes(app: FastifyInstance) {
-  app.get('/api/avistamentos', async (request) => {
+  app.get('/api/avistamentos', { preHandler: [app.authenticate, requireRead] }, async (request) => {
     const querySchema = z.object({
       airportId: z.coerce.number().optional(),
       inicio: z.string().optional(),
@@ -78,10 +81,14 @@ export async function sightingsRoutes(app: FastifyInstance) {
     const { rows } = await db.query(
       `SELECT s.sighting_id AS id, s.airport_id, s.date_utc, s.time_local, s.time_period_id, s.event_type, s.location_id,
               COALESCE(l.code, CONCAT('ID ', s.location_id::text)) AS location_nome,
+              s.aerodrome_location_id,
+              s.occurrence_phase_id,
               s.latitude_dec, s.longitude_dec, s.quadrant, s.fauna_height_agl_m, s.inside_aerodrome,
               s.detection_method, s.effort_hours, s.effort_km, s.effort_area_ha, s.precip_id, s.wind_id, s.vis_id,
               s.photo_url, s.confidence_overall, s.observer_team, s.risk_mgmt_notes, s.related_attractor_id, fa.description AS related_attractor_desc, s.actions_taken,
               s.reported_by_user_id, s.reporter_name, s.reporter_contact, s.notes,
+              al.name AS aerodrome_location_label,
+              op.name AS occurrence_phase_label,
                COALESCE((
                  SELECT json_agg(json_build_object(
                    'sighting_item_id', si.sighting_item_id,
@@ -96,6 +103,8 @@ export async function sightingsRoutes(app: FastifyInstance) {
        FROM wildlife.fact_sighting s
        LEFT JOIN wildlife.dim_location l ON l.location_id = s.location_id
        LEFT JOIN wildlife.fact_attractor fa ON fa.attractor_id = s.related_attractor_id
+       LEFT JOIN wildlife.lu_aerodrome_location al ON al.aerodrome_location_id = s.aerodrome_location_id
+       LEFT JOIN wildlife.lu_occurrence_phase op ON op.occurrence_phase_id = s.occurrence_phase_id
        ${where}
        ORDER BY s.date_utc DESC, s.time_local DESC
        LIMIT $${valores.length - 1} OFFSET $${valores.length}`,
@@ -104,7 +113,7 @@ export async function sightingsRoutes(app: FastifyInstance) {
     return rows.map((row) => ({ ...row, itens: row.itens ?? [] }));
   });
 
-  app.post('/api/avistamentos', async (request, reply) => {
+  app.post('/api/avistamentos', { preHandler: [app.authenticate, requireCreate] }, async (request, reply) => {
     const body = corpo.parse(request.body);
     const resultado = await db.transaction(async (client) => {
       const colunas = [
@@ -114,6 +123,8 @@ export async function sightingsRoutes(app: FastifyInstance) {
         'time_period_id',
         'event_type',
         'location_id',
+        'aerodrome_location_id',
+        'occurrence_phase_id',
         'latitude_dec',
         'longitude_dec',
         'quadrant',
@@ -145,6 +156,8 @@ export async function sightingsRoutes(app: FastifyInstance) {
         time_period_id: body.time_period_id ?? null,
         event_type: body.event_type ?? 'avistamento',
         location_id: body.location_id,
+        aerodrome_location_id: body.aerodrome_location_id ?? null,
+        occurrence_phase_id: body.occurrence_phase_id ?? null,
         latitude_dec: body.latitude_dec ?? null,
         longitude_dec: body.longitude_dec ?? null,
         quadrant: body.quadrant ?? null,
@@ -193,7 +206,7 @@ export async function sightingsRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: resultado });
   });
 
-  app.put('/api/avistamentos/:id', async (request, reply) => {
+  app.put('/api/avistamentos/:id', { preHandler: [app.authenticate, requireUpdate] }, async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     const body = corpo.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([chave, valor]) => chave !== 'itens' && valor !== undefined);
@@ -229,7 +242,7 @@ export async function sightingsRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/avistamentos/:id', async (request, reply) => {
+  app.delete('/api/avistamentos/:id', { preHandler: [app.authenticate, requireDelete] }, async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_sighting WHERE sighting_id=$1', [id]);
     return reply.code(204).send();

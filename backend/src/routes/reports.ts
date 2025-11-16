@@ -6,6 +6,7 @@ import sharp from 'sharp';
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
 import { ChartConfiguration } from 'chart.js';
 import { db } from '../services/db';
+import { requireReportAccess } from '../utils/auth';
 import {
   FinanceiroDataset,
   FinanceiroAgrupamentoItem,
@@ -35,7 +36,7 @@ const NOMES_MESES = [
 ];
 
 export async function reportsRoutes(app: FastifyInstance) {
-  app.get('/api/relatorios/pareto-especies', async (request) => {
+  app.get('/api/relatorios/pareto-especies', { preHandler: [app.authenticate, requireReportAccess] }, async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const { rows } = await db.query(
@@ -50,7 +51,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { periodo: { inicio, fim }, dados: rows };
   });
 
-  app.get('/api/relatorios/fases-voo', async (request) => {
+  app.get('/api/relatorios/fases-voo', { preHandler: [app.authenticate, requireReportAccess] }, async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const { rows } = await db.query(
@@ -65,7 +66,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { periodo: { inicio, fim }, dados: rows };
   });
 
-  app.get('/api/relatorios/partes-dano', async (request) => {
+  app.get('/api/relatorios/partes-dano', { preHandler: [app.authenticate, requireReportAccess] }, async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const { rows } = await db.query(
@@ -91,7 +92,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { periodo: { inicio, fim }, dados };
   });
 
-  app.get('/api/relatorios/ba-janela', async (request) => {
+  app.get('/api/relatorios/ba-janela', { preHandler: [app.authenticate, requireReportAccess] }, async (request) => {
     const filtros = z.object({ airportId: z.coerce.number().optional() }).parse(request.query ?? {});
     const { rows } = await db.query(
       `SELECT * FROM wildlife_kpi.kpi_ba_sr_tah WHERE $1::bigint IS NULL OR airport_id=$1 ORDER BY action_id DESC`,
@@ -100,7 +101,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { janela_padrao_dias: 30, dados: rows };
   });
 
-  app.get('/api/relatorios/movimentos-periodo', async (request) => {
+  app.get('/api/relatorios/movimentos-periodo', { preHandler: [app.authenticate, requireReportAccess] }, async (request) => {
     const filtros = z
       .object({
         airportId: z.coerce.number().optional(),
@@ -191,7 +192,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get('/api/relatorios/financeiro/export', async (request, reply) => {
+  app.get('/api/relatorios/financeiro/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -219,7 +220,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return reply.send(buffer);
   });
 
-  app.get('/api/relatorios/colisoes-imagens', async (request) => {
+  app.get('/api/relatorios/colisoes-imagens', { preHandler: [app.authenticate, requireReportAccess] }, async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const dados = await buscarColisoesComImagens(filtros.airportId ?? null, inicio, fim);
@@ -239,7 +240,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get('/api/relatorios/colisoes-imagens/export', async (request, reply) => {
+  app.get('/api/relatorios/colisoes-imagens/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -266,7 +267,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return reply.send(buffer);
   });
 
-  app.get('/api/relatorios/incidentes/export', async (request, reply) => {
+  app.get('/api/relatorios/incidentes/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -289,6 +290,520 @@ export async function reportsRoutes(app: FastifyInstance) {
       return reply.send(buffer);
     }
     const buffer = await gerarPdfIncidentes(dados, { inicio, fim });
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.pdf`);
+    return reply.send(buffer);
+  });
+
+  // Exportação PDF de Inspeções Diárias
+  app.get('/api/relatorios/inspecoes-diarias/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+    const filtros = periodoSchema.parse(request.query ?? {});
+    const { inicio, fim } = periodosComDefaults(filtros);
+
+    // Buscar inspeções do período
+    let whereClause = 'WHERE i.inspection_date BETWEEN $1 AND $2';
+    const params: any[] = [inicio, fim];
+
+    if (filtros.airportId) {
+      whereClause += ' AND i.airport_id = $3';
+      params.push(filtros.airportId);
+    }
+
+    const query = `
+      SELECT i.*,
+             a.icao_code,
+             a.name AS airport_name,
+             p.name AS period_name,
+             w.name AS weather_name,
+             (SELECT json_agg(json_build_object(
+               'location_type_name', lt.name,
+               'species_name', s.common_name,
+               'species_text', obs.species_text,
+               'quantity', obs.quantity,
+               'quadrant_code', q.code,
+               'notes', obs.notes
+             ))
+             FROM wildlife.fact_daily_inspection_aerodrome_area obs
+             LEFT JOIN wildlife.lu_inspection_location_type lt ON lt.location_type_id = obs.location_type_id
+             LEFT JOIN wildlife.dim_species s ON s.species_id = obs.species_id
+             LEFT JOIN wildlife.lu_quadrant q ON q.quadrant_id = obs.quadrant_id
+             WHERE obs.inspection_id = i.inspection_id) AS aerodrome_observations,
+
+             (SELECT json_agg(json_build_object(
+               'location_type_name', lt.name,
+               'species_name', s.common_name,
+               'species_text', obs.species_text,
+               'quantity', obs.quantity,
+               'quadrant_code', q.code
+             ))
+             FROM wildlife.fact_daily_inspection_site_area obs
+             LEFT JOIN wildlife.lu_inspection_location_type lt ON lt.location_type_id = obs.location_type_id
+             LEFT JOIN wildlife.dim_species s ON s.species_id = obs.species_id
+             LEFT JOIN wildlife.lu_quadrant q ON q.quadrant_id = obs.quadrant_id
+             WHERE obs.inspection_id = i.inspection_id) AS site_observations,
+
+             (SELECT json_agg(json_build_object(
+               'location_text', n.location_text,
+               'area_type', n.area_type,
+               'has_eggs', n.has_eggs,
+               'egg_count', n.egg_count
+             ))
+             FROM wildlife.fact_daily_inspection_nest n
+             WHERE n.inspection_id = i.inspection_id) AS nests,
+
+             (SELECT json_agg(json_build_object(
+               'location_text', c.location_text,
+               'species_name', s.common_name,
+               'species_text', c.species_text,
+               'photographed', c.photographed,
+               'destination_name', d.name
+             ))
+             FROM wildlife.fact_daily_inspection_carcass c
+             LEFT JOIN wildlife.dim_species s ON s.species_id = c.species_id
+             LEFT JOIN wildlife.lu_carcass_destination d ON d.destination_id = c.destination_id
+             WHERE c.inspection_id = i.inspection_id) AS carcasses,
+
+             (SELECT json_build_object(
+               'dispersal_performed', m.dispersal_performed,
+               'capture_performed', m.capture_performed,
+               'species_involved', m.species_involved,
+               'techniques', (
+                 SELECT string_agg(t.name, ', ')
+                 FROM wildlife.fact_daily_inspection_management_technique mt
+                 JOIN wildlife.lu_management_technique t ON t.technique_id = mt.technique_id
+                 WHERE mt.management_id = m.management_id
+               )
+             )
+             FROM wildlife.fact_daily_inspection_management m
+             WHERE m.inspection_id = i.inspection_id) AS management
+
+      FROM wildlife.fact_daily_inspection i
+      LEFT JOIN wildlife.airport a ON a.airport_id = i.airport_id
+      LEFT JOIN wildlife.lu_inspection_period p ON p.period_id = i.period_id
+      LEFT JOIN wildlife.lu_weather_condition w ON w.weather_id = i.weather_id
+      ${whereClause}
+      ORDER BY i.inspection_date DESC, i.inspection_time DESC
+    `;
+
+    const result = await db.query(query, params);
+    const inspecoes = result.rows;
+
+    if (!inspecoes.length) {
+      return reply.code(404).send({ mensagem: 'Nenhuma inspeção encontrada para o período informado' });
+    }
+
+    const buffer = await gerarPdfInspecoesDiarias(inspecoes, { inicio, fim });
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', `attachment; filename=inspecoes-diarias-${inicio}-a-${fim}.pdf`);
+    return reply.send(buffer);
+  });
+
+  // Exportação PDF/DOCX de Inspeções de Proteção (F4)
+  app.get('/api/relatorios/inspecoes-protecao/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+    const filtros = periodoSchema
+      .extend({
+        formato: z.enum(['pdf', 'docx'])
+      })
+      .parse(request.query ?? {});
+    const { inicio, fim } = periodosComDefaults(filtros);
+
+    let whereClause = 'WHERE i.inspection_date BETWEEN $1 AND $2';
+    const params: any[] = [inicio, fim];
+
+    if (filtros.airportId) {
+      whereClause += ' AND i.airport_id = $3';
+      params.push(filtros.airportId);
+    }
+
+    const query = `
+      SELECT i.*,
+             a.icao_code,
+             a.name AS airport_name,
+             s.name AS season_name,
+             (SELECT json_agg(json_build_object(
+               'location_text', fo.location_text,
+               'repair_performed', fo.repair_performed,
+               'repair_date', fo.repair_date,
+               'irregular_waste_present', fo.irregular_waste_present,
+               'waste_removed', fo.waste_removed,
+               'notes', fo.notes,
+               'occurrence_types', (
+                 SELECT string_agg(ft.name, ', ')
+                 FROM wildlife.fact_protection_fence_occurrence_type fot
+                 JOIN wildlife.lu_fence_occurrence_type ft ON ft.occurrence_type_id = fot.occurrence_type_id
+                 WHERE fot.occurrence_id = fo.occurrence_id
+               )
+             ))
+             FROM wildlife.fact_protection_fence_occurrence fo
+             WHERE fo.inspection_id = i.inspection_id) AS fence_occurrences,
+
+             (SELECT json_agg(json_build_object(
+               'location_text', go.location_text,
+               'other_occurrence', go.other_occurrence,
+               'repair_performed', go.repair_performed,
+               'repair_date', go.repair_date,
+               'irregular_waste_present', go.irregular_waste_present,
+               'waste_removed', go.waste_removed,
+               'notes', go.notes,
+               'occurrence_types', (
+                 SELECT string_agg(gt.name, ', ')
+                 FROM wildlife.fact_protection_gate_occurrence_type got
+                 JOIN wildlife.lu_gate_occurrence_type gt ON gt.occurrence_type_id = got.occurrence_type_id
+                 WHERE got.occurrence_id = go.occurrence_id
+               )
+             ))
+             FROM wildlife.fact_protection_gate_occurrence go
+             WHERE go.inspection_id = i.inspection_id) AS gate_occurrences
+
+      FROM wildlife.fact_protection_inspection i
+      LEFT JOIN wildlife.airport a ON a.airport_id = i.airport_id
+      LEFT JOIN wildlife.lu_year_season s ON s.season_id = i.season_id
+      ${whereClause}
+      ORDER BY i.inspection_date DESC
+    `;
+
+    const result = await db.query(query, params);
+    const inspecoes = result.rows;
+
+    if (!inspecoes.length) {
+      return reply.code(404).send({ mensagem: 'Nenhuma inspeção encontrada para o período informado' });
+    }
+
+    const nomeArquivoBase = `inspecoes-protecao-${inicio}-a-${fim}`;
+    if (filtros.formato === 'docx') {
+      const buffer = await gerarDocxInspecoesProtecao(inspecoes, { inicio, fim });
+      reply.header(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
+      reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.docx`);
+      return reply.send(buffer);
+    }
+
+    const buffer = await gerarPdfInspecoesProtecao(inspecoes, { inicio, fim });
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.pdf`);
+    return reply.send(buffer);
+  });
+
+  // Exportação PDF/DOCX de Coletas de Carcaça (F5)
+  app.get('/api/relatorios/coletas-carcaca/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+    const filtros = periodoSchema
+      .extend({
+        formato: z.enum(['pdf', 'docx'])
+      })
+      .parse(request.query ?? {});
+    const { inicio, fim } = periodosComDefaults(filtros);
+
+    let whereClause = 'WHERE c.collection_date BETWEEN $1 AND $2';
+    const params: any[] = [inicio, fim];
+
+    if (filtros.airportId) {
+      whereClause += ' AND c.airport_id = $3';
+      params.push(filtros.airportId);
+    }
+
+    const query = `
+      SELECT c.*,
+             a.icao_code,
+             a.name AS airport_name,
+             q.code AS quadrant_code
+      FROM wildlife.fact_carcass_collection c
+      LEFT JOIN wildlife.airport a ON a.airport_id = c.airport_id
+      LEFT JOIN wildlife.lu_quadrant q ON q.quadrant_id = c.quadrant_id
+      ${whereClause}
+      ORDER BY c.collection_date DESC
+    `;
+
+    const result = await db.query(query, params);
+    const coletas = result.rows;
+
+    if (!coletas.length) {
+      return reply.code(404).send({ mensagem: 'Nenhuma coleta encontrada para o período informado' });
+    }
+
+    const nomeArquivoBase = `coletas-carcaca-${inicio}-a-${fim}`;
+    if (filtros.formato === 'docx') {
+      const buffer = await gerarDocxColetasCarcaca(coletas, { inicio, fim });
+      reply.header(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
+      reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.docx`);
+      return reply.send(buffer);
+    }
+
+    const buffer = await gerarPdfColetasCarcaca(coletas, { inicio, fim });
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.pdf`);
+    return reply.send(buffer);
+  });
+
+  // Exportação PDF/DOCX de Coletas de Carcaça (F5)
+  app.get('/api/relatorios/coletas-carcaca/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+    const filtros = periodoSchema
+      .extend({
+        formato: z.enum(['pdf', 'docx'])
+      })
+      .parse(request.query ?? {});
+    const { inicio, fim } = periodosComDefaults(filtros);
+
+    let whereClause = 'WHERE c.collection_date BETWEEN $1 AND $2';
+    const params: any[] = [inicio, fim];
+
+    if (filtros.airportId) {
+      whereClause += ' AND c.airport_id = $3';
+      params.push(filtros.airportId);
+    }
+
+    const query = `
+      SELECT c.*,
+             a.icao_code,
+             a.name AS airport_name,
+             q.code AS quadrant_code
+      FROM wildlife.fact_carcass_collection c
+      LEFT JOIN wildlife.airport a ON a.airport_id = c.airport_id
+      LEFT JOIN wildlife.lu_quadrant q ON q.quadrant_id = c.quadrant_id
+      ${whereClause}
+      ORDER BY c.collection_date DESC
+    `;
+
+    const result = await db.query(query, params);
+    const coletas = result.rows;
+
+    if (!coletas.length) {
+      return reply.code(404).send({ mensagem: 'Nenhuma coleta encontrada para o período informado' });
+    }
+
+    const nomeArquivoBase = `coletas-carcaca-${inicio}-a-${fim}`;
+    if (filtros.formato === 'docx') {
+      const buffer = await gerarDocxColetasCarcaca(coletas, { inicio, fim });
+      reply.header(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
+      reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.docx`);
+      return reply.send(buffer);
+    }
+
+    const buffer = await gerarPdfColetasCarcaca(coletas, { inicio, fim });
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.pdf`);
+    return reply.send(buffer);
+  });
+
+  // Exportação PDF/DOCX de Inspeções de Lagos
+  app.get('/api/relatorios/inspecoes-lagos/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+    const filtros = periodoSchema
+      .extend({
+        formato: z.enum(['pdf', 'docx'])
+      })
+      .parse(request.query ?? {});
+    const { inicio, fim } = periodosComDefaults(filtros);
+
+    let whereClause = 'WHERE i.inspection_date BETWEEN $1 AND $2';
+    const params: any[] = [inicio, fim];
+
+    if (filtros.airportId) {
+      whereClause += ' AND i.airport_id = $3';
+      params.push(filtros.airportId);
+    }
+
+    const query = `
+      SELECT i.*,
+             a.icao_code,
+             a.name AS airport_name,
+             s.name as season_name,
+             q.code as quadrant_code,
+             (SELECT COUNT(*) FROM wildlife.fact_lake_inspection_photo p WHERE p.inspection_id = i.inspection_id) as photo_count
+      FROM wildlife.fact_lake_inspection i
+      LEFT JOIN wildlife.airport a ON a.airport_id = i.airport_id
+      LEFT JOIN wildlife.lu_year_season s ON s.season_id = i.season_id
+      LEFT JOIN wildlife.lu_quadrant q ON q.quadrant_id = i.quadrant_id
+      ${whereClause}
+      ORDER BY i.inspection_date DESC
+    `;
+
+    const result = await db.query(query, params);
+    const inspecoes = result.rows;
+
+    if (!inspecoes.length) {
+      return reply.code(404).send({ mensagem: 'Nenhuma inspeção encontrada para o período informado' });
+    }
+
+    const nomeArquivoBase = `inspecoes-lagos-${inicio}-a-${fim}`;
+    if (filtros.formato === 'docx') {
+      const buffer = await gerarDocxInspecoesLagos(inspecoes, { inicio, fim });
+      reply.header(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
+      reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.docx`);
+      return reply.send(buffer);
+    }
+
+    const buffer = await gerarPdfInspecoesLagos(inspecoes, { inicio, fim });
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.pdf`);
+    return reply.send(buffer);
+  });
+
+  // Exportação PDF/DOCX de Manutenção de Áreas Verdes (F2)
+  app.get('/api/relatorios/inspecoes-areas-verdes/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+    const filtros = periodoSchema
+      .extend({
+        formato: z.enum(['pdf', 'docx'])
+      })
+      .parse(request.query ?? {});
+    const { inicio, fim } = periodosComDefaults(filtros);
+
+    let whereClause = 'WHERE i.record_date BETWEEN $1 AND $2';
+    const params: any[] = [inicio, fim];
+
+    if (filtros.airportId) {
+      whereClause += ' AND i.airport_id = $3';
+      params.push(filtros.airportId);
+    }
+
+    const query = `
+      SELECT i.*,
+             a.icao_code,
+             a.name AS airport_name,
+             s.name as season_name
+      FROM wildlife.fact_green_area_maintenance i
+      LEFT JOIN wildlife.airport a ON a.airport_id = i.airport_id
+      LEFT JOIN wildlife.lu_year_season s ON s.season_id = i.season_id
+      ${whereClause}
+      ORDER BY i.record_date DESC
+    `;
+
+    const result = await db.query(query, params);
+    const inspecoes = result.rows;
+
+    if (!inspecoes.length) {
+      return reply.code(404).send({ mensagem: 'Nenhum registro encontrado para o período informado' });
+    }
+
+    const nomeArquivoBase = `manutencao-areas-verdes-${inicio}-a-${fim}`;
+    if (filtros.formato === 'docx') {
+      const buffer = await gerarDocxInspecoesAreasVerdes(inspecoes, { inicio, fim });
+      reply.header(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
+      reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.docx`);
+      return reply.send(buffer);
+    }
+
+    const buffer = await gerarPdfInspecoesAreasVerdes(inspecoes, { inicio, fim });
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.pdf`);
+    return reply.send(buffer);
+  });
+
+  // Exportação PDF/DOCX de Monitoramento de Focos de Atração (F3)
+  app.get('/api/relatorios/inspecoes-focos-atracao/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+    const filtros = periodoSchema
+      .extend({
+        formato: z.enum(['pdf', 'docx'])
+      })
+      .parse(request.query ?? {});
+    const { inicio, fim } = periodosComDefaults(filtros);
+
+    let whereClause = 'WHERE i.inspection_date BETWEEN $1 AND $2';
+    const params: any[] = [inicio, fim];
+
+    if (filtros.airportId) {
+      whereClause += ' AND i.airport_id = $3';
+      params.push(filtros.airportId);
+    }
+
+    const query = `
+      SELECT i.*,
+             a.icao_code,
+             a.name AS airport_name,
+             s.name as season_name
+      FROM wildlife.fact_attraction_focus_inspection i
+      LEFT JOIN wildlife.airport a ON a.airport_id = i.airport_id
+      LEFT JOIN wildlife.lu_year_season s ON s.season_id = i.season_id
+      ${whereClause}
+      ORDER BY i.inspection_date DESC
+    `;
+
+    const result = await db.query(query, params);
+    const inspecoes = result.rows;
+
+    if (!inspecoes.length) {
+      return reply.code(404).send({ mensagem: 'Nenhum registro encontrado para o período informado' });
+    }
+
+    const nomeArquivoBase = `monitoramento-focos-${inicio}-a-${fim}`;
+    if (filtros.formato === 'docx') {
+      const buffer = await gerarDocxInspecoesFocosAtracao(inspecoes, { inicio, fim });
+      reply.header(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
+      reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.docx`);
+      return reply.send(buffer);
+    }
+
+    const buffer = await gerarPdfInspecoesFocosAtracao(inspecoes, { inicio, fim });
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.pdf`);
+    return reply.send(buffer);
+  });
+
+  // Exportação PDF/DOCX de Resíduos para Incineração
+  app.get('/api/relatorios/residuos-incineracao/export', { preHandler: [app.authenticate, requireReportAccess] }, async (request, reply) => {
+    const filtros = periodoSchema
+      .extend({
+        formato: z.enum(['pdf', 'docx'])
+      })
+      .parse(request.query ?? {});
+    const { inicio, fim } = periodosComDefaults(filtros);
+
+    let whereClause = 'WHERE w.record_date BETWEEN $1 AND $2';
+    const params: any[] = [inicio, fim];
+
+    if (filtros.airportId) {
+      whereClause += ' AND w.airport_id = $3';
+      params.push(filtros.airportId);
+    }
+
+    const query = `
+      SELECT w.*,
+             a.icao_code,
+             a.name AS airport_name,
+             ps.name AS physical_state_name,
+             tr.name AS treatment_name
+      FROM wildlife.fact_incineration_waste w
+      LEFT JOIN wildlife.airport a ON a.airport_id = w.airport_id
+      LEFT JOIN wildlife.lu_waste_physical_state ps ON ps.state_id = w.physical_state_id
+      LEFT JOIN wildlife.lu_waste_treatment_type tr ON tr.treatment_id = w.treatment_id
+      ${whereClause}
+      ORDER BY w.record_date DESC
+    `;
+
+    const result = await db.query(query, params);
+    const residuos = result.rows;
+
+    if (!residuos.length) {
+      return reply.code(404).send({ mensagem: 'Nenhum resíduo encontrado para o período informado' });
+    }
+
+    const nomeArquivoBase = `residuos-incineracao-${inicio}-a-${fim}`;
+    if (filtros.formato === 'docx') {
+      const buffer = await gerarDocxResiduosIncineracao(residuos, { inicio, fim });
+      reply.header(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
+      reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.docx`);
+      return reply.send(buffer);
+    }
+
+    const buffer = await gerarPdfResiduosIncineracao(residuos, { inicio, fim });
     reply.header('Content-Type', 'application/pdf');
     reply.header('Content-Disposition', `attachment; filename=${nomeArquivoBase}.pdf`);
     return reply.send(buffer);
@@ -1059,4 +1574,1115 @@ const currencyFormatterBR = new Intl.NumberFormat('pt-BR', {
 
 function formatarMoedaBR(valor: number) {
   return currencyFormatterBR.format(Number(valor ?? 0));
+}
+
+// Função de geração de PDF para Inspeções Diárias
+async function gerarPdfInspecoesDiarias(
+  inspecoes: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  return await new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margins: { top: 40, left: 40, right: 40, bottom: 40 } });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', (err) => reject(err));
+
+    const processar = async () => {
+      // Título e cabeçalho
+      doc.fontSize(18).text('Relatório de Inspeções Diárias - Monitoramento de Fauna (F1)', {
+        align: 'center'
+      });
+      doc.moveDown();
+      doc.fontSize(12).text(`Período: ${periodo.inicio} a ${periodo.fim}`, { align: 'center' });
+      doc.fontSize(10).text(`Total de inspeções: ${inspecoes.length}`, { align: 'center' });
+      doc.moveDown(1.5);
+
+      // Processa cada inspeção
+      for (let index = 0; index < inspecoes.length; index++) {
+        const insp = inspecoes[index];
+
+        if (index > 0) {
+          doc.addPage();
+        }
+
+        // Cabeçalho da inspeção
+        doc.fontSize(14).fillColor('#2c3e50').text(`Inspeção #${insp.inspection_id}`, { underline: true });
+        doc.moveDown(0.5);
+
+        // Informações Gerais
+        doc.fontSize(11).fillColor('#000000');
+        doc.text(`Aeroporto: ${insp.airport_name} (${insp.icao_code})`);
+        doc.text(`Data: ${formatarData(insp.inspection_date)} | Horário: ${insp.inspection_time}`);
+        doc.text(`Período: ${insp.period_name || insp.period_text || 'N/A'}`);
+        doc.text(`Clima: ${insp.weather_name || 'N/A'}`);
+        doc.text(`Inspetor: ${insp.inspector_name || 'N/A'} | Equipe: ${insp.inspector_team || 'N/A'}`);
+
+        if (insp.collision_occurred) {
+          doc.fillColor('#e74c3c')
+            .text(`⚠️  COLISÃO OCORRIDA - Espécie: ${insp.collision_species || 'Não informada'}`, {
+              continued: false
+            })
+            .fillColor('#000000');
+        }
+
+        if (insp.mandatory_report) {
+          doc.fillColor('#f39c12').text('📋 Reporte Mandatório').fillColor('#000000');
+        }
+
+        if (insp.notes) {
+          doc.moveDown(0.3);
+          doc.fontSize(10).text(`Notas: ${insp.notes}`);
+          doc.fontSize(11);
+        }
+
+        doc.moveDown();
+
+        // Área de Movimentação de Aeronaves
+        if (insp.aerodrome_observations && insp.aerodrome_observations.length > 0) {
+          doc.fontSize(12).fillColor('#3498db').text('2. Área de Movimentação de Aeronaves').fillColor('#000000');
+          doc.fontSize(10);
+          doc.moveDown(0.3);
+
+          for (const obs of insp.aerodrome_observations) {
+            const especie = obs.species_name || obs.species_text || 'Não especificada';
+            const local = obs.location_type_name || 'N/A';
+            const quantidade = obs.quantity !== null && obs.quantity !== undefined ? obs.quantity : '?';
+            const quadrante = obs.quadrant_code || '-';
+
+            doc.text(`• ${local}: ${especie} (Qtd: ${quantidade}, Quadrante: ${quadrante})`);
+            if (obs.notes) {
+              doc.fontSize(9).text(`  Notas: ${obs.notes}`).fontSize(10);
+            }
+          }
+          doc.moveDown();
+        }
+
+        // Demais Áreas do Sítio
+        if (insp.site_observations && insp.site_observations.length > 0) {
+          doc.fontSize(12).fillColor('#3498db').text('3. Demais Áreas do Sítio').fillColor('#000000');
+          doc.fontSize(10);
+          doc.moveDown(0.3);
+
+          for (const obs of insp.site_observations) {
+            const especie = obs.species_name || obs.species_text || 'Não especificada';
+            const local = obs.location_type_name || 'N/A';
+            const quantidade = obs.quantity !== null && obs.quantity !== undefined ? obs.quantity : '?';
+            const quadrante = obs.quadrant_code || '-';
+
+            doc.text(`• ${local}: ${especie} (Qtd: ${quantidade}, Quadrante: ${quadrante})`);
+          }
+          doc.moveDown();
+        }
+
+        // Ninhos Encontrados
+        if (insp.nests && insp.nests.length > 0) {
+          doc.fontSize(12).fillColor('#3498db').text('Ninhos Encontrados').fillColor('#000000');
+          doc.fontSize(10);
+          doc.moveDown(0.3);
+
+          for (const ninho of insp.nests) {
+            const areaLabel = ninho.area_type === 'aerodrome' ? 'Área de Movimento' : 'Demais Áreas';
+            const ovos = ninho.has_eggs ? `com ${ninho.egg_count || '?'} ovos` : 'sem ovos';
+            doc.text(`• ${ninho.location_text} (${areaLabel}) - ${ovos}`);
+          }
+          doc.moveDown();
+        }
+
+        // Carcaças Encontradas
+        if (insp.carcasses && insp.carcasses.length > 0) {
+          doc.fontSize(12).fillColor('#3498db').text('4. Carcaças Encontradas').fillColor('#000000');
+          doc.fontSize(10);
+          doc.moveDown(0.3);
+
+          for (const carcaca of insp.carcasses) {
+            const especie = carcaca.species_name || carcaca.species_text || 'Não identificada';
+            const foto = carcaca.photographed ? 'Fotografada' : 'Não fotografada';
+            const destino = carcaca.destination_name || 'Sem destinação registrada';
+            doc.text(`• Local: ${carcaca.location_text} | Espécie: ${especie}`);
+            doc.fontSize(9).text(`  ${foto} | Destinação: ${destino}`).fontSize(10);
+          }
+          doc.moveDown();
+        }
+
+        // Manejo Animal
+        if (insp.management) {
+          const mgmt = insp.management;
+          if (mgmt.dispersal_performed || mgmt.capture_performed) {
+            doc.fontSize(12).fillColor('#3498db').text('5. Manejo Animal - Ações Realizadas').fillColor('#000000');
+            doc.fontSize(10);
+            doc.moveDown(0.3);
+
+            if (mgmt.dispersal_performed) {
+              doc.text('✓ Afugentamento realizado');
+            }
+            if (mgmt.capture_performed) {
+              doc.text('✓ Captura realizada');
+            }
+            if (mgmt.techniques) {
+              doc.text(`Técnicas: ${mgmt.techniques}`);
+            }
+            if (mgmt.species_involved) {
+              doc.text(`Espécies envolvidas: ${mgmt.species_involved}`);
+            }
+            doc.moveDown();
+          }
+        }
+
+        // Linha separadora para próxima inspeção
+        if (index < inspecoes.length - 1) {
+          doc.fontSize(8).fillColor('#95a5a6').text('─'.repeat(80), { align: 'center' }).fillColor('#000000');
+        }
+      }
+
+      doc.end();
+    };
+
+    processar().catch((err) => {
+      doc.destroy();
+      reject(err);
+    });
+  });
+}
+
+function formatarData(data: string) {
+  if (!data) return '';
+  const d = new Date(data + 'T00:00:00');
+  return d.toLocaleDateString('pt-BR');
+}
+
+// Função de geração de DOCX para Inspeções de Proteção (F4)
+async function gerarDocxInspecoesProtecao(
+  inspecoes: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  const children: Paragraph[] = [
+    new Paragraph({
+      text: 'Relatório de Inspeções de Proteção (F4)',
+      heading: HeadingLevel.HEADING_1
+    }),
+    new Paragraph({
+      text: `Período: ${periodo.inicio} a ${periodo.fim}`
+    }),
+    new Paragraph({
+      text: `Total de inspeções: ${inspecoes.length}`
+    }),
+    new Paragraph(' ')
+  ];
+
+  for (const insp of inspecoes) {
+    // Cabeçalho da inspeção
+    children.push(
+      new Paragraph({
+        text: `Inspeção F4 #${insp.inspection_id}`,
+        heading: HeadingLevel.HEADING_2
+      })
+    );
+
+    // Informações Gerais
+    children.push(new Paragraph(`Aeroporto: ${insp.airport_name} (${insp.icao_code})`));
+    children.push(new Paragraph(`Data: ${formatarData(insp.inspection_date)}`));
+    children.push(new Paragraph(`Período do Ano: ${insp.season_name || 'N/A'}`));
+    children.push(new Paragraph(`Chuva nas últimas 24h: ${insp.rained_last_24h ? 'Sim' : 'Não'}`));
+    children.push(new Paragraph(' '));
+
+    // Cercas Patrimoniais e Operacionais
+    if (insp.fence_occurrences && insp.fence_occurrences.length > 0) {
+      children.push(
+        new Paragraph({
+          text: '2. Cercas Patrimoniais e Operacionais',
+          heading: HeadingLevel.HEADING_3
+        })
+      );
+
+      for (const fence of insp.fence_occurrences) {
+        children.push(new Paragraph(`• Local: ${fence.location_text}`));
+        if (fence.occurrence_types) {
+          children.push(new Paragraph(`  Tipos de ocorrência: ${fence.occurrence_types}`));
+        }
+        if (fence.repair_performed) {
+          const repairDate = fence.repair_date ? ` em ${formatarData(fence.repair_date)}` : '';
+          children.push(new Paragraph(`  ✓ Reparo realizado${repairDate}`));
+        }
+        if (fence.irregular_waste_present) {
+          children.push(new Paragraph(`  ⚠️ Descarte irregular de resíduos presente`));
+          if (fence.waste_removed) {
+            children.push(new Paragraph(`     ✓ Remoção realizada`));
+          }
+        }
+        if (fence.notes) {
+          children.push(new Paragraph(`  Notas: ${fence.notes}`));
+        }
+      }
+      children.push(new Paragraph(' '));
+    }
+
+    // Portões Operacionais
+    if (insp.gate_occurrences && insp.gate_occurrences.length > 0) {
+      children.push(
+        new Paragraph({
+          text: '3. Portões Operacionais',
+          heading: HeadingLevel.HEADING_3
+        })
+      );
+
+      for (const gate of insp.gate_occurrences) {
+        children.push(new Paragraph(`• Local: ${gate.location_text}`));
+        if (gate.occurrence_types) {
+          children.push(new Paragraph(`  Tipos de ocorrência: ${gate.occurrence_types}`));
+        }
+        if (gate.other_occurrence) {
+          children.push(new Paragraph(`  Outros: ${gate.other_occurrence}`));
+        }
+        if (gate.repair_performed) {
+          const repairDate = gate.repair_date ? ` em ${formatarData(gate.repair_date)}` : '';
+          children.push(new Paragraph(`  ✓ Reparo realizado${repairDate}`));
+        }
+        if (gate.irregular_waste_present) {
+          children.push(new Paragraph(`  ⚠️ Descarte irregular de resíduos presente`));
+          if (gate.waste_removed) {
+            children.push(new Paragraph(`     ✓ Remoção realizada`));
+          }
+        }
+        if (gate.notes) {
+          children.push(new Paragraph(`  Notas: ${gate.notes}`));
+        }
+      }
+      children.push(new Paragraph(' '));
+    }
+
+    // Observações Gerais
+    if (insp.general_notes) {
+      children.push(
+        new Paragraph({
+          text: '4. Observações Gerais',
+          heading: HeadingLevel.HEADING_3
+        })
+      );
+      children.push(new Paragraph(insp.general_notes));
+      children.push(new Paragraph(' '));
+    }
+
+    // Separador entre inspeções
+    children.push(new Paragraph('─'.repeat(80)));
+    children.push(new Paragraph(' '));
+  }
+
+  const doc = new Document({
+    sections: [
+      {
+        children
+      }
+    ]
+  });
+  return Packer.toBuffer(doc);
+}
+
+// Função de geração de PDF para Inspeções de Proteção (F4)
+async function gerarPdfInspecoesProtecao(
+  inspecoes: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  return await new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margins: { top: 40, left: 40, right: 40, bottom: 40 } });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', (err) => reject(err));
+
+    const processar = async () => {
+      // Título e cabeçalho
+      doc.fontSize(18).text('Relatório de Inspeções de Proteção (F4)', {
+        align: 'center'
+      });
+      doc.moveDown();
+      doc.fontSize(12).text(`Período: ${periodo.inicio} a ${periodo.fim}`, { align: 'center' });
+      doc.fontSize(10).text(`Total de inspeções: ${inspecoes.length}`, { align: 'center' });
+      doc.moveDown(1.5);
+
+      // Processa cada inspeção
+      for (let index = 0; index < inspecoes.length; index++) {
+        const insp = inspecoes[index];
+
+        if (index > 0) {
+          doc.addPage();
+        }
+
+        // Cabeçalho da inspeção
+        doc.fontSize(14).fillColor('#27ae60').text(`Inspeção F4 #${insp.inspection_id}`, { underline: true });
+        doc.moveDown(0.5);
+
+        // Informações Gerais
+        doc.fontSize(11).fillColor('#000000');
+        doc.text(`Aeroporto: ${insp.airport_name} (${insp.icao_code})`);
+        doc.text(`Data: ${formatarData(insp.inspection_date)}`);
+        doc.text(`Período do Ano: ${insp.season_name || 'N/A'}`);
+        doc.text(`Chuva nas últimas 24h: ${insp.rained_last_24h ? 'Sim' : 'Não'}`);
+
+        doc.moveDown();
+
+        // Cercas Patrimoniais e Operacionais
+        if (insp.fence_occurrences && insp.fence_occurrences.length > 0) {
+          doc.fontSize(12).fillColor('#27ae60').text('2. Cercas Patrimoniais e Operacionais').fillColor('#000000');
+          doc.fontSize(10);
+          doc.moveDown(0.3);
+
+          for (const fence of insp.fence_occurrences) {
+            doc.text(`• Local: ${fence.location_text}`);
+            if (fence.occurrence_types) {
+              doc.fontSize(9).text(`  Tipos de ocorrência: ${fence.occurrence_types}`).fontSize(10);
+            }
+            if (fence.repair_performed) {
+              const repairDate = fence.repair_date ? ` em ${formatarData(fence.repair_date)}` : '';
+              doc.text(`  ✓ Reparo realizado${repairDate}`);
+            }
+            if (fence.irregular_waste_present) {
+              doc.text(`  ⚠️ Descarte irregular de resíduos presente`);
+              if (fence.waste_removed) {
+                doc.text(`     ✓ Remoção realizada`);
+              }
+            }
+            if (fence.notes) {
+              doc.fontSize(9).text(`  Notas: ${fence.notes}`).fontSize(10);
+            }
+            doc.moveDown(0.5);
+          }
+          doc.moveDown();
+        }
+
+        // Portões Operacionais
+        if (insp.gate_occurrences && insp.gate_occurrences.length > 0) {
+          doc.fontSize(12).fillColor('#27ae60').text('3. Portões Operacionais').fillColor('#000000');
+          doc.fontSize(10);
+          doc.moveDown(0.3);
+
+          for (const gate of insp.gate_occurrences) {
+            doc.text(`• Local: ${gate.location_text}`);
+            if (gate.occurrence_types) {
+              doc.fontSize(9).text(`  Tipos de ocorrência: ${gate.occurrence_types}`).fontSize(10);
+            }
+            if (gate.other_occurrence) {
+              doc.fontSize(9).text(`  Outros: ${gate.other_occurrence}`).fontSize(10);
+            }
+            if (gate.repair_performed) {
+              const repairDate = gate.repair_date ? ` em ${formatarData(gate.repair_date)}` : '';
+              doc.text(`  ✓ Reparo realizado${repairDate}`);
+            }
+            if (gate.irregular_waste_present) {
+              doc.text(`  ⚠️ Descarte irregular de resíduos presente`);
+              if (gate.waste_removed) {
+                doc.text(`     ✓ Remoção realizada`);
+              }
+            }
+            if (gate.notes) {
+              doc.fontSize(9).text(`  Notas: ${gate.notes}`).fontSize(10);
+            }
+            doc.moveDown(0.5);
+          }
+          doc.moveDown();
+        }
+
+        // Observações Gerais
+        if (insp.general_notes) {
+          doc.fontSize(12).fillColor('#27ae60').text('4. Observações Gerais').fillColor('#000000');
+          doc.fontSize(10);
+          doc.moveDown(0.3);
+          doc.text(insp.general_notes);
+          doc.moveDown();
+        }
+
+        // Linha separadora para próxima inspeção
+        if (index < inspecoes.length - 1) {
+          doc.fontSize(8).fillColor('#95a5a6').text('─'.repeat(80), { align: 'center' }).fillColor('#000000');
+        }
+      }
+
+      doc.end();
+    };
+
+    processar().catch((err) => {
+      doc.destroy();
+      reject(err);
+    });
+  });
+}
+
+// Função de geração de DOCX para Coletas de Carcaça (F5)
+async function gerarDocxColetasCarcaca(
+  coletas: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  const children: Paragraph[] = [
+    new Paragraph({
+      text: 'Relatório de Coletas de Carcaça (F5)',
+      heading: HeadingLevel.HEADING_1
+    }),
+    new Paragraph({
+      text: `Período: ${periodo.inicio} a ${periodo.fim}`
+    }),
+    new Paragraph({
+      text: `Total de coletas: ${coletas.length}`
+    }),
+    new Paragraph(' ')
+  ];
+
+  for (const coleta of coletas) {
+    children.push(
+      new Paragraph({
+        text: `Coleta #${coleta.collection_id}`,
+        heading: HeadingLevel.HEADING_2
+      })
+    );
+
+    children.push(new Paragraph(`Aeroporto: ${coleta.airport_name} (${coleta.icao_code})`));
+    children.push(new Paragraph(`Data: ${formatarData(coleta.collection_date)}`));
+    if (coleta.filled_by) children.push(new Paragraph(`Preenchido por: ${coleta.filled_by}`));
+    if (coleta.delivered_by) children.push(new Paragraph(`Entregue por: ${coleta.delivered_by}`));
+    children.push(new Paragraph(`Pista: ${coleta.runway_ref || 'N/A'}`));
+    if (coleta.quadrant_code) children.push(new Paragraph(`Quadrante: ${coleta.quadrant_code}`));
+    children.push(new Paragraph(`Encontrada durante inspeção: ${coleta.found_during_inspection ? 'Sim' : 'Não'}`));
+    if (coleta.destination_text) children.push(new Paragraph(`Destinação: ${coleta.destination_text}`));
+    if (coleta.common_name) children.push(new Paragraph(`Nome popular: ${coleta.common_name}`));
+    if (coleta.scientific_name) children.push(new Paragraph(`Nome científico: ${coleta.scientific_name}`));
+    if (coleta.individual_count) children.push(new Paragraph(`Número de indivíduos: ${coleta.individual_count}`));
+    children.push(new Paragraph(`Possui fotos: ${coleta.has_photos ? 'Sim' : 'Não'}`));
+    if (coleta.observations) {
+      children.push(new Paragraph(`Observações: ${coleta.observations}`));
+    }
+
+    children.push(new Paragraph('─'.repeat(80)));
+    children.push(new Paragraph(' '));
+  }
+
+  const doc = new Document({
+    sections: [
+      {
+        children
+      }
+    ]
+  });
+  return Packer.toBuffer(doc);
+}
+
+// Função de geração de PDF para Coletas de Carcaça (F5)
+async function gerarPdfColetasCarcaca(
+  coletas: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  return await new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margins: { top: 40, left: 40, right: 40, bottom: 40 } });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', (err) => reject(err));
+
+    const processar = async () => {
+      doc.fontSize(18).text('Relatório de Coletas de Carcaça (F5)', {
+        align: 'center'
+      });
+      doc.moveDown();
+      doc.fontSize(12).text(`Período: ${periodo.inicio} a ${periodo.fim}`, { align: 'center' });
+      doc.fontSize(10).text(`Total de coletas: ${coletas.length}`, { align: 'center' });
+      doc.moveDown(1.5);
+
+      for (let index = 0; index < coletas.length; index++) {
+        const coleta = coletas[index];
+
+        if (index > 0) {
+          doc.addPage();
+        }
+
+        doc.fontSize(14).fillColor('#e74c3c').text(`Coleta #${coleta.collection_id}`, { underline: true });
+        doc.moveDown(0.5);
+
+        doc.fontSize(11).fillColor('#000000');
+        doc.text(`Aeroporto: ${coleta.airport_name} (${coleta.icao_code})`);
+        doc.text(`Data: ${formatarData(coleta.collection_date)}`);
+        if (coleta.filled_by) doc.text(`Preenchido por: ${coleta.filled_by}`);
+        if (coleta.delivered_by) doc.text(`Entregue por: ${coleta.delivered_by}`);
+
+        doc.moveDown();
+        doc.fontSize(12).fillColor('#e74c3c').text('Localização').fillColor('#000000');
+        doc.fontSize(10);
+        doc.text(`Pista: ${coleta.runway_ref || 'N/A'}`);
+        if (coleta.quadrant_code) doc.text(`Quadrante: ${coleta.quadrant_code}`);
+        doc.text(`Encontrada durante inspeção: ${coleta.found_during_inspection ? 'Sim' : 'Não'}`);
+
+        doc.moveDown();
+        doc.fontSize(12).fillColor('#e74c3c').text('Informações sobre a Carcaça').fillColor('#000000');
+        doc.fontSize(10);
+        if (coleta.destination_text) doc.text(`Destinação: ${coleta.destination_text}`);
+        if (coleta.common_name) doc.text(`Nome popular: ${coleta.common_name}`);
+        if (coleta.scientific_name) doc.text(`Nome científico: ${coleta.scientific_name}`);
+        if (coleta.individual_count) doc.text(`Número de indivíduos: ${coleta.individual_count}`);
+        doc.text(`Possui fotos: ${coleta.has_photos ? 'Sim' : 'Não'}`);
+
+        if (coleta.observations) {
+          doc.moveDown();
+          doc.fontSize(12).fillColor('#e74c3c').text('Observações').fillColor('#000000');
+          doc.fontSize(10);
+          doc.text(coleta.observations);
+        }
+
+        if (index < coletas.length - 1) {
+          doc.fontSize(8).fillColor('#95a5a6').text('─'.repeat(80), { align: 'center' }).fillColor('#000000');
+        }
+      }
+
+      doc.end();
+    };
+
+    processar().catch((err) => {
+      doc.destroy();
+      reject(err);
+    });
+  });
+}
+
+// Função de geração de DOCX para Coletas de Carcaça (F5)
+async function gerarDocxColetasCarcaca(
+  coletas: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  const children: Paragraph[] = [
+    new Paragraph({
+      text: 'Relatório de Coletas de Carcaça (F5)',
+      heading: HeadingLevel.HEADING_1
+    }),
+    new Paragraph({
+      text: `Período: ${periodo.inicio} a ${periodo.fim}`
+    }),
+    new Paragraph({
+      text: `Total de coletas: ${coletas.length}`
+    }),
+    new Paragraph(' ')
+  ];
+
+  for (const coleta of coletas) {
+    children.push(
+      new Paragraph({
+        text: `Coleta #${coleta.collection_id}`,
+        heading: HeadingLevel.HEADING_2
+      })
+    );
+
+    children.push(new Paragraph(`Aeroporto: ${coleta.airport_name} (${coleta.icao_code})`));
+    children.push(new Paragraph(`Data: ${formatarData(coleta.collection_date)}`));
+    if (coleta.filled_by) children.push(new Paragraph(`Preenchido por: ${coleta.filled_by}`));
+    if (coleta.delivered_by) children.push(new Paragraph(`Entregue por: ${coleta.delivered_by}`));
+    children.push(new Paragraph(`Pista: ${coleta.runway_ref || 'N/A'}`));
+    if (coleta.quadrant_code) children.push(new Paragraph(`Quadrante: ${coleta.quadrant_code}`));
+    children.push(new Paragraph(`Encontrada durante inspeção: ${coleta.found_during_inspection ? 'Sim' : 'Não'}`));
+    if (coleta.destination_text) children.push(new Paragraph(`Destinação: ${coleta.destination_text}`));
+    if (coleta.common_name) children.push(new Paragraph(`Nome popular: ${coleta.common_name}`));
+    if (coleta.scientific_name) children.push(new Paragraph(`Nome científico: ${coleta.scientific_name}`));
+    if (coleta.individual_count) children.push(new Paragraph(`Número de indivíduos: ${coleta.individual_count}`));
+    children.push(new Paragraph(`Possui fotos: ${coleta.has_photos ? 'Sim' : 'Não'}`));
+    if (coleta.observations) {
+      children.push(new Paragraph(`Observações: ${coleta.observations}`));
+    }
+
+    children.push(new Paragraph('─'.repeat(80)));
+    children.push(new Paragraph(' '));
+  }
+
+  const doc = new Document({
+    sections: [
+      {
+        children
+      }
+    ]
+  });
+  return Packer.toBuffer(doc);
+}
+
+// Função de geração de PDF para Coletas de Carcaça (F5)
+async function gerarPdfColetasCarcaca(
+  coletas: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  return await new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margins: { top: 40, left: 40, right: 40, bottom: 40 } });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', (err) => reject(err));
+
+    const processar = async () => {
+      doc.fontSize(18).text('Relatório de Coletas de Carcaça (F5)', {
+        align: 'center'
+      });
+      doc.moveDown();
+      doc.fontSize(12).text(`Período: ${periodo.inicio} a ${periodo.fim}`, { align: 'center' });
+      doc.fontSize(10).text(`Total de coletas: ${coletas.length}`, { align: 'center' });
+      doc.moveDown(1.5);
+
+      for (let index = 0; index < coletas.length; index++) {
+        const coleta = coletas[index];
+
+        if (index > 0) {
+          doc.addPage();
+        }
+
+        doc.fontSize(14).fillColor('#e74c3c').text(`Coleta #${coleta.collection_id}`, { underline: true });
+        doc.moveDown(0.5);
+
+        doc.fontSize(11).fillColor('#000000');
+        doc.text(`Aeroporto: ${coleta.airport_name} (${coleta.icao_code})`);
+        doc.text(`Data: ${formatarData(coleta.collection_date)}`);
+        if (coleta.filled_by) doc.text(`Preenchido por: ${coleta.filled_by}`);
+        if (coleta.delivered_by) doc.text(`Entregue por: ${coleta.delivered_by}`);
+
+        doc.moveDown();
+        doc.fontSize(12).fillColor('#e74c3c').text('Localização').fillColor('#000000');
+        doc.fontSize(10);
+        doc.text(`Pista: ${coleta.runway_ref || 'N/A'}`);
+        if (coleta.quadrant_code) doc.text(`Quadrante: ${coleta.quadrant_code}`);
+        doc.text(`Encontrada durante inspeção: ${coleta.found_during_inspection ? 'Sim' : 'Não'}`);
+
+        doc.moveDown();
+        doc.fontSize(12).fillColor('#e74c3c').text('Informações sobre a Carcaça').fillColor('#000000');
+        doc.fontSize(10);
+        if (coleta.destination_text) doc.text(`Destinação: ${coleta.destination_text}`);
+        if (coleta.common_name) doc.text(`Nome popular: ${coleta.common_name}`);
+        if (coleta.scientific_name) doc.text(`Nome científico: ${coleta.scientific_name}`);
+        if (coleta.individual_count) doc.text(`Número de indivíduos: ${coleta.individual_count}`);
+        doc.text(`Possui fotos: ${coleta.has_photos ? 'Sim' : 'Não'}`);
+
+        if (coleta.observations) {
+          doc.moveDown();
+          doc.fontSize(12).fillColor('#e74c3c').text('Observações').fillColor('#000000');
+          doc.fontSize(10);
+          doc.text(coleta.observations);
+        }
+
+        if (index < coletas.length - 1) {
+          doc.fontSize(8).fillColor('#95a5a6').text('─'.repeat(80), { align: 'center' }).fillColor('#000000');
+        }
+      }
+
+      doc.end();
+    };
+
+    processar().catch((err) => {
+      doc.destroy();
+      reject(err);
+    });
+  });
+}
+
+// Função de geração de DOCX para Inspeções de Lagos
+async function gerarDocxInspecoesLagos(
+  inspecoes: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  const children: Paragraph[] = [
+    new Paragraph({ text: 'Relatório de Inspeção de Lagos e Áreas Alagadiças', heading: HeadingLevel.HEADING_1 }),
+    new Paragraph(`Período: ${periodo.inicio} a ${periodo.fim}`),
+    new Paragraph(`Total de inspeções: ${inspecoes.length}`),
+    new Paragraph(' ')
+  ];
+
+  for (const insp of inspecoes) {
+    children.push(new Paragraph({ text: `Inspeção #${insp.inspection_id}`, heading: HeadingLevel.HEADING_2 }));
+
+    children.push(new Paragraph(`Data: ${formatarData(insp.inspection_date)}`));
+    children.push(new Paragraph(`Aeroporto: ${insp.airport_name} (${insp.icao_code})`));
+    children.push(new Paragraph(`Período do Ano: ${insp.season_name || 'N/A'}`));
+    children.push(new Paragraph(`Chuva nas últimas 24h: ${insp.rained_last_24h ? 'Sim' : 'Não'}`));
+    children.push(new Paragraph(' '));
+
+    children.push(new Paragraph({ text: 'Ponto Inspecionado', heading: HeadingLevel.HEADING_3 }));
+    children.push(new Paragraph(`Pista Associada: ${insp.runway_ref || 'N/A'}`));
+    children.push(new Paragraph(`Quadrante: ${insp.quadrant_code || 'N/A'}`));
+    children.push(new Paragraph(' '));
+
+    if (insp.fauna_present) {
+      children.push(new Paragraph({ text: 'Fauna Associada', heading: HeadingLevel.HEADING_3 }));
+      children.push(new Paragraph(`Nome Popular: ${insp.species_popular_name || 'N/A'}`));
+      children.push(new Paragraph(`Nome Científico: ${insp.species_scientific_name || 'N/A'}`));
+      children.push(new Paragraph(`Número de Indivíduos: ${insp.individual_count || 'N/A'}`));
+      children.push(new Paragraph(' '));
+    }
+
+    children.push(new Paragraph({ text: 'Análise do Sistema', heading: HeadingLevel.HEADING_3 }));
+    children.push(new Paragraph(`Sistema Inspecionado: ${insp.inspected_system || 'N/A'}`));
+    children.push(new Paragraph(`Apresenta Inconformidade: ${insp.has_non_conformity ? 'Sim' : 'Não'}`));
+    children.push(new Paragraph(' '));
+
+    if (insp.situation_description) {
+      children.push(new Paragraph({ text: 'Registro Visual', heading: HeadingLevel.HEADING_3 }));
+      children.push(new Paragraph(`Descrição: ${insp.situation_description}`));
+      children.push(new Paragraph(`Fotos: ${insp.photo_count > 0 ? `Sim (${insp.photo_count})` : 'Não'}`));
+      children.push(new Paragraph(' '));
+    }
+
+    if (insp.mitigation_action) {
+      children.push(new Paragraph({ text: 'Ação Mitigadora', heading: HeadingLevel.HEADING_3 }));
+      children.push(new Paragraph(insp.mitigation_action));
+      children.push(new Paragraph(' '));
+    }
+
+    if (insp.general_observations) {
+      children.push(new Paragraph({ text: 'Observações Gerais', heading: HeadingLevel.HEADING_3 }));
+      children.push(new Paragraph(insp.general_observations));
+    }
+
+    children.push(new Paragraph('─'.repeat(80)));
+    children.push(new Paragraph(' '));
+  }
+
+  const doc = new Document({ sections: [{ children }] });
+  return Packer.toBuffer(doc);
+}
+
+// Função de geração de PDF para Inspeções de Lagos
+async function gerarPdfInspecoesLagos(
+  inspecoes: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  return await new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margins: { top: 40, left: 40, right: 40, bottom: 40 } });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', (err) => reject(err));
+
+    doc.fontSize(16).text('Relatório de Inspeção de Lagos e Áreas Alagadiças', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(`Período: ${periodo.inicio} a ${periodo.fim}`, { align: 'center' });
+    doc.moveDown(1.5);
+
+    inspecoes.forEach((insp, index) => {
+      if (index > 0) doc.addPage();
+
+      doc.fontSize(14).fillColor('#16a085').text(`Inspeção #${insp.inspection_id}`, { underline: true });
+      doc.moveDown(0.5);
+
+      doc.fontSize(11).fillColor('#000');
+      doc.text(`Data: ${formatarData(insp.inspection_date)} | Aeroporto: ${insp.airport_name}`);
+      doc.text(`Período do Ano: ${insp.season_name || 'N/A'} | Chuva 24h: ${insp.rained_last_24h ? 'Sim' : 'Não'}`);
+      doc.text(`Pista: ${insp.runway_ref || 'N/A'} | Quadrante: ${insp.quadrant_code || 'N/A'}`);
+      if (insp.fauna_present) {
+        doc.text(`Fauna: ${insp.species_popular_name || 'N/A'} (Qtd: ${insp.individual_count || '?'})`);
+      }
+      if (insp.situation_description) doc.text(`Descrição: ${insp.situation_description}`);
+      if (insp.mitigation_action) doc.text(`Ação: ${insp.mitigation_action}`);
+      if (insp.general_observations) doc.text(`Obs: ${insp.general_observations}`);
+      doc.moveDown();
+    });
+
+    doc.end();
+  });
+}
+
+// Função de geração de DOCX para Manutenção de Áreas Verdes (F2)
+async function gerarDocxInspecoesAreasVerdes(
+  inspecoes: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  const children: Paragraph[] = [
+    new Paragraph({ text: 'Relatório F2 – Manutenção de Áreas Verdes', heading: HeadingLevel.HEADING_1 }),
+    new Paragraph(`Período: ${periodo.inicio} a ${periodo.fim}`),
+    new Paragraph(`Total de registros: ${inspecoes.length}`),
+    new Paragraph(' ')
+  ];
+
+  for (const insp of inspecoes) {
+    children.push(new Paragraph({ text: `Registro #${insp.maintenance_id}`, heading: HeadingLevel.HEADING_2 }));
+
+    children.push(new Paragraph(`Data: ${formatarData(insp.record_date)}`));
+    children.push(new Paragraph(`Tipo: ${insp.record_type}`));
+    children.push(new Paragraph(`Período do Ano: ${insp.season_name || 'N/A'}`));
+    children.push(new Paragraph(' '));
+
+    if (insp.record_type === 'corte' && insp.grass_cutting) {
+      const corte = insp.grass_cutting;
+      children.push(new Paragraph({ text: 'Corte de Grama', heading: HeadingLevel.HEADING_3 }));
+      children.push(new Paragraph(`Período da Atividade: ${corte.activity_period || 'N/A'}`));
+      children.push(new Paragraph(`Equipamento: ${corte.equipment || 'N/A'}`));
+      children.push(new Paragraph(`Recolhimento de Aparas: ${corte.cuttings_collected ? 'Sim' : 'Não'}`));
+      if (corte.cuttings_destination) children.push(new Paragraph(`Destino: ${corte.cuttings_destination}`));
+      if (corte.cut_areas) children.push(new Paragraph(`Áreas Cortadas: ${corte.cut_areas}`));
+      children.push(new Paragraph(`Atração de Animais: ${corte.animal_attraction ? 'Sim' : 'Não'}`));
+      if (corte.attracted_species) children.push(new Paragraph(`Espécies Atraídas: ${corte.attracted_species}`));
+      children.push(new Paragraph(`Limpeza de Canaletas: ${corte.gutter_cleaned ? 'Sim' : 'Não'}`));
+      children.push(new Paragraph(' '));
+    }
+
+    if ((insp.record_type === 'poda' || insp.record_type === 'extracao') && insp.pruning_extraction) {
+      const poda = insp.pruning_extraction;
+      children.push(new Paragraph({ text: 'Poda ou Extração', heading: HeadingLevel.HEADING_3 }));
+      children.push(new Paragraph(`Tipo de Vegetação: ${poda.vegetation_type || 'N/A'}`));
+      children.push(new Paragraph(`Possui Autorização Ambiental: ${poda.has_environmental_authorization ? 'Sim' : 'Não'}`));
+      if (poda.managed_species) children.push(new Paragraph(`Espécies Manejadas: ${poda.managed_species}`));
+      children.push(new Paragraph(`Recolhimento de Aparas: ${poda.cuttings_collected ? 'Sim' : 'Não'}`));
+      if (poda.cuttings_destination) children.push(new Paragraph(`Destino: ${poda.cuttings_destination}`));
+      if (poda.vegetation_location) children.push(new Paragraph(`Localização: ${poda.vegetation_location}`));
+      children.push(new Paragraph(`Atração de Animais: ${poda.animal_attraction ? 'Sim' : 'Não'}`));
+      if (poda.observed_species) children.push(new Paragraph(`Espécies Observadas: ${poda.observed_species}`));
+      children.push(new Paragraph(' '));
+    }
+
+    if (insp.general_observations) {
+      children.push(new Paragraph({ text: 'Observações Gerais', heading: HeadingLevel.HEADING_3 }));
+      children.push(new Paragraph(insp.general_observations));
+    }
+
+    children.push(new Paragraph('─'.repeat(80)));
+    children.push(new Paragraph(' '));
+  }
+
+  const doc = new Document({ sections: [{ children }] });
+  return Packer.toBuffer(doc);
+}
+
+// Função de geração de PDF para Manutenção de Áreas Verdes (F2)
+async function gerarPdfInspecoesAreasVerdes(
+  inspecoes: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  return await new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margins: { top: 40, left: 40, right: 40, bottom: 40 } });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', (err) => reject(err));
+
+    doc.fontSize(16).text('Relatório F2 – Manutenção de Áreas Verdes', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(`Período: ${periodo.inicio} a ${periodo.fim}`, { align: 'center' });
+    doc.moveDown(1.5);
+
+    inspecoes.forEach((insp, index) => {
+      if (index > 0) doc.addPage();
+
+      doc.fontSize(14).fillColor('#27ae60').text(`Registro #${insp.maintenance_id}`, { underline: true });
+      doc.moveDown(0.5);
+
+      doc.fontSize(11).fillColor('#000');
+      doc.text(`Data: ${formatarData(insp.record_date)} | Tipo: ${insp.record_type} | Aeroporto: ${insp.icao_code}`);
+      if (insp.general_observations) doc.text(`Observações: ${insp.general_observations}`);
+      // Adicionar mais detalhes se necessário
+      doc.moveDown();
+    });
+
+    doc.end();
+  });
+}
+
+// Função de geração de DOCX para Monitoramento de Focos de Atração (F3)
+async function gerarDocxInspecoesFocosAtracao(
+  inspecoes: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  const children: Paragraph[] = [
+    new Paragraph({ text: 'Relatório F3 – Monitoramento de Focos de Atração', heading: HeadingLevel.HEADING_1 }),
+    new Paragraph(`Período: ${periodo.inicio} a ${periodo.fim}`),
+    new Paragraph(`Total de registros: ${inspecoes.length}`),
+    new Paragraph(' ')
+  ];
+
+  for (const insp of inspecoes) {
+    children.push(new Paragraph({ text: `Registro #${insp.focus_inspection_id}`, heading: HeadingLevel.HEADING_2 }));
+
+    children.push(new Paragraph(`Data: ${formatarData(insp.inspection_date)}`));
+    children.push(new Paragraph(`Aeroporto: ${insp.airport_name} (${insp.icao_code})`));
+    children.push(new Paragraph(`Período do Ano: ${insp.season_name || 'N/A'}`));
+    children.push(new Paragraph(`Chuva nas últimas 24h: ${insp.rained_last_24h ? 'Sim' : 'Não'}`));
+    children.push(new Paragraph(' '));
+
+    if (insp.secondary_focuses?.length) {
+      children.push(new Paragraph({ text: 'Focos Secundários', heading: HeadingLevel.HEADING_3 }));
+      children.push(new Paragraph(`Registros: ${insp.secondary_focuses.length}`));
+    }
+    if (insp.green_area_focuses?.length) {
+      children.push(new Paragraph({ text: 'Áreas Verdes', heading: HeadingLevel.HEADING_3 }));
+      children.push(new Paragraph(`Registros: ${insp.green_area_focuses.length}`));
+    }
+    // Simplificado para o DOCX, detalhes completos podem ser adicionados
+
+    if (insp.general_observations) {
+      children.push(new Paragraph({ text: 'Observações Gerais', heading: HeadingLevel.HEADING_3 }));
+      children.push(new Paragraph(insp.general_observations));
+    }
+
+    children.push(new Paragraph('─'.repeat(80)));
+    children.push(new Paragraph(' '));
+  }
+
+  const doc = new Document({ sections: [{ children }] });
+  return Packer.toBuffer(doc);
+}
+
+// Função de geração de PDF para Monitoramento de Focos de Atração (F3)
+async function gerarPdfInspecoesFocosAtracao(
+  inspecoes: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  return await new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margins: { top: 40, left: 40, right: 40, bottom: 40 } });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', (err) => reject(err));
+
+    doc.fontSize(16).text('Relatório F3 – Monitoramento de Focos de Atração', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(`Período: ${periodo.inicio} a ${periodo.fim}`, { align: 'center' });
+    doc.moveDown(1.5);
+    // PDF simplificado por brevidade
+    doc.fontSize(10).text('Relatório detalhado disponível no formato DOCX.');
+    doc.end();
+  });
+}
+
+// Função de geração de DOCX para Resíduos de Incineração
+async function gerarDocxResiduosIncineracao(
+  residuos: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  const children: Paragraph[] = [
+    new Paragraph({
+      text: 'Relatório de Resíduos Enviados para Incineração',
+      heading: HeadingLevel.HEADING_1
+    }),
+    new Paragraph({
+      text: `Período: ${periodo.inicio} a ${periodo.fim}`
+    }),
+    new Paragraph({
+      text: `Total de registros: ${residuos.length}`
+    }),
+    new Paragraph(' ')
+  ];
+
+  for (const residuo of residuos) {
+    children.push(
+      new Paragraph({
+        text: `Registro #${residuo.waste_id}`,
+        heading: HeadingLevel.HEADING_2
+      })
+    );
+
+    children.push(new Paragraph(`Aeroporto: ${residuo.airport_name} (${residuo.icao_code})`));
+    children.push(new Paragraph(`Empresa: ${residuo.company_name}`));
+    children.push(new Paragraph(`Data: ${formatarData(residuo.record_date)}`));
+    children.push(new Paragraph(`Voos internacionais: ${residuo.international_flights ? 'Sim' : 'Não'}`));
+    if (residuo.waste_type) children.push(new Paragraph(`Tipo de resíduo: ${residuo.waste_type}`));
+    if (residuo.physical_state_name) children.push(new Paragraph(`Estado físico: ${residuo.physical_state_name}`));
+    if (residuo.origin) children.push(new Paragraph(`Origem: ${residuo.origin}`));
+    if (residuo.codification) children.push(new Paragraph(`Codificação (NBR): ${residuo.codification}`));
+    if (residuo.generation_frequency) children.push(new Paragraph(`Frequência de geração: ${residuo.generation_frequency}`));
+    if (residuo.weight_kg) children.push(new Paragraph(`Peso: ${residuo.weight_kg} kg`));
+    if (residuo.unit_quantity) children.push(new Paragraph(`Quantidade (unidades): ${residuo.unit_quantity}`));
+    if (residuo.volume_value) {
+      const volUnit = residuo.volume_unit || 'L';
+      children.push(new Paragraph(`Volume: ${residuo.volume_value} ${volUnit}`));
+    }
+    if (residuo.treatment_name) {
+      children.push(new Paragraph(`Tratamento: ${residuo.treatment_name}`));
+    }
+    if (residuo.treatment_other) {
+      children.push(new Paragraph(`Outro tratamento: ${residuo.treatment_other}`));
+    }
+    if (residuo.filled_by) children.push(new Paragraph(`Preenchido por: ${residuo.filled_by}`));
+
+    children.push(new Paragraph('─'.repeat(80)));
+    children.push(new Paragraph(' '));
+  }
+
+  const doc = new Document({
+    sections: [
+      {
+        children
+      }
+    ]
+  });
+  return Packer.toBuffer(doc);
+}
+
+// Função de geração de PDF para Resíduos de Incineração
+async function gerarPdfResiduosIncineracao(
+  residuos: any[],
+  periodo: { inicio: string; fim: string }
+) {
+  return await new Promise<Buffer>((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margins: { top: 40, left: 40, right: 40, bottom: 40 } });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', (err) => reject(err));
+
+    const processar = async () => {
+      doc.fontSize(18).text('Relatório de Resíduos Enviados para Incineração', {
+        align: 'center'
+      });
+      doc.moveDown();
+      doc.fontSize(12).text(`Período: ${periodo.inicio} a ${periodo.fim}`, { align: 'center' });
+      doc.fontSize(10).text(`Total de registros: ${residuos.length}`, { align: 'center' });
+      doc.moveDown(1.5);
+
+      for (let index = 0; index < residuos.length; index++) {
+        const residuo = residuos[index];
+
+        if (index > 0) {
+          doc.addPage();
+        }
+
+        doc.fontSize(14).fillColor('#f39c12').text(`Registro #${residuo.waste_id}`, { underline: true });
+        doc.moveDown(0.5);
+
+        doc.fontSize(11).fillColor('#000000');
+        doc.text(`Aeroporto: ${residuo.airport_name} (${residuo.icao_code})`);
+        doc.text(`Empresa: ${residuo.company_name}`);
+        doc.text(`Data: ${formatarData(residuo.record_date)}`);
+        doc.text(`Voos internacionais: ${residuo.international_flights ? 'Sim' : 'Não'}`);
+
+        doc.moveDown();
+        doc.fontSize(12).fillColor('#f39c12').text('Caracterização do Resíduo').fillColor('#000000');
+        doc.fontSize(10);
+        if (residuo.waste_type) doc.text(`Tipo de resíduo: ${residuo.waste_type}`);
+        if (residuo.physical_state_name) doc.text(`Estado físico: ${residuo.physical_state_name}`);
+        if (residuo.origin) doc.text(`Origem: ${residuo.origin}`);
+        if (residuo.codification) doc.text(`Codificação (NBR): ${residuo.codification}`);
+        if (residuo.generation_frequency) doc.text(`Frequência de geração: ${residuo.generation_frequency}`);
+
+        doc.moveDown();
+        doc.fontSize(12).fillColor('#f39c12').text('Quantificação').fillColor('#000000');
+        doc.fontSize(10);
+        if (residuo.weight_kg) doc.text(`Peso: ${residuo.weight_kg} kg`);
+        if (residuo.unit_quantity) doc.text(`Quantidade (unidades): ${residuo.unit_quantity}`);
+        if (residuo.volume_value) {
+          const volUnit = residuo.volume_unit || 'L';
+          doc.text(`Volume: ${residuo.volume_value} ${volUnit}`);
+        }
+
+        doc.moveDown();
+        doc.fontSize(12).fillColor('#f39c12').text('Tratamento e Destinação').fillColor('#000000');
+        doc.fontSize(10);
+        if (residuo.treatment_name) {
+          doc.text(`Tratamento: ${residuo.treatment_name}`);
+        }
+        if (residuo.treatment_other) {
+          doc.text(`Outro tratamento: ${residuo.treatment_other}`);
+        }
+
+        if (residuo.filled_by) {
+          doc.moveDown();
+          doc.fontSize(9).text(`Responsável: ${residuo.filled_by}`);
+        }
+
+        if (index < residuos.length - 1) {
+          doc.fontSize(8).fillColor('#95a5a6').text('─'.repeat(80), { align: 'center' }).fillColor('#000000');
+        }
+      }
+
+      doc.end();
+    };
+
+    processar().catch((err) => {
+      doc.destroy();
+      reject(err);
+    });
+  });
 }

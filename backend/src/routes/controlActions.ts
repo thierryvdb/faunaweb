@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { db } from '../services/db';
+import { requireRead, requireCreate, requireUpdate, requireDelete } from '../utils/auth';
 
 const corpo = z.object({
   airport_id: z.coerce.number(),
@@ -22,7 +23,7 @@ const corpo = z.object({
 const paramsId = z.object({ id: z.coerce.number() });
 
 export async function controlActionsRoutes(app: FastifyInstance) {
-  app.get('/api/acoes-controle', async (request) => {
+  app.get('/api/acoes-controle', { preHandler: [app.authenticate, requireRead] }, async (request) => {
     const querySchema = z.object({
       airportId: z.coerce.number().optional(),
       inicio: z.string().optional(),
@@ -60,7 +61,7 @@ export async function controlActionsRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/acoes-controle', async (request, reply) => {
+  app.post('/api/acoes-controle', { preHandler: [app.authenticate, requireCreate] }, async (request, reply) => {
     const body = corpo.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.fact_control_action (airport_id, date_utc, time_local, location_id, latitude_dec, longitude_dec,
@@ -87,7 +88,7 @@ export async function controlActionsRoutes(app: FastifyInstance) {
     return reply.code(201).send(rows[0]);
   });
 
-  app.put('/api/acoes-controle/:id', async (request, reply) => {
+  app.put('/api/acoes-controle/:id', { preHandler: [app.authenticate, requireUpdate] }, async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     const body = corpo.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
@@ -107,7 +108,7 @@ export async function controlActionsRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/acoes-controle/:id', async (request, reply) => {
+  app.delete('/api/acoes-controle/:id', { preHandler: [app.authenticate, requireDelete] }, async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_control_action WHERE action_id=$1', [id]);
     return reply.code(204).send();

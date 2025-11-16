@@ -3,84 +3,6 @@
     <section class="bloco">
       <header class="bloco-topo">
         <div>
-          <h2>Focos atrativos na ASA</h2>
-          <p>Registro atualizado por município, protocolo e status de mitigação.</p>
-        </div>
-      </header>
-      <form class="grid" @submit.prevent="salvarFoco">
-        <label>
-          Município
-          <input type="text" v-model="formFoco.municipality" required />
-        </label>
-        <label>
-          Tipo de foco
-          <input type="text" v-model="formFoco.focus_type" placeholder="Aterro, lagoa, cultivo..." />
-        </label>
-        <label class="wide">
-          Descrição
-          <textarea rows="2" v-model="formFoco.description"></textarea>
-        </label>
-        <label>
-          Distância (km)
-          <input type="number" min="0" step="0.1" v-model.number="formFoco.distance_km" />
-        </label>
-        <label>
-          Status
-          <select v-model="formFoco.status">
-            <option value="monitorado">Monitorado</option>
-            <option value="em_gestao">Em gestão</option>
-            <option value="mitigado">Mitigado</option>
-          </select>
-        </label>
-        <label>
-          Responsável
-          <input type="text" v-model="formFoco.responsible_org" />
-        </label>
-        <label>
-          Protocolo
-          <input type="text" v-model="formFoco.protocol_ref" />
-        </label>
-        <label>
-          Próximo follow-up
-          <input type="date" v-model="formFoco.next_follow_up" />
-        </label>
-        <button class="btn principal" :disabled="salvandoFoco">
-          {{ salvandoFoco ? 'Salvando...' : 'Registrar foco ASA' }}
-        </button>
-      </form>
-      <div class="tabela">
-        <table>
-          <thead>
-            <tr>
-              <th>Município</th>
-              <th>Tipo</th>
-              <th>Status</th>
-              <th>Distância</th>
-              <th>Protocolo</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in focos" :key="item.asa_focus_id">
-              <td>{{ item.municipality || '-' }}</td>
-              <td>{{ item.focus_type || '-' }}</td>
-              <td>{{ focoStatus(item.status) }}</td>
-              <td>{{ item.distance_km ? item.distance_km + ' km' : '-' }}</td>
-              <td>
-                {{ item.protocol_ref || '-' }}<br>
-                <small>Follow-up: {{ item.next_follow_up || '-' }}</small>
-              </td>
-            </tr>
-            <tr v-if="!focos.length">
-              <td colspan="5">Nenhum foco cadastrado.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="bloco">
-      <header class="bloco-topo">
-        <div>
           <h2>Comunicações externas</h2>
           <p>Rastreia ofícios enviados a órgãos municipais, ambientais e operadores vizinhos.</p>
         </div>
@@ -483,7 +405,6 @@
 import { onMounted, reactive, ref } from 'vue';
 import { ApiService } from '@/services/api';
 
-const focos = ref<any[]>([]);
 const comunicados = ref<any[]>([]);
 const treinamentos = ref<any[]>([]);
 const kpisBaist = ref<any[]>([]);
@@ -491,19 +412,6 @@ const pessoal = ref<any[]>([]);
 const statusFuncoes = ref<any[]>([]);
 const pendenciasTreinamento = ref<any[]>([]);
 const conclusoes = ref<any[]>([]);
-
-const formFoco = reactive({
-  airport_id: 1,
-  municipality: '',
-  focus_type: '',
-  description: '',
-  distance_km: undefined as number | undefined,
-  status: 'monitorado',
-  responsible_org: '',
-  protocol_ref: '',
-  next_follow_up: ''
-});
-const salvandoFoco = ref(false);
 
 const formComunicado = reactive({
   airport_id: 1,
@@ -562,34 +470,6 @@ const kpiFiltro = reactive({
 
 function airportIdAtual() {
   return ApiService.getUser<any>()?.aeroporto_id ?? 1;
-}
-
-async function carregarFocos() {
-  const data = await ApiService.getAsaFocos({ airportId: airportIdAtual() });
-  focos.value = data;
-}
-
-async function salvarFoco() {
-  salvandoFoco.value = true;
-  try {
-    await ApiService.criarAsaFoco({
-      ...formFoco,
-      airport_id: airportIdAtual()
-    });
-    Object.assign(formFoco, {
-      municipality: '',
-      focus_type: '',
-      description: '',
-      distance_km: undefined,
-      status: 'monitorado',
-      responsible_org: '',
-      protocol_ref: '',
-      next_follow_up: ''
-    });
-    await carregarFocos();
-  } finally {
-    salvandoFoco.value = false;
-  }
 }
 
 async function carregarComunicados() {
@@ -817,15 +697,6 @@ async function carregarKpis() {
   kpisBaist.value = data.aeroportos ?? [];
 }
 
-function focoStatus(valor?: string) {
-  const mapa: Record<string, string> = {
-    monitorado: 'Monitorado',
-    em_gestao: 'Em gestão',
-    mitigado: 'Mitigado'
-  };
-  return mapa[valor || ''] || '-';
-}
-
 function comunicadoStatus(valor?: string) {
   const mapa: Record<string, string> = {
     enviado: 'Enviado',
@@ -843,7 +714,6 @@ function formatNumber(value: number | null | undefined) {
 
 onMounted(async () => {
   await Promise.all([
-    carregarFocos(),
     carregarComunicados(),
     carregarTreinamentos(),
     carregarKpis(),

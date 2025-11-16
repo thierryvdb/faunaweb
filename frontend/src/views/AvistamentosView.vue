@@ -75,14 +75,6 @@
           </select>
         </label>
         <label>
-          Latitude
-          <input type="number" step="0.000001" v-model.number="novo.latitude_dec" />
-        </label>
-        <label>
-          Longitude
-          <input type="number" step="0.000001" v-model.number="novo.longitude_dec" />
-        </label>
-        <label>
           Quadrante
           <select v-model="novo.quadrant">
             <option :value="undefined">Selecione</option>
@@ -95,12 +87,34 @@
           <QuadrantMapPicker :selected="novo.quadrant ?? ''" @select="aplicarQuadrante" />
         </div>
         <label>
-          Altura da fauna (AGL, m)
-          <input type="number" min="0" step="1" v-model.number="novo.fauna_height_agl_m" />
-        </label>
-        <label>
           Dentro do aeródromo
           <input type="checkbox" v-model="novo.inside_aerodrome" />
+        </label>
+        <label>
+          Localização no Aeródromo
+          <select v-model.number="novo.aerodrome_location_id">
+            <option :value="undefined">Selecione</option>
+            <option
+              v-for="loc in lookups.locais_aerodromo"
+              :key="loc.id"
+              :value="loc.id"
+            >
+              {{ loc.name }}
+            </option>
+          </select>
+        </label>
+        <label>
+          Fase da ocorrência
+          <select v-model.number="novo.occurrence_phase_id">
+            <option :value="undefined">Selecione</option>
+            <option
+              v-for="fase in lookups.fases_ocorrencia"
+              :key="fase.id"
+              :value="fase.id"
+            >
+              {{ fase.name }}
+            </option>
+          </select>
         </label>
         <label>
           Equipe
@@ -146,14 +160,15 @@ const colunas = [
   { titulo: 'Data', campo: 'date_br' },
   { titulo: 'Hora', campo: 'time_local' },
   { titulo: 'Local', campo: 'location_nome' },
-  { titulo: 'Per?odo', campo: 'periodo_label' },
+  { titulo: 'Periodo', campo: 'periodo_label' },
   { titulo: 'Quadrante', campo: 'quadrant' },
   { titulo: 'Dentro do AD', campo: 'inside_label' },
-  { titulo: 'AGL (m)', campo: 'fauna_height_agl_m' },
+  { titulo: 'Localizacao AD', campo: 'aerodrome_location_label' },
+  { titulo: 'Fase', campo: 'occurrence_phase_label' },
   { titulo: 'Atrativo', campo: 'related_attractor_desc' },
   { titulo: 'Equipe', campo: 'observer_team' },
   { titulo: 'Notas', campo: 'notes' },
-  { titulo: 'A??es', campo: 'acoes' }
+  { titulo: 'Acoes', campo: 'acoes' }
 ];
 
 const filtros = ref<{ airportId?: number; inicio?: string; fim?: string }>({});
@@ -162,7 +177,7 @@ const aeroportos = ref<any[]>([]);
 const locais = ref<any[]>([]);
 const atrativos = ref<any[]>([]);
 const equipes = ref<any[]>([]);
-const lookups = ref<any>({ periodos_dia: [] });
+const lookups = ref<any>({ periodos_dia: [], locais_aerodromo: [], fases_ocorrencia: [] });
 const quadrantes = ref<any[]>([]);
 const carregando = ref(false);
 const erro = ref<string | null>(null);
@@ -172,10 +187,9 @@ const novo = ref({
   date_utc: '',
   time_local: '',
   time_period_id: undefined as any,
-  latitude_dec: undefined as any,
-  longitude_dec: undefined as any,
   quadrant: undefined as any,
-  fauna_height_agl_m: undefined as any,
+  aerodrome_location_id: undefined as any,
+  occurrence_phase_id: undefined as any,
   inside_aerodrome: false,
   risk_mgmt_notes: '',
   related_attractor_id: undefined as any,
@@ -193,7 +207,9 @@ async function carregar() {
     const dados = await ApiService.getAvistamentos(filtros.value);
     lista.value = dados.map((item: any) => ({
       ...item,
-      date_br: item.date_utc ? new Date(item.date_utc).toLocaleDateString('pt-BR') : null
+      date_br: item.date_utc ? new Date(item.date_utc).toLocaleDateString('pt-BR') : null,
+      aerodrome_location_label: item.aerodrome_location_label ?? '-',
+      occurrence_phase_label: item.occurrence_phase_label ?? '-'
     }));
   } catch (e: any) {
     erro.value = e?.message ?? 'Falha ao buscar avistamentos';
@@ -223,12 +239,6 @@ async function carregarLocaisEquipes() {
 
 function aplicarQuadrante(selecao: QuadrantSelection) {
   novo.value.quadrant = selecao.quadrant;
-  if (selecao.latitude !== null) {
-    novo.value.latitude_dec = selecao.latitude;
-  }
-  if (selecao.longitude !== null) {
-    novo.value.longitude_dec = selecao.longitude;
-  }
 }
 
 async function salvar() {
@@ -253,7 +263,22 @@ async function salvar() {
 
 function cancelarEdicao() {
   editandoId.value = null;
-  novo.value = { airport_id: '' as any, location_id: '' as any, date_utc: '', time_local: '', time_period_id: undefined as any, latitude_dec: undefined as any, longitude_dec: undefined as any, quadrant: undefined as any, fauna_height_agl_m: undefined as any, inside_aerodrome: false, risk_mgmt_notes: '', related_attractor_id: undefined as any, actions_taken: '', observer_team: '', notes: '' };
+  novo.value = {
+    airport_id: '' as any,
+    location_id: '' as any,
+    date_utc: '',
+    time_local: '',
+    time_period_id: undefined as any,
+    quadrant: undefined as any,
+    aerodrome_location_id: undefined as any,
+    occurrence_phase_id: undefined as any,
+    inside_aerodrome: false,
+    risk_mgmt_notes: '',
+    related_attractor_id: undefined as any,
+    actions_taken: '',
+    observer_team: '',
+    notes: ''
+  };
   equipeSelecionada.value = '';
   locais.value = [];
   equipes.value = [];
@@ -267,10 +292,9 @@ async function editar(avistamento: any) {
     date_utc: avistamento.date_utc?.slice(0, 10) ?? '',
     time_local: avistamento.time_local ?? '',
     time_period_id: avistamento.time_period_id,
-    latitude_dec: avistamento.latitude_dec,
-    longitude_dec: avistamento.longitude_dec,
     quadrant: avistamento.quadrant,
-    fauna_height_agl_m: avistamento.fauna_height_agl_m,
+    aerodrome_location_id: avistamento.aerodrome_location_id,
+    occurrence_phase_id: avistamento.occurrence_phase_id,
     inside_aerodrome: !!avistamento.inside_aerodrome,
     risk_mgmt_notes: avistamento.risk_mgmt_notes ?? '',
     related_attractor_id: avistamento.related_attractor_id,

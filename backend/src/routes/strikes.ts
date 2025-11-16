@@ -2,6 +2,10 @@ import { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { MultipartFile } from '@fastify/multipart';
 import { db } from '../services/db';
+import { requireRead, requireCreate, requireUpdate, requireDelete } from '../utils/auth';
+
+const skyConditionValues = ['claro', 'poucas_nuvens', 'encoberto'] as const;
+const precipConditionValues = ['nenhuma', 'nevoeiro', 'chuva', 'chuva_recente'] as const;
 
 const corpo = z.object({
   airport_id: z.coerce.number(),
@@ -10,14 +14,14 @@ const corpo = z.object({
   time_period_id: z.coerce.number().optional(),
   event_type: z.enum(['colisao_ave','colisao_outro_animal','quase_colisao']).optional(),
   location_id: z.coerce.number(),
+  aerodrome_location_id: z.coerce.number().optional(),
+  occurrence_phase_id: z.coerce.number().optional(),
   latitude_dec: z.number().nullable().optional(),
   longitude_dec: z.number().nullable().optional(),
-  precip_id: z.coerce.number().optional(),
-  wind_id: z.coerce.number().optional(),
-  vis_id: z.coerce.number().optional(),
+  sky_condition: z.enum(skyConditionValues).optional(),
+  precip_condition: z.enum(precipConditionValues).optional(),
   phase_id: z.coerce.number().optional(),
   species_id: z.coerce.number().optional(),
-  id_confidence: z.enum(['Alta', 'Media', 'Baixa', 'Nao_identificada']).optional(),
   quantity: z.coerce.number().min(1).optional(),
   damage_id: z.coerce.number().optional(),
   ingestion: z.boolean().optional(),
@@ -43,8 +47,6 @@ const corpo = z.object({
   reporter_name: z.string().optional(),
   reporter_contact: z.string().optional(),
   quadrant: z.string().optional(),
-  impact_height_agl_m: z.coerce.number().min(0).optional(),
-  aircraft_speed_kt: z.coerce.number().min(0).optional(),
   operational_consequence: z.string().optional(),
   visible_damage_notes: z.string().optional(),
   investigated_by: z.string().optional(),
@@ -243,7 +245,7 @@ async function normalizarFoto(foto: FotoUpload): Promise<FotoUpload> {
 }
 
 export async function strikesRoutes(app: FastifyInstance) {
-  app.get('/api/colisoes', async (request) => {
+  app.get('/api/colisoes', { preHandler: [app.authenticate, requireRead] }, async (request) => {
     const querySchema = z.object({
       airportId: z.coerce.number().optional(),
       inicio: z.string().optional(),
@@ -277,15 +279,17 @@ export async function strikesRoutes(app: FastifyInstance) {
     const { rows } = await db.query(
       `SELECT s.strike_id AS id, s.airport_id, s.date_utc, s.time_local, s.time_period_id, s.event_type, s.location_id,
               COALESCE(l.code, CONCAT('ID ', s.location_id::text)) AS location_nome,
-              s.latitude_dec, s.longitude_dec, s.precip_id, s.wind_id, s.vis_id, s.phase_id, s.species_id,
-              s.id_confidence, s.quantity, s.damage_id, s.ingestion, s.effect_id, s.part_id, s.time_out_hours,
+              s.aerodrome_location_id,
+              s.occurrence_phase_id,
+              s.latitude_dec, s.longitude_dec, s.sky_condition, s.precip_condition, s.phase_id, s.species_id,
+              s.quantity, s.damage_id, s.ingestion, s.effect_id, s.part_id, s.time_out_hours,
               s.cost_brl, s.sample_collected, s.severity_weight,
               s.aircraft_registration, s.aircraft_type, s.aircraft_model_id, s.engine_type_id, s.near_miss, s.pilot_alerted,
               s.flight_delay, s.delay_minutes,
               s.est_mass_id, s.est_mass_grams,
               s.reported_by_user_id, s.reporter_name, s.reporter_contact,
               s.related_attractor_id, fa.description AS related_attractor_desc,
-              s.quadrant, s.impact_height_agl_m, s.aircraft_speed_kt, s.operational_consequence, s.visible_damage_notes,
+              s.quadrant, s.operational_consequence, s.visible_damage_notes,
               s.investigated_by, s.carcass_found, s.actions_taken, s.inside_aerodrome, s.risk_mgmt_notes, s.related_attractor_id,
               s.photo_url, s.photo_filename, s.photo_mime,
               (s.photo_blob IS NOT NULL OR fotos_extra.tem_foto) AS photo_upload_disponivel,
@@ -326,7 +330,7 @@ export async function strikesRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/colisoes', async (request, reply) => {
+  app.post('/api/colisoes', { preHandler: [app.authenticate, requireCreate] }, async (request, reply) => {
     const { body, fotos } = await parseStrikePayload(request, corpo);
     const created = await db.transaction(async (client) => {
       const fotosNormalizadas = await Promise.all(fotos.map(normalizarFoto));
@@ -342,14 +346,14 @@ export async function strikesRoutes(app: FastifyInstance) {
         'time_period_id',
         'event_type',
         'location_id',
+        'aerodrome_location_id',
+        'occurrence_phase_id',
         'latitude_dec',
         'longitude_dec',
-        'precip_id',
-        'wind_id',
-        'vis_id',
+        'sky_condition',
+        'precip_condition',
         'phase_id',
         'species_id',
-        'id_confidence',
         'quantity',
         'damage_id',
         'ingestion',
@@ -373,8 +377,6 @@ export async function strikesRoutes(app: FastifyInstance) {
         'reporter_name',
         'reporter_contact',
         'quadrant',
-        'impact_height_agl_m',
-        'aircraft_speed_kt',
         'operational_consequence',
         'visible_damage_notes',
         'investigated_by',
@@ -415,14 +417,14 @@ export async function strikesRoutes(app: FastifyInstance) {
         time_period_id: body.time_period_id ?? null,
         event_type: body.event_type ?? 'colisao_ave',
         location_id: body.location_id,
+        aerodrome_location_id: body.aerodrome_location_id ?? null,
+        occurrence_phase_id: body.occurrence_phase_id ?? null,
         latitude_dec: body.latitude_dec ?? null,
         longitude_dec: body.longitude_dec ?? null,
-        precip_id: body.precip_id ?? null,
-        wind_id: body.wind_id ?? null,
-        vis_id: body.vis_id ?? null,
+        sky_condition: body.sky_condition ?? null,
+        precip_condition: body.precip_condition ?? null,
         phase_id: body.phase_id ?? null,
         species_id: body.species_id ?? null,
-        id_confidence: body.id_confidence ?? null,
         quantity: body.quantity ?? null,
         damage_id: body.damage_id ?? null,
         ingestion: body.ingestion ?? null,
@@ -446,8 +448,6 @@ export async function strikesRoutes(app: FastifyInstance) {
         reporter_name: body.reporter_name ?? null,
         reporter_contact: body.reporter_contact ?? null,
         quadrant: body.quadrant ?? null,
-        impact_height_agl_m: body.impact_height_agl_m ?? null,
-        aircraft_speed_kt: body.aircraft_speed_kt ?? null,
         operational_consequence: body.operational_consequence ?? null,
         visible_damage_notes: body.visible_damage_notes ?? null,
         investigated_by: body.investigated_by ?? null,
@@ -491,7 +491,7 @@ export async function strikesRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: created });
   });
 
-  app.put('/api/colisoes/:id', async (request, reply) => {
+  app.put('/api/colisoes/:id', { preHandler: [app.authenticate, requireUpdate] }, async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     const { body, fotos } = await parseStrikePayload(request, corpo.partial(), { allowEmpty: true });
     const pares = Object.entries(body)
@@ -588,7 +588,7 @@ export async function strikesRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/colisoes/:id', async (request, reply) => {
+  app.delete('/api/colisoes/:id', { preHandler: [app.authenticate, requireDelete] }, async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_strike WHERE strike_id=$1', [id]);
     return reply.code(204).send();
