@@ -274,7 +274,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
-import ApiService from '../services/api';
+import { ApiService } from '@/services/api';
 
 // Estado
 const inspecoes = ref<any[]>([]);
