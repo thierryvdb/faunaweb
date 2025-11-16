@@ -51,6 +51,10 @@
           </select>
         </label>
         <label>
+          Pista
+          <input type="text" v-model="novo.runway" placeholder="Ex: 10/28" />
+        </label>
+        <label>
           Quantidade no dia
           <input type="number" v-model.number="novo.movements_in_day" min="0" />
         </label>
@@ -78,7 +82,7 @@ const lista = ref<any[]>([]);
 const carregando = ref(false);
 const erro = ref<string | null>(null);
 const aeroportos = ref<any[]>([]);
-const novo = ref({ airport_id: '' as any, date_utc: '', movement_type: 'Pouso', movements_in_day: 0 });
+const novo = ref({ airport_id: '' as any, date_utc: '', movement_type: 'Pouso', runway: '10/28', movements_in_day: 0 });
 
 async function carregar() {
   carregando.value = true;
@@ -107,7 +111,7 @@ async function salvar() {
   try {
     await api.post('/api/movimentos', novo.value);
     carregar();
-    novo.value = { airport_id: '' as any, date_utc: '', movement_type: 'Pouso', movements_in_day: 0 };
+    novo.value = { airport_id: '' as any, date_utc: '', movement_type: 'Pouso', runway: '10/28', movements_in_day: 0 };
   } catch (e: any) {
     alert(e?.message ?? 'Nao foi possivel salvar');
   }
