@@ -1,6 +1,20 @@
 <template>
   <div class="painel">
-    <section class="bloco">
+    <div class="form-selector">
+      <label>
+        Formulário escolhido
+        <select v-model="selectedTemplateId">
+          <option v-for="template in formTemplates" :key="template.id" :value="template.id">
+            {{ template.selectorTitle }}
+          </option>
+        </select>
+      </label>
+      <p class="selector-description">
+        {{ currentTemplate.frequency }} | {{ currentTemplate.purpose }}
+      </p>
+    </div>
+    <div v-if="currentTemplate.id === 'legacy'">
+      <section class="bloco">
       <header class="bloco-topo">
         <div>
           <h2>Inspeções no sítio e ASA</h2>
@@ -111,7 +125,7 @@
       </div>
     </section>
 
-    <section class="bloco">
+      <section class="bloco">
       <header class="bloco-topo">
         <div>
           <h2>Carcaças recolhidas</h2>
@@ -192,7 +206,7 @@
           </tbody>
         </table>
       </div>
-    </section>
+      </section>
 
     <section class="bloco">
       <header class="bloco-topo">
@@ -279,17 +293,41 @@
         </table>
       </div>
     </section>
+    </div>
+
+    <InspecoesDiariasView v-else-if="currentTemplate.id === 'asa'" :showSelector="false" />
+
+    <div v-else class="template-placeholder">
+      <h2>{{ currentTemplate.pageTitle }}</h2>
+      <p class="subtitle">{{ currentTemplate.frequency }} | {{ currentTemplate.purpose }}</p>
+      <ul>
+        <li v-for="section in currentTemplate.details || []" :key="section.title">
+          <strong>{{ section.title }}:</strong> {{ section.description }}
+        </li>
+      </ul>
+      <router-link :to="currentTemplate.externalRoute || '#'" class="btn btn-primary">
+        Acessar formulário
+      </router-link>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref, computed } from 'vue';
 import { ApiService } from '@/services/api';
+import InspecoesDiariasView from '@/views/InspecoesDiariasView.vue';
+import { inspectionTemplates } from '@/constants/inspectionTemplates';
 
 const filtros = reactive({
   tipo: '',
   inicio: '',
   fim: ''
+});
+
+const formTemplates = inspectionTemplates;
+const selectedTemplateId = ref(formTemplates[0].id);
+const currentTemplate = computed(() => {
+  return formTemplates.find((template) => template.id === selectedTemplateId.value) || formTemplates[0];
 });
 
 const inspecoes = ref<any[]>([]);
@@ -495,6 +533,50 @@ onMounted(async () => {
 .tabela th, .tabela td { border-bottom: 1px solid var(--color-border); padding: .6rem; vertical-align: top; }
 .tabela th { text-align: left; background: var(--color-bg-secondary); color: var(--color-text-primary); }
 @media (max-width: 768px) {
-  .grid .wide { grid-column: span 1; }
+.grid .wide { grid-column: span 1; }
+}
+
+.form-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 20px;
+}
+
+.form-selector select {
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #fff;
+}
+
+.selector-description {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #5f6d7a;
+}
+
+.template-placeholder {
+  background: #fafbfc;
+  border: 1px dashed #d0dae0;
+  border-radius: 10px;
+  padding: 25px;
+  margin-top: 20px;
+}
+
+.template-placeholder ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+}
+
+.template-placeholder li {
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.template-placeholder strong {
+  color: #2c3e50;
 }
 </style>

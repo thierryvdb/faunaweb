@@ -3,7 +3,7 @@
     <h1 class="page-title">Inspeções Diárias - {{ currentTemplate.pageTitle }}</h1>
     <p class="subtitle">{{ currentTemplate.frequency }} | {{ currentTemplate.purpose }}</p>
 
-    <div class="form-selector">
+    <div v-if="showSelector" class="form-selector">
       <label>
         Formulário escolhido
         <select v-model="selectedTemplateId" @change="trocarFormulario">
@@ -476,6 +476,14 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ApiService } from '@/services/api';
+import { inspectionTemplates } from '@/constants/inspectionTemplates';
+
+const props = defineProps({
+  showSelector: {
+    type: Boolean,
+    default: true
+  }
+});
 
 // Estado
 const inspecoes = ref<any[]>([]);
@@ -490,219 +498,7 @@ const lookups = ref<any>({
   quadrantes: []
 });
 
-const formTemplates = ref([
-  {
-    id: 'f1',
-    pageTitle: 'Monitoramento de Fauna (F1)',
-    selectorTitle: 'REQUISITOS DO FORMULÁRIO – MONITORAMENTO DIÁRIO DE FAUNA (F1)',
-    frequency: 'Periodicidade: 2 vezes ao dia',
-    purpose:
-      'Registrar presença de fauna, riscos, colisões, ninhos, carcaças e ações de manejo em todo o sítio aeroportuário.'
-  },
-  {
-    id: 'f4',
-    pageTitle: 'Sistema de Proteção (F4)',
-    selectorTitle: 'FORMULÁRIO F4 – SISTEMA DE PROTEÇÃO',
-    frequency: 'Periodicidade: 1 vez por semana ou sempre que houver necessidade',
-    purpose: 'Abrangência: Todo o sítio aeroportuário',
-    details: [
-      {
-        title: '1. Informações Gerais do Registro',
-        description:
-          'Data do registro, estação do ano (Primavera/Verão/Outono/Inverno) e indicador de chuva nas últimas 24 horas.'
-      },
-      {
-        title: '2. Cercas Patrimoniais e Operacionais',
-        description:
-          'Registre tipos de ocorrência, localização, fotos, reparo (sim/não), data do reparo, descarte irregular e remoção.'
-      },
-      {
-        title: '3. Portões Operacionais',
-        description:
-          'Mesmos campos de ocorrência e evidências das cercas, inclusive campo “Outros” para tipos não listados.'
-      },
-      {
-        title: '4. Observações Gerais',
-        description: 'Texto livre para complementos e até cinco fotos anexadas.'
-      }
-    ],
-    externalRoute: '/inspecoes-protecao'
-  }
-  ,
-  {
-    id: 'lakes',
-    pageTitle: 'Inspeção de Lagos e Áreas Alagadiças',
-    selectorTitle: 'REQUISITOS DO FORMULÁRIO – INSPEÇÃO DE LAGOS E ÁREAS ALAGADIÇAS',
-    frequency: 'Periodicidade: 1 vez por semana ou sob demanda',
-    purpose: 'Abrangência: Todo o sítio aeroportuário',
-    details: [
-      {
-        title: '1. Informações Gerais do Registro',
-        description:
-          'Data da inspeção, estação do ano e flag de chuva nas últimas 24h.'
-      },
-      {
-        title: '2. Identificação do Ponto Inspecionado',
-        description: 'Pista associada e quadrante onde a coleta foi realizada.'
-      },
-      {
-        title: '3. Registro de Fauna Associada à Água',
-        description:
-          'Presença de fauna, nome popular e científico, e quantidade de indivíduos.'
-      },
-      {
-        title: '4. Análise do Sistema Inspecionado',
-        description:
-          'Tipo de sistema (Via Patrimonial ou outro informado pelo usuário) e inconformidade identificada.'
-      },
-      {
-        title: '5. Registro Visual',
-        description: 'Descrição da situação e upload de até 5 fotos da ocorrência.'
-      },
-      {
-        title: '6. Ação Mitigadora',
-        description: 'Campo livre para descrever medidas adotadas.'
-      },
-      {
-        title: '7. Observações Gerais',
-        description: 'Campo de anotações adicionais.'
-      }
-    ],
-    externalRoute: '/inspecoes-lagos'
-  }
-  ,
-  {
-    id: 'f2',
-    pageTitle: 'Manutenção de Áreas Verdes (F2)',
-    selectorTitle: 'FORMULÁRIO F2 – MANUTENÇÃO DE ÁREAS VERDES',
-    frequency: 'Obrigatório durante qualquer manejo de vegetação',
-    purpose: 'Cobre corte de grama, poda, extração e limpeza associada',
-    details: [
-      {
-        title: '1. Informações Gerais do Registro',
-        description: 'Data, tipo de registro (corte/poda/extração/limpeza) e estação do ano.'
-      },
-      {
-        title: '2. Em caso de corte de grama',
-        description:
-          'Detalhes sobre tipo de manejo, período da atividade, equipamento, aparas, quadrantes, atração de fauna e limpeza de canaletas.'
-      },
-      {
-        title: '3. Em caso de poda ou extração',
-        description:
-          'Tipo de vegetação, autorização ambiental, espécies manejadas, aparas, localização, atrações/fauna observada.'
-      },
-      {
-        title: '4. Observações Gerais',
-        description: 'Campo livre para complementar qualquer informação relevante do manejo.'
-      }
-    ],
-    externalRoute: '/inspecoes-areas-verdes'
-  }
-  ,
-  {
-    id: 'f3',
-    pageTitle: 'Monitoramento de Focos de Atração (F3)',
-    selectorTitle: 'FORMULÁRIO F3 – MONITORAMENTO DE FOCOS DE ATRAÇÃO',
-    frequency: 'Periodicidade: Trimestral',
-    purpose: 'Abrangência: Todo o sítio aeroportuário',
-    details: [
-      {
-        title: '1. Informações Gerais do Registro',
-        description:
-          'Data, estação do ano e chuva nas últimas 24h para orientar o monitoramento.'
-      },
-      {
-        title: '2. Focos Secundários',
-        description:
-          'Seleção do tipo (cupinzeiro, ninhos, ovos, etc.), ações realizadas, localização e fauna presente.'
-      },
-      {
-        title: '3. Áreas Verdes',
-        description:
-          'Registro de gramados, árvores e vegetação rasteira com ação aplicada, localização e presença de fauna/ninhos.'
-      },
-      {
-        title: '4. Sistema de Drenagem',
-        description:
-          'Quadro completo de caixa, boca de lobo, vala, bacia e demais acumulações com condição estrutural e fauna observada.'
-      },
-      {
-        title: '5. Descarte Irregular de Resíduos Sólidos',
-        description:
-          'Clas­sificação orgânico/inorgânico/construção, localização, remoção e fauna implicada.'
-      },
-      {
-        title: '6. Observações Gerais',
-        description: 'Campo livre para notas adicionais sobre os focos monitorados.'
-      }
-    ],
-    externalRoute: '/inspecoes-focos-atracao'
-  }
-  ,
-  {
-    id: 'f5',
-    pageTitle: 'Identificação e Recolhimento de Carcaças (F5)',
-    selectorTitle: 'F5 – FORMULÁRIO DE IDENTIFICAÇÃO, RECOLHIMENTO E DESTINAÇÃO DE CARCAÇA',
-    frequency: 'Preenchimento toda vez que houver registro de colisão com fauna',
-    purpose: 'Abrange registro geral do evento e destinação/controladoria da carcaça',
-    details: [
-      {
-        title: '1. Informações Gerais',
-        description: 'Aeroporto, data do registro e responsáveis pelo preenchimento e entrega.'
-      },
-      {
-        title: '2. Localização do Evento',
-        description:
-          'Pista, quadrante e flag indicando se foi encontrada durante inspeção de pista.'
-      },
-      {
-        title: '3. Informações Sobre a Carcaça',
-        description:
-          'Destinação, nomes populares/científicos, número de indivíduos e fotos anexadas.'
-      },
-      {
-        title: '4. Observações',
-        description: 'Campo livre para detalhes adicionais relevantes ao evento.'
-      }
-    ],
-    externalRoute: '/coletas-carcaca'
-  }
-  ,
-  {
-    id: 'residuos',
-    pageTitle: 'Resíduos Enviados para Incineração',
-    selectorTitle: 'FORMULÁRIO – RESÍDUOS ENVIADOS PARA INCINERAÇÃO',
-    frequency: 'Preenchimento conforme geração de resíduos (especialmente voos internacionais)',
-    purpose: 'Registro completo dos resíduos encaminhados à incineração por voo/área geradora',
-    details: [
-      {
-        title: '1. Identificação Geral',
-        description: 'Nome da empresa, data e indicador de voos internacionais relacionados ao envio.'
-      },
-      {
-        title: '2. Caracterização do Resíduo',
-        description:
-          'Tipo, natureza/estado físico, origem (área, equipamento, voo, etc.), codificação e frequência.'
-      },
-      {
-        title: '3. Quantificação',
-        description:
-          'Peso (kg), unidades (U) e volume (L ou m³) registrados para cada lote de resíduos.'
-      },
-      {
-        title: '4. Tratamento e Destinação',
-        description:
-          'Tratamento adotado (incineração, co-processamento ou outro destino permitido) e justificativas.'
-      },
-      {
-        title: '5. Registro',
-        description: 'Responsável pelo preenchimento do formulário.'
-      }
-    ],
-    externalRoute: '/residuos-incineracao'
-  }
-]);
+const formTemplates = ref(inspectionTemplates.filter((template) => template.id !== 'legacy'))
 
 const selectedTemplateId = ref(formTemplates.value[0].id);
 const currentTemplate = computed(() => {
@@ -1331,3 +1127,4 @@ onMounted(async () => {
   }
 }
 </style>
+
