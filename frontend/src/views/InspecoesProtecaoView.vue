@@ -1,5 +1,10 @@
 <template>
   <div class="inspecoes-protecao-container">
+    <FormTypeSelector
+      :items="selectorTemplates"
+      :modelValue="selectedTemplateId"
+      @update:modelValue="handleTemplateChange"
+    />
     <h1 class="page-title">Inspeções F4 - Sistema de Proteção</h1>
     <p class="subtitle">Periodicidade: 1 vez por semana ou sempre que houver necessidade | Abrangência: Todo o sítio aeroportuário</p>
 
@@ -274,11 +279,29 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { ApiService } from '@/services/api';
+import { inspectionTemplates } from '@/constants/inspectionTemplates';
+import FormTypeSelector from '@/components/FormTypeSelector.vue';
 
 // Estado
 const inspecoes = ref<any[]>([]);
 const aeroportos = ref<any[]>([]);
+const router = useRouter();
+const selectorTemplates = inspectionTemplates.filter((template) => template.id !== 'legacy');
+const selectedTemplateId = ref('f4');
+
+function handleTemplateChange(id: string) {
+  selectedTemplateId.value = id;
+  if (id === 'f4') return;
+  const template = selectorTemplates.find((entry) => entry.id === id);
+  if (template?.externalRoute) {
+    router.push(template.externalRoute);
+  } else {
+    router.push('/inspecoes');
+  }
+}
+
 const lookups = ref<any>({
   estacoes_ano: [],
   tipos_ocorrencia_cerca: [],

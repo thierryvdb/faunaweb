@@ -165,7 +165,25 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { ApiService } from '../services/api';
+import { inspectionTemplates } from '@/constants/inspectionTemplates';
+import FormTypeSelector from '@/components/FormTypeSelector.vue';
+
+const router = useRouter();
+const selectorTemplates = inspectionTemplates.filter((template) => template.id !== 'legacy');
+const selectedTemplateId = ref('lakes');
+
+function handleTemplateChange(id: string) {
+  selectedTemplateId.value = id;
+  if (id === 'lakes') return;
+  const template = selectorTemplates.find((entry) => entry.id === id);
+  if (template?.externalRoute) {
+    router.push(template.externalRoute);
+  } else {
+    router.push('/inspecoes');
+  }
+}
 
 const inspecoes = ref<any[]>([]);
 const lookups = ref<any>({ seasons: [] });

@@ -212,9 +212,27 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { ApiService } from '../services/api';
+import { inspectionTemplates } from '@/constants/inspectionTemplates';
+import FormTypeSelector from '@/components/FormTypeSelector.vue';
 
 // Estado
+const router = useRouter();
+const selectorTemplates = inspectionTemplates.filter((template) => template.id !== 'legacy');
+const selectedTemplateId = ref('residuos');
+
+function handleTemplateChange(id: string) {
+  selectedTemplateId.value = id;
+  if (id === 'residuos') return;
+  const template = selectorTemplates.find((entry) => entry.id === id);
+  if (template?.externalRoute) {
+    router.push(template.externalRoute);
+  } else {
+    router.push('/inspecoes');
+  }
+}
+
 const residuos = ref<any[]>([]);
 const aeroportos = ref<any[]>([]);
 const lookups = ref<any>({

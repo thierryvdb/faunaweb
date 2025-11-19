@@ -1,21 +1,9 @@
 <template>
   <div class="painel">
-    <div class="form-selector">
-      <label>
-        Formulário escolhido
-        <select v-model="selectedTemplateId">
-          <option v-for="template in formTemplates" :key="template.id" :value="template.id">
-            {{ template.selectorTitle }}
-          </option>
-        </select>
-      </label>
-      <p class="selector-description">
-        {{ currentTemplate.frequency }} | {{ currentTemplate.purpose }}
-      </p>
-    </div>
+    <FormTypeSelector v-model="selectedTemplateId" />
     <div v-if="currentTemplate.id === 'legacy'">
       <section class="bloco">
-      <header class="bloco-topo">
+        <header class="bloco-topo">
         <div>
           <h2>Inspeções no sítio e ASA</h2>
           <p>Registro diário das inspeções exigidas pelo manual (mapa de grade, clima e achados).</p>
@@ -317,6 +305,7 @@ import { onMounted, reactive, ref, computed } from 'vue';
 import { ApiService } from '@/services/api';
 import InspecoesDiariasView from '@/views/InspecoesDiariasView.vue';
 import { inspectionTemplates } from '@/constants/inspectionTemplates';
+import FormTypeSelector from '@/components/FormTypeSelector.vue';
 
 const filtros = reactive({
   tipo: '',
@@ -547,8 +536,9 @@ onMounted(async () => {
   max-width: 100%;
   padding: 8px 12px;
   border-radius: 6px;
-  border: 1px solid #ccc;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
 }
 
 .selector-description {
@@ -558,17 +548,19 @@ onMounted(async () => {
 }
 
 .template-placeholder {
-  background: #fafbfc;
-  border: 1px dashed #d0dae0;
+  background: var(--color-bg-card);
+  border: 1px dashed var(--color-border);
   border-radius: 10px;
   padding: 25px;
   margin-top: 20px;
+  color: var(--color-text-primary);
 }
 
 .template-placeholder ul {
   list-style: none;
   padding: 0;
   margin: 0 0 20px;
+  color: var(--color-text-secondary);
 }
 
 .template-placeholder li {
@@ -577,6 +569,6 @@ onMounted(async () => {
 }
 
 .template-placeholder strong {
-  color: #2c3e50;
+  color: var(--color-text-primary);
 }
 </style>

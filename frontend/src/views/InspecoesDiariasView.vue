@@ -1,19 +1,13 @@
 <template>
   <div class="inspecoes-diarias-container">
+    <FormTypeSelector
+      v-if="showSelector"
+      :items="selectorTemplates"
+      :modelValue="selectedTemplateId"
+      @update:modelValue="handleTemplateChange"
+    />
     <h1 class="page-title">Inspeções Diárias - {{ currentTemplate.pageTitle }}</h1>
     <p class="subtitle">{{ currentTemplate.frequency }} | {{ currentTemplate.purpose }}</p>
-
-    <div v-if="showSelector" class="form-selector">
-      <label>
-        Formulário escolhido
-        <select v-model="selectedTemplateId" @change="trocarFormulario">
-          <option v-for="template in formTemplates" :key="template.id" :value="template.id">
-            {{ template.selectorTitle }}
-          </option>
-        </select>
-      </label>
-      <p class="selector-description">{{ currentTemplate.selectorTitle }}</p>
-    </div>
 
     <div v-if="isF1Template" class="two-column-layout">
       <!-- Lista de Inspeções -->
@@ -475,8 +469,10 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { ApiService } from '@/services/api';
 import { inspectionTemplates } from '@/constants/inspectionTemplates';
+import FormTypeSelector from '@/components/FormTypeSelector.vue';
 
 const props = defineProps({
   showSelector: {
@@ -498,13 +494,20 @@ const lookups = ref<any>({
   quadrantes: []
 });
 
-const formTemplates = ref(inspectionTemplates.filter((template) => template.id !== 'legacy'))
-
-const selectedTemplateId = ref(formTemplates.value[0].id);
+const router = useRouter();
+const selectorTemplates = inspectionTemplates.filter((template) => template.id !== 'legacy');
+const selectedTemplateId = ref('asa');
 const currentTemplate = computed(() => {
-  return formTemplates.value.find((template) => template.id === selectedTemplateId.value) || formTemplates.value[0];
+  return selectorTemplates.find((template) => template.id === selectedTemplateId.value) || selectorTemplates[0];
 });
-const isF1Template = computed(() => currentTemplate.value?.id === 'f1');
+const isF1Template = computed(() => selectedTemplateId.value === 'asa');
+
+function handleTemplateChange(id: string) {
+  selectedTemplateId.value = id;
+  if (id === 'asa') return;
+  const template = selectorTemplates.find((item) => item.id === id);
+  router.push(template?.externalRoute ?? '/inspecoes');
+}
 
 const inspecaoSelecionada = ref<any>(null);
 const modoEdicao = ref(false);
@@ -595,11 +598,6 @@ function novaInspecao() {
   Object.assign(form, formPadrao());
   inspecaoSelecionada.value = null;
   modoEdicao.value = false;
-}
-
-function trocarFormulario() {
-  // Limpa formulário ao trocar o template selecionado
-  novaInspecao();
 }
 
 function editarInspecao(inspecao: any) {
@@ -803,17 +801,19 @@ onMounted(async () => {
 }
 
 .template-placeholder {
-  background: #fafbfc;
-  border: 1px dashed #d0dae0;
+  background: var(--color-bg-card);
+  border: 1px dashed var(--color-border);
   border-radius: 10px;
   padding: 25px;
   margin-top: 20px;
+  color: var(--color-text-primary);
 }
 
 .template-placeholder ul {
   list-style: none;
   padding: 0;
   margin: 0 0 20px;
+  color: var(--color-text-secondary);
 }
 
 .template-placeholder li {
@@ -822,7 +822,7 @@ onMounted(async () => {
 }
 
 .template-placeholder strong {
-  color: #2c3e50;
+  color: var(--color-text-primary);
 }
 
 .form-selector {

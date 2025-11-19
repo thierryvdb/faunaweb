@@ -1,5 +1,10 @@
 <template>
   <div class="inspecoes-areas-verdes-container">
+    <FormTypeSelector
+      :items="selectorTemplates"
+      :modelValue="selectedTemplateId"
+      @update:modelValue="handleTemplateChange"
+    />
     <h1 class="page-title">F2 – Manutenção de Áreas Verdes</h1>
     <p class="subtitle">Registro de atividades de manejo de vegetação no sítio aeroportuário.</p>
 
@@ -186,7 +191,25 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { ApiService } from '../services/api';
+import { inspectionTemplates } from '@/constants/inspectionTemplates';
+import FormTypeSelector from '@/components/FormTypeSelector.vue';
+
+const router = useRouter();
+const selectorTemplates = inspectionTemplates.filter((template) => template.id !== 'legacy');
+const selectedTemplateId = ref('f2');
+
+function handleTemplateChange(id: string) {
+  selectedTemplateId.value = id;
+  if (id === 'f2') return;
+  const template = selectorTemplates.find((entry) => entry.id === id);
+  if (template?.externalRoute) {
+    router.push(template.externalRoute);
+  } else {
+    router.push('/inspecoes');
+  }
+}
 
 const registros = ref<any[]>([]);
 const lookups = ref<any>({ seasons: [] });

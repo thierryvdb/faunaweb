@@ -1,5 +1,10 @@
 <template>
   <div class="coletas-carcaca-container">
+    <FormTypeSelector
+      :items="selectorTemplates"
+      :modelValue="selectedTemplateId"
+      @update:modelValue="handleTemplateChange"
+    />
     <h1 class="page-title">F5 – Coleta e Destinação de Carcaça</h1>
     <p class="subtitle">Registro de carcaças de fauna encontradas no sítio aeroportuário.</p>
 
@@ -176,9 +181,27 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue';
-import { ApiService } from '../services/api';
+import { useRouter } from 'vue-router';
+import { ApiService } from '@/services/api';
+import { inspectionTemplates } from '@/constants/inspectionTemplates';
+import FormTypeSelector from '@/components/FormTypeSelector.vue';
 
 // Estado
+const router = useRouter();
+const selectorTemplates = inspectionTemplates.filter((template) => template.id !== 'legacy');
+const selectedTemplateId = ref('f5');
+
+function handleTemplateChange(id: string) {
+  selectedTemplateId.value = id;
+  if (id === 'f5') return;
+  const template = selectorTemplates.find((entry) => entry.id === id);
+  if (template?.externalRoute) {
+    router.push(template.externalRoute);
+  } else {
+    router.push('/inspecoes');
+  }
+}
+
 const coletas = ref<any[]>([]);
 const aeroportos = ref<any[]>([]);
 const quadrantes = ref<any[]>([]);
