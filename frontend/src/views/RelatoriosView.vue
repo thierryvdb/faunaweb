@@ -271,6 +271,49 @@
         </div>
       </LoadingState>
     </section>
+
+    <section class="bloco">
+      <header class="bloco-topo">
+        <div>
+          <h2>Formulários operacionais</h2>
+          <p>Exporte relatórios completos para os formulários F1 a F5, focos, lagos, áreas verdes e resíduos.</p>
+        </div>
+        <form class="filtros" @submit.prevent>
+          <label>
+            Início
+            <input type="date" v-model="formReportFilters.inicio" />
+          </label>
+          <label>
+            Fim
+            <input type="date" v-model="formReportFilters.fim" />
+          </label>
+          <label>
+            Aeroporto
+            <select v-model="formReportFilters.airportId">
+              <option value="">Todos</option>
+              <option v-for="a in aeroportos" :key="a.airport_id ?? a.id" :value="a.airport_id ?? a.id">
+                {{ a.icao_code ?? a.name ?? a.nome }}
+              </option>
+            </select>
+          </label>
+        </form>
+      </header>
+      <div class="report-grid">
+        <article v-for="report in formReports" :key="report.id" class="report-card">
+          <div>
+            <strong>{{ report.label }}</strong>
+            <p>{{ report.description }}</p>
+          </div>
+          <button
+            class="btn btn-primary"
+            :disabled="isExportingForm === report.id"
+            @click="exportarFormulario(report.id)"
+          >
+            {{ isExportingForm === report.id ? 'Exportando...' : 'Exportar PDF' }}
+          </button>
+        </article>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -326,6 +369,71 @@ const colisoes = reactive<{ periodo: { inicio: string; fim: string } | null; dad
 const carregandoColisoes = ref(false);
 const erroColisoes = ref<string | null>(null);
 const exportandoColisoes = ref(false);
+
+const formReportFilters = reactive({
+  inicio: inicioPadrao,
+  fim: fimPadrao,
+  airportId: '' as '' | number
+});
+
+const formReports: {
+  id: string;
+  label: string;
+  description: string;
+  exporter: (params?: Record<string, any>) => Promise<any>;
+  filename: string;
+}[] = [
+  {
+    id: 'f1',
+    label: 'F1 – Monitoramento Diário de Fauna',
+    description: 'Relatório do formulário diário com dados de fauna, colisões e manejo.',
+    exporter: ApiService.exportarInspecoesDiarias,
+    filename: 'inspecoes-diarias'
+  },
+  {
+    id: 'f2',
+    label: 'F2 – Manutenção de Áreas Verdes',
+    description: 'Controle de manutenções com cortes, podas, aparas e autorizações.',
+    exporter: ApiService.exportarInspecoesAreasVerdes,
+    filename: 'inspecoes-areas-verdes'
+  },
+  {
+    id: 'f3',
+    label: 'F3 – Monitoramento de Focos de Atração',
+    description: 'Focos secundários, áreas verdes e sistemas hídricos monitorados trimestralmente.',
+    exporter: ApiService.exportarInspecoesFocosAtracao,
+    filename: 'inspecoes-focos-atracao'
+  },
+  {
+    id: 'f4',
+    label: 'F4 – Sistema de Proteção',
+    description: 'Cercas, portões e índices de proteção patrimonial.',
+    exporter: ApiService.exportarInspecoesProtecao,
+    filename: 'inspecoes-protecao'
+  },
+  {
+    id: 'f5',
+    label: 'F5 – Identificação e Recolhimento de Carcaças',
+    description: 'Destinação sanitária das carcaças encontradas após colisões.',
+    exporter: ApiService.exportarColetasCarcaca,
+    filename: 'coletas-carcaca'
+  },
+  {
+    id: 'lakes',
+    label: 'Inspeções de Lagos e Áreas Alagadiças',
+    description: 'Monitoramento de corpos d’água, fauna aquática e fotos.',
+    exporter: ApiService.exportarInspecoesLagos,
+    filename: 'inspecoes-lagos'
+  },
+  {
+    id: 'residuos',
+    label: 'Resíduos enviados para incineração',
+    description: 'Registro dos resíduos gerados e tratados via incineração.',
+    exporter: ApiService.exportarResiduosIncineracao,
+    filename: 'residuos-incineracao'
+  }
+];
+const isExportingForm = ref<string | null>(null);
 const colisoesChartData = computed(() => {
   if (!colisoes.dados.length) return null;
   const agrupado = colisoes.dados.reduce((acc: Record<string, number>, item) => {
@@ -355,6 +463,39 @@ const chartColisoesOptions = {
     }
   }
 };
+
+async function exportarFormulario(reportId: string) {
+  const report = formReports.find((entry) => entry.id === reportId);
+  if (!report) return;
+  isExportingForm.value = reportId;
+  try {
+    const params: Record<string, any> = {};
+    if (formReportFilters.inicio) params.inicio = formReportFilters.inicio;
+    if (formReportFilters.fim) params.fim = formReportFilters.fim;
+    if (formReportFilters.airportId) params.airportId = formReportFilters.airportId;
+    const response = await report.exporter(params);
+    baixarArquivo(response, report.filename);
+  } catch (error: any) {
+    alert(error?.message ?? 'Falha ao exportar o relatório');
+  } finally {
+    isExportingForm.value = null;
+  }
+}
+
+function baixarArquivo(response: any, fallback: string) {
+  const contentType = response.headers?.['content-type'] ?? 'application/pdf';
+  const blob = new Blob([response.data], { type: contentType });
+  const url = window.URL.createObjectURL(blob);
+  const filenameMatch = response.headers?.['content-disposition']?.match(/filename="?(.+)"?/);
+  const downloadName = filenameMatch?.[1] || `${fallback}.pdf`;
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', downloadName);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
 
 async function carregarFinanceiro() {
   const data = await ApiService.getFinanceiro({
@@ -571,4 +712,28 @@ onMounted(async () => {
 .foto-thumb { margin-top: .5rem; display: flex; flex-direction: column; gap: .35rem; font-size: .85rem; color: var(--color-text-secondary); }
 .foto-thumb img { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; border: 1px solid var(--color-border); }
 .grafico-colisoes { margin-top: 1rem; }
+
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.report-card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 180px;
+}
+
+.report-card p {
+  color: var(--color-text-secondary);
+  margin-bottom: .75rem;
+  font-size: .9rem;
+  line-height: 1.4;
+}
 </style>
