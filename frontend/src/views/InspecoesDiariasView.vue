@@ -787,16 +787,19 @@ onMounted(async () => {
   padding: 20px;
   max-width: 1800px;
   margin: 0 auto;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
 }
 
 .page-title {
   font-size: 28px;
   margin-bottom: 10px;
-  color: #2c3e50;
+  color: var(--color-text-primary);
 }
 
 .subtitle {
-  color: #7f8c8d;
+  color: var(--color-text-secondary);
   margin-bottom: 20px;
 }
 
@@ -836,14 +839,15 @@ onMounted(async () => {
   max-width: 100%;
   padding: 8px 12px;
   border-radius: 6px;
-  border: 1px solid #ccc;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
 }
 
 .selector-description {
   margin: 0;
   font-size: 0.9rem;
-  color: #5f6d7a;
+  color: var(--color-text-secondary);
 }
 
 .two-column-layout {
@@ -854,7 +858,7 @@ onMounted(async () => {
 }
 
 .left-column {
-  border-right: 1px solid #ddd;
+  border-right: 1px solid var(--color-border);
   padding-right: 20px;
 }
 
@@ -876,7 +880,7 @@ onMounted(async () => {
 }
 
 .filters {
-  background: #f8f9fa;
+  background: var(--color-bg-secondary);
   padding: 15px;
   border-radius: 8px;
   margin-bottom: 20px;
@@ -949,14 +953,14 @@ onMounted(async () => {
 }
 
 .inspection-form {
-  background: white;
+  background: var(--color-bg-secondary);
   padding: 20px;
   border-radius: 8px;
 }
 
 .form-section {
-  background: #f8f9fa;
-  border: 1px solid #e0e0e0;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -965,25 +969,25 @@ onMounted(async () => {
 .form-section h4 {
   margin-top: 0;
   margin-bottom: 15px;
-  color: #2c3e50;
-  border-bottom: 2px solid #3498db;
+  color: var(--color-text-primary);
+  border-bottom: 2px solid var(--color-border);
   padding-bottom: 8px;
 }
 
 .form-section h5 {
   margin-top: 20px;
   margin-bottom: 10px;
-  color: #34495e;
+  color: var(--color-text-primary);
 }
 
 .subsection {
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px dashed #bdc3c7;
+  border-top: 1px dashed var(--color-border);
 }
 
 .help-text {
-  color: #7f8c8d;
+  color: var(--color-text-secondary);
   font-size: 14px;
   margin-bottom: 15px;
 }
@@ -1003,23 +1007,25 @@ onMounted(async () => {
 .form-group label {
   font-weight: 600;
   margin-bottom: 5px;
-  color: #34495e;
+  color: var(--color-text-primary);
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
   padding: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   font-size: 14px;
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #3498db;
+  border-color: var(--color-border);
 }
 
 .checkbox-group {
