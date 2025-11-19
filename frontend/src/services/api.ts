@@ -1,4 +1,4 @@
-﻿﻿import axios from 'axios';
+import axios from 'axios';
 
 const baseURL = import.meta.env.VITE_API_URL ?? '';
 
@@ -191,6 +191,18 @@ export const ApiService = {
   },
   async getAtrativosPorAeroporto(airportId: number) {
     const { data } = await api.get('/api/atrativos', { params: { airportId } });
+    return data;
+  },
+  async getAeroportos() {
+    const { data } = await api.get('/api/aeroportos');
+    return data;
+  },
+  async getEspecies() {
+    const { data } = await api.get('/api/especies');
+    return data;
+  },
+  async getLookups() {
+    const { data } = await api.get('/api/lookups');
     return data;
   },
   async getInspecoes(params?: Record<string, any>) {
