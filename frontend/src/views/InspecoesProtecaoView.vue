@@ -598,19 +598,26 @@ onMounted(async () => {
 
 .two-column-layout {
   display: grid;
-  grid-template-columns: 400px 1fr;
-  gap: 20px;
+  grid-template-columns: minmax(360px, 420px) 1fr;
+  gap: 24px;
   min-height: 600px;
+  align-items: start;
 }
 
 .left-column {
-  border-right: 1px solid #ddd;
+  border-right: 1px solid var(--color-border);
   padding-right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .right-column {
   overflow-y: auto;
   max-height: calc(100vh - 150px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .toolbar {
@@ -618,6 +625,8 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .toolbar h2 {
@@ -626,10 +635,14 @@ onMounted(async () => {
 }
 
 .filters {
-  background: #f8f9fa;
+  background: var(--color-bg-secondary);
   padding: 15px;
   border-radius: 8px;
   margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
 }
 
 .filter-group {
@@ -699,8 +712,8 @@ onMounted(async () => {
 }
 
 .form-section {
-  background: #f8f9fa;
-  border: 1px solid #e0e0e0;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -709,19 +722,19 @@ onMounted(async () => {
 .form-section h4 {
   margin-top: 0;
   margin-bottom: 15px;
-  color: #2c3e50;
-  border-bottom: 2px solid #27ae60;
+  color: var(--color-text-primary);
+  border-bottom: 2px solid var(--color-border);
   padding-bottom: 8px;
 }
 
 .form-section h5 {
   margin-top: 0;
   margin-bottom: 10px;
-  color: #34495e;
+  color: var(--color-text-primary);
 }
 
 .help-text {
-  color: #7f8c8d;
+  color: var(--color-text-secondary);
   font-size: 14px;
   margin-bottom: 15px;
 }
@@ -868,5 +881,48 @@ onMounted(async () => {
     padding-bottom: 20px;
     margin-bottom: 20px;
   }
+}
+
+.two-column-layout {
+  grid-template-columns: minmax(360px, 420px) 1fr;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.left-column,
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.toolbar {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.form-section {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+}
+
+.form-section h4 {
+  color: var(--color-text-primary);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.form-section h5 {
+  color: var(--color-text-primary);
+}
+
+.help-text {
+  color: var(--color-text-secondary);
 }
 </style>

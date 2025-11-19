@@ -852,19 +852,26 @@ onMounted(async () => {
 
 .two-column-layout {
   display: grid;
-  grid-template-columns: 400px 1fr;
-  gap: 20px;
+  grid-template-columns: minmax(360px, 420px) 1fr;
+  gap: 24px;
+  align-items: start;
   min-height: 600px;
 }
 
 .left-column {
   border-right: 1px solid var(--color-border);
   padding-right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .right-column {
   overflow-y: auto;
   max-height: calc(100vh - 150px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .toolbar {
@@ -872,6 +879,8 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .toolbar h2 {
@@ -884,6 +893,10 @@ onMounted(async () => {
   padding: 15px;
   border-radius: 8px;
   margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
 }
 
 .filter-group {
@@ -956,6 +969,9 @@ onMounted(async () => {
   background: var(--color-bg-secondary);
   padding: 20px;
   border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .form-section {

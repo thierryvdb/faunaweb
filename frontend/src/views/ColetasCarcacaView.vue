@@ -620,4 +620,47 @@ onMounted(async () => {
     margin-bottom: 20px;
   }
 }
+
+.two-column-layout {
+  grid-template-columns: minmax(360px, 420px) 1fr;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.left-column,
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.toolbar {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.form-section {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+}
+
+.form-section h4 {
+  color: var(--color-text-primary);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.form-section h5 {
+  color: var(--color-text-primary);
+}
+
+.help-text {
+  color: var(--color-text-secondary);
+}
 </style>
