@@ -323,9 +323,9 @@ const formPadrao = () => ({
   season_id: '',
   rained_last_24h: false,
   general_notes: '',
-  fence_occurrences: [],
-  gate_occurrences: [],
-  general_photos: []
+  fence_occurrences: [] as any[],
+  gate_occurrences: [] as any[],
+  general_photos: [] as any[]
 });
 
 const form = reactive(formPadrao());

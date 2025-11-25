@@ -548,10 +548,6 @@ export const ApiService = {
   async removerLocal(airportId: number, locationId: number) {
     await api.delete(`/api/aeroportos/${airportId}/locais/${locationId}`);
   },
-  async getLookups() {
-    const { data } = await api.get('/api/lookups');
-    return data;
-  },
   async getKpisBaist(params?: Record<string, any>) {
     const { data } = await api.get('/api/kpis/baist', { params });
     return data;

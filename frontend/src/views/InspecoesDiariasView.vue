@@ -530,17 +530,17 @@ const formPadrao = () => ({
   inspector_name: '',
   inspector_team: '',
   notes: '',
-  aerodrome_observations: [],
-  site_observations: [],
-  nests: [],
-  carcasses: [],
+  aerodrome_observations: [] as any[],
+  site_observations: [] as any[],
+  nests: [] as any[],
+  carcasses: [] as any[],
   management: {
     dispersal_performed: false,
     capture_performed: false,
     species_involved: '',
     capture_destination: '',
     notes: '',
-    techniques: []
+    techniques: [] as any[]
   }
 });
 
