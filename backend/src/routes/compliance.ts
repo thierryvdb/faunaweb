@@ -63,7 +63,7 @@ async function parseNoticePayload<T extends z.ZodTypeAny>(
 
     if (part.fieldname === 'dados') {
       try {
-        payload = JSON.parse(part.value);
+        payload = JSON.parse(part.value as string);
       } catch {
         throw request.server.httpErrors.badRequest('Campo "dados" deve conter JSON válido.');
       }

@@ -27,7 +27,7 @@ import { incinerationWasteRoutes } from "./incinerationWaste";
 import { attractionFocusInspectionsRoutes } from './attractionFocusInspections';
 
 async function routes(app: FastifyInstance) {
-  await app.register(fp(authRoutes, { name: "authRoutes" }));
+  await app.register(fp(authRoutes));
 
   app.addHook("onRequest", async (request, reply) => {
     if (request.url.startsWith("/api/auth") || request.url === "/status") {

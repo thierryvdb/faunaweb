@@ -62,7 +62,7 @@ export async function locationsRoutes(app: FastifyInstance) {
       return reply.code(400).send({ mensagem: 'Informe dados para atualizar' });
     }
     const sets = pares.map(([campo], idx) => `${campo}=$${idx + 1}`);
-    const valores = pares.map(([, valor]) => valor);
+    const valores: any[] = pares.map(([, valor]) => valor);
     valores.push(locationId, airportId);
     const { rows } = await db.query(
       `UPDATE wildlife.dim_location SET ${sets.join(', ')}, updated_at=now()

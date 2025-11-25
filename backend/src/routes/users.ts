@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { db } from '../services/db';
 
@@ -24,7 +24,7 @@ const bulkResetSchema = z.object({
 });
 
 export async function usersRoutes(app: FastifyInstance) {
-  const ensureAdmin = async (request: any, reply: any) => {
+  const ensureAdmin = async (request: FastifyRequest, reply: FastifyReply) => {
     await app.authenticate(request, reply);
   };
 

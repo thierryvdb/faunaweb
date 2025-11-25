@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { MultipartFile } from '@fastify/multipart';
+import sharp from 'sharp';
 import { db } from '../services/db';
 import { requireRead, requireCreate, requireUpdate, requireDelete } from '../utils/auth';
 
@@ -121,7 +122,7 @@ async function parseStrikePayload<T extends z.ZodTypeAny>(
     }
     if (part.fieldname === 'dados' || part.fieldname === 'payload') {
       try {
-        basePayload = JSON.parse(part.value);
+        basePayload = JSON.parse(part.value as string);
       } catch {
         throw request.server.httpErrors.badRequest('Campo "dados" deve conter JSON valido');
       }

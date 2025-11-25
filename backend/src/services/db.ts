@@ -1,17 +1,18 @@
 import { Pool, PoolClient } from 'pg';
+import { QueryResult } from '../types/database';
 import env from '../config/env';
 
 export const pool = env.databaseUrl ? new Pool({ connectionString: env.databaseUrl }) : new Pool(env.pg);
 
-pool.on('error', (err) => {
+pool.on('error', (err: Error) => {
   console.error('Erro inesperado no pool do Postgres', err);
 });
 
 export const db = {
-  async query<T = any>(text: string, params?: any[]): Promise<{ rows: T[] }> {
+  async query<T = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
     const client = await pool.connect();
     try {
-      return await client.query(text, params);
+      return await client.query(text, params) as QueryResult<T>;
     } finally {
       client.release();
     }

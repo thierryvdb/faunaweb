@@ -1,7 +1,8 @@
-import Fastify from 'fastify';
+import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import multipart from '@fastify/multipart';
+import sensible from '@fastify/sensible';
 import env from './config/env';
 import { registerRoutes } from './routes';
 
@@ -23,6 +24,7 @@ export function buildApp() {
   }
 
   app.register(cors, { origin: true });
+  app.register(sensible);
   app.register(multipart, {
     attachFieldsToBody: false,
     limits: {
@@ -36,7 +38,7 @@ export function buildApp() {
     }
   });
 
-  app.decorate('authenticate', async function (request, reply) {
+  app.decorate('authenticate', async function (request: FastifyRequest, reply: FastifyReply) {
     try {
       await request.jwtVerify();
     } catch (error) {
