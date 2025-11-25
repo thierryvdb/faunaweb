@@ -370,7 +370,7 @@ async function carregar() {
   erro.value = null;
   try {
     const dados = await ApiService.getAcoes(filtros.value);
-    const aeroportosUnicos = Array.from(new Set(dados.map((acao: any) => acao.airport_id).filter(Boolean)));
+    const aeroportosUnicos = Array.from(new Set(dados.map((acao: any) => acao.airport_id).filter(Boolean))) as number[];
     for (const airportId of aeroportosUnicos) {
       await garantirLocais(airportId);
     }

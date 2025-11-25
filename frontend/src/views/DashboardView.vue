@@ -90,7 +90,7 @@ async function carregar() {
 }
 
 function atualizarPeriodo(valor: { inicio?: string; fim?: string }) {
-  periodo.value = valor;
+  periodo.value = { inicio: valor.inicio, fim: valor.fim };
   carregar();
 }
 

@@ -281,8 +281,7 @@ async function salvarColeta() {
   if (modoEdicao.value) return;
 
   const formData = new FormData();
-  const payload = { ...form };
-  delete payload.photos;
+  const { photos, ...payload } = form;
 
   formData.append('payload', JSON.stringify(payload));
   form.photos.forEach((photo, index) => {
