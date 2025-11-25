@@ -460,9 +460,9 @@
           <strong>{{ section.title }}:</strong> {{ section.description }}
         </li>
       </ul>
-      <router-link :to="currentTemplate.externalRoute" class="btn btn-primary">
+      <button @click="navigateToExternalRoute" class="btn btn-primary">
         Acessar formulário
-      </router-link>
+      </button>
     </div>
   </div>
 </template>
@@ -506,7 +506,19 @@ function handleTemplateChange(id: string) {
   selectedTemplateId.value = id;
   if (id === 'asa') return;
   const template = selectorTemplates.find((item) => item.id === id);
-  router.push(template?.externalRoute ?? '/inspecoes');
+  const route = template?.externalRoute;
+  if (route) {
+    router.push(route);
+  } else {
+    router.push('/inspecoes');
+  }
+}
+
+function navigateToExternalRoute() {
+  const route = currentTemplate.value.externalRoute;
+  if (route) {
+    router.push(route);
+  }
 }
 
 const inspecaoSelecionada = ref<any>(null);

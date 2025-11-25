@@ -9,7 +9,10 @@
       "Bash(chmod:*)",
       "Bash(psql:*)",
       "Bash(npm run lint:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(npx vite build)"
     ],
     "deny": [],
     "ask": []
