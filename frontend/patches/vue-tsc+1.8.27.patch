@@ -1,5 +1,5 @@
 diff --git a/node_modules/vue-tsc/bin/vue-tsc.js b/node_modules/vue-tsc/bin/vue-tsc.js
-index 6b7193c..db9d601 100644
+index 6b7193c..f0599cc 100644
 --- a/node_modules/vue-tsc/bin/vue-tsc.js
 +++ b/node_modules/vue-tsc/bin/vue-tsc.js
 @@ -4,23 +4,54 @@ const fs = require('fs');
@@ -49,9 +49,9 @@ index 6b7193c..db9d601 100644
 +	}
 +
 +	// add *.vue files to allow extensions
-+	tryReplace(/supportedTSExtensions = .*(?=;)/, s => s + '.concat([[".vue"]])');
-+	tryReplace(/supportedJSExtensions = .*(?=;)/, s => s + '.concat([[".vue"]])');
-+	tryReplace(/allSupportedExtensions = .*(?=;)/, s => s + '.concat([[".vue"]])');
++	tryReplace(/supportedTSExtensions = [\s\S]*?(?=;)/, s => s + '.concat([[".vue"]])');
++	tryReplace(/supportedJSExtensions = [\s\S]*?(?=;)/, s => s + '.concat([[".vue"]])');
++	tryReplace(/allSupportedExtensions = [\s\S]*?(?=;)/, s => s + '.concat([[".vue"]])');
  
 -		// proxy createProgram apis
 -		tryReplace(/function createProgram\(.+\) {/, s => s + ` return require(${JSON.stringify(proxyApiPath)}).createProgram(...arguments);`);
