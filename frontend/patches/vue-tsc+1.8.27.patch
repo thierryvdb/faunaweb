@@ -1,0 +1,116 @@
+diff --git a/node_modules/vue-tsc/bin/vue-tsc.js b/node_modules/vue-tsc/bin/vue-tsc.js
+index 6b7193c..db9d601 100644
+--- a/node_modules/vue-tsc/bin/vue-tsc.js
++++ b/node_modules/vue-tsc/bin/vue-tsc.js
+@@ -4,23 +4,54 @@ const fs = require('fs');
+ const tsPkg = require('typescript/package.json');
+ const readFileSync = fs.readFileSync;
+ const tscPath = require.resolve('typescript/lib/tsc');
++let tscImplPath;
++try {
++    tscImplPath = require.resolve('typescript/lib/_tsc');
++}
++catch (error) {
++}
+ const proxyApiPath = require.resolve('../out/index');
+ const { state } = require('../out/shared');
+ 
++const patchTargets = (() => {
++	const result = new Set([tscPath]);
++	if (tscImplPath) {
++		result.add(tscImplPath);
++	}
++	return result;
++})();
++const patchedCache = new Map();
++
+ fs.readFileSync = (...args) => {
+-	if (args[0] === tscPath) {
++	const filePath = args[0];
++	if (patchTargets.has(filePath)) {
++		if (patchedCache.has(filePath)) {
++			return patchedCache.get(filePath);
++		}
+ 		let tsc = readFileSync(...args);
++		tsc = applyPatches(tsc);
++		patchedCache.set(filePath, tsc);
++		return tsc;
++	}
++	return readFileSync(...args);
++};
+ 
+-		// add *.vue files to allow extensions
+-		tryReplace(/supportedTSExtensions = .*(?=;)/, s => s + '.concat([[".vue"]])');
+-		tryReplace(/supportedJSExtensions = .*(?=;)/, s => s + '.concat([[".vue"]])');
+-		tryReplace(/allSupportedExtensions = .*(?=;)/, s => s + '.concat([[".vue"]])');
++function applyPatches(tsc) {
++	if (!tsc.includes('supportedTSExtensions = ')) {
++		return tsc;
++	}
++
++	// add *.vue files to allow extensions
++	tryReplace(/supportedTSExtensions = .*(?=;)/, s => s + '.concat([[".vue"]])');
++	tryReplace(/supportedJSExtensions = .*(?=;)/, s => s + '.concat([[".vue"]])');
++	tryReplace(/allSupportedExtensions = .*(?=;)/, s => s + '.concat([[".vue"]])');
+ 
+-		// proxy createProgram apis
+-		tryReplace(/function createProgram\(.+\) {/, s => s + ` return require(${JSON.stringify(proxyApiPath)}).createProgram(...arguments);`);
++	// proxy createProgram apis
++	tryReplace(/function createProgram\(.+\) {/, s => s + ` return require(${JSON.stringify(proxyApiPath)}).createProgram(...arguments);`);
+ 
+-		// patches logic for checking root file extension in build program for incremental builds
+-		if (semver.gt(tsPkg.version, '5.0.0')) {
++	// patches logic for checking root file extension in build program for incremental builds
++	if (semver.gt(tsPkg.version, '5.0.0')) {
++		if (tsc.includes('for (const existingRoot of buildInfoVersionMap.roots) {')) {
+ 			tryReplace(
+ 				`for (const existingRoot of buildInfoVersionMap.roots) {`,
+ 				`for (const existingRoot of buildInfoVersionMap.roots
+@@ -28,12 +59,16 @@ fs.readFileSync = (...args) => {
+ 					.map(file => file.replace(/\.vue\.(j|t)sx?$/i, '.vue'))
+ 				) {`
+ 			);
++		}
++		if (tsc.includes('return [toFileId(key), toFileIdListId(state.exportedModulesMap.getValues(key))];')) {
+ 			tryReplace(
+ 				`return [toFileId(key), toFileIdListId(state.exportedModulesMap.getValues(key))];`, 
+ 				`return [toFileId(key), toFileIdListId(new Set(arrayFrom(state.exportedModulesMap.getValues(key)).filter(file => file !== void 0)))];`
+ 			);
+ 		}
+-		if (semver.gte(tsPkg.version, '5.0.4')) {
++	}
++	if (semver.gte(tsPkg.version, '5.0.4')) {
++		if (tsc.includes('return createBuilderProgramUsingProgramBuildInfo(buildInfo, buildInfoPath, host);')) {
+ 			tryReplace(
+ 				`return createBuilderProgramUsingProgramBuildInfo(buildInfo, buildInfoPath, host);`,
+ 				s => `buildInfo.program.fileNames = buildInfo.program.fileNames
+@@ -41,20 +76,19 @@ fs.readFileSync = (...args) => {
+ 					.map(file => file.replace(/\.vue\.(j|t)sx?$/i, '.vue'));\n` + s
+ 			);
+ 		}
++	}
+ 
+-		return tsc;
++	return tsc;
+ 
+-		function tryReplace(search, replace) {
+-			const before = tsc;
+-			tsc = tsc.replace(search, replace);
+-			const after = tsc;
+-			if (after === before) {
+-				throw 'Search string not found: ' + JSON.stringify(search.toString());
+-			}
++	function tryReplace(search, replace) {
++		const before = tsc;
++		tsc = tsc.replace(search, replace);
++		const after = tsc;
++		if (after === before) {
++			throw 'Search string not found: ' + JSON.stringify(search.toString());
+ 		}
+ 	}
+-	return readFileSync(...args);
+-};
++}
+ 
+ (function main() {
+ 	try {
