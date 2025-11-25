@@ -6,7 +6,7 @@ WORKDIR /app
 # Sharp e outros pacotes nativos precisam de toolchain durante o build
 # Canvas precisa de Cairo e suas dependências
 RUN apk add --no-cache python3 make g++ \
-    pkg-config \
+    pkgconf \
     cairo-dev \
     pango-dev \
     pixman-dev \
