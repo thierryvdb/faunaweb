@@ -47,7 +47,7 @@ const corpo = z.object({
 const paramsId = z.object({ id: z.coerce.number() });
 
 export async function sightingsRoutes(app: FastifyInstance) {
-  app.get('/api/avistamentos', { preHandler: [app.authenticate, requireRead] }, async (request) => {
+  app.get('/avistamentos', { preHandler: [app.authenticate, requireRead] }, async (request) => {
     const querySchema = z.object({
       airportId: z.coerce.number().optional(),
       inicio: z.string().optional(),
@@ -113,7 +113,7 @@ export async function sightingsRoutes(app: FastifyInstance) {
     return rows.map((row) => ({ ...row, itens: row.itens ?? [] }));
   });
 
-  app.post('/api/avistamentos', { preHandler: [app.authenticate, requireCreate] }, async (request, reply) => {
+  app.post('/avistamentos', { preHandler: [app.authenticate, requireCreate] }, async (request, reply) => {
     const body = corpo.parse(request.body);
     const resultado = await db.transaction(async (client) => {
       const colunas = [
@@ -206,7 +206,7 @@ export async function sightingsRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: resultado });
   });
 
-  app.put('/api/avistamentos/:id', { preHandler: [app.authenticate, requireUpdate] }, async (request, reply) => {
+  app.put('/avistamentos/:id', { preHandler: [app.authenticate, requireUpdate] }, async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     const body = corpo.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([chave, valor]) => chave !== 'itens' && valor !== undefined);
@@ -242,7 +242,7 @@ export async function sightingsRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/avistamentos/:id', { preHandler: [app.authenticate, requireDelete] }, async (request, reply) => {
+  app.delete('/avistamentos/:id', { preHandler: [app.authenticate, requireDelete] }, async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_sighting WHERE sighting_id=$1', [id]);
     return reply.code(204).send();

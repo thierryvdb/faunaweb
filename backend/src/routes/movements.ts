@@ -16,7 +16,7 @@ const corpo = z.object({
 const paramsId = z.object({ id: z.coerce.number() });
 
 export async function movementsRoutes(app: FastifyInstance) {
-  app.get('/api/movimentos', async (request) => {
+  app.get('/movimentos', async (request) => {
     const querySchema = z.object({
       airportId: z.coerce.number().optional(),
       inicio: z.string().optional(),
@@ -53,7 +53,7 @@ export async function movementsRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/movimentos', async (request, reply) => {
+  app.post('/movimentos', async (request, reply) => {
     const body = corpo.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.fact_movement (airport_id, date_utc, time_local, movement_type, runway, aircraft_type, engine_type_id, movements_in_day)
@@ -73,7 +73,7 @@ export async function movementsRoutes(app: FastifyInstance) {
     return reply.code(201).send(rows[0]);
   });
 
-  app.put('/api/movimentos/:id', async (request, reply) => {
+  app.put('/movimentos/:id', async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     const body = corpo.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
@@ -94,7 +94,7 @@ export async function movementsRoutes(app: FastifyInstance) {
     return rows[0];
   });
 
-  app.delete('/api/movimentos/:id', async (request, reply) => {
+  app.delete('/movimentos/:id', async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_movement WHERE movement_id=$1', [id]);
     return reply.code(204).send();

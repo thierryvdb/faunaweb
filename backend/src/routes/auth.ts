@@ -9,7 +9,7 @@ const changePasswordSchema = z.object({
 });
 
 export async function authRoutes(app: FastifyInstance) {
-  app.post('/api/auth/login', async (request, reply) => {
+  app.post('/auth/login', async (request, reply) => {
     const { username, password } = schema.parse(request.body);
     const { rows } = await db.query(
       `SELECT u.user_id, u.name, u.username, u.airport_id, u.must_reset_password, u.active, a.name AS airport_nome,
@@ -73,7 +73,7 @@ export async function authRoutes(app: FastifyInstance) {
     };
   });
 
-  app.post('/api/auth/switch-airport', async (request, reply) => {
+  app.post('/auth/switch-airport', async (request, reply) => {
     const body = (request.body ?? {}) as { airport_id?: number };
     const airport_id = Number(body.airport_id);
     if (!airport_id) {
@@ -111,7 +111,7 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   app.post(
-    '/api/auth/change-password',
+    '/auth/change-password',
     { preHandler: app.authenticate },
     async (request, reply) => {
       const { current_password, new_password } = changePasswordSchema.parse(request.body);

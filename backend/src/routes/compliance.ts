@@ -234,7 +234,7 @@ const idParams = z.object({ id: z.coerce.number() });
 
 export async function complianceRoutes(app: FastifyInstance) {
   // Inspeções
-  app.get('/api/inspecoes', async (request) => {
+  app.get('/inspecoes', async (request) => {
     const filtros = z
       .object({
         airportId: z.coerce.number().optional(),
@@ -274,7 +274,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/inspecoes', async (request, reply) => {
+  app.post('/inspecoes', async (request, reply) => {
     const body = inspectionSchema.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.fact_inspection
@@ -301,7 +301,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: rows[0].id });
   });
 
-  app.put('/api/inspecoes/:id', async (request, reply) => {
+  app.put('/inspecoes/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const body = inspectionSchema.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
@@ -332,14 +332,14 @@ export async function complianceRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/inspecoes/:id', async (request, reply) => {
+  app.delete('/inspecoes/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_inspection WHERE inspection_id=$1', [id]);
     return reply.code(204).send();
   });
 
   // Carcaças
-  app.get('/api/carcacas', async (request) => {
+  app.get('/carcacas', async (request) => {
     const filtros = z
       .object({
         airportId: z.coerce.number().optional(),
@@ -376,7 +376,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/carcacas', async (request, reply) => {
+  app.post('/carcacas', async (request, reply) => {
     const body = carcassSchema.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.fact_carcass (
@@ -412,7 +412,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: rows[0].id });
   });
 
-  app.put('/api/carcacas/:id', async (request, reply) => {
+  app.put('/carcacas/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const body = carcassSchema.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
@@ -432,14 +432,14 @@ export async function complianceRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/carcacas/:id', async (request, reply) => {
+  app.delete('/carcacas/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_carcass WHERE carcass_id=$1', [id]);
     return reply.code(204).send();
   });
 
   // Auditorias ambientais
-  app.get('/api/auditorias-ambientais', async (request) => {
+  app.get('/auditorias-ambientais', async (request) => {
     const filtros = z
       .object({
         airportId: z.coerce.number().optional(),
@@ -469,7 +469,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/auditorias-ambientais', async (request, reply) => {
+  app.post('/auditorias-ambientais', async (request, reply) => {
     const body = auditSchema.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.fact_environment_audit (
@@ -495,7 +495,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: rows[0].id });
   });
 
-  app.put('/api/auditorias-ambientais/:id', async (request, reply) => {
+  app.put('/auditorias-ambientais/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const body = auditSchema.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
@@ -520,14 +520,14 @@ export async function complianceRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/auditorias-ambientais/:id', async (request, reply) => {
+  app.delete('/auditorias-ambientais/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_environment_audit WHERE audit_id=$1', [id]);
     return reply.code(204).send();
   });
 
   // Focos ASA
-  app.get('/api/asa-focos', async (request) => {
+  app.get('/asa-focos', async (request) => {
     const filtros = z
       .object({
         airportId: z.coerce.number().optional(),
@@ -557,7 +557,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/asa-focos', async (request, reply) => {
+  app.post('/asa-focos', async (request, reply) => {
     const body = asaFocusSchema.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.fact_asa_focus (
@@ -586,7 +586,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: rows[0].id });
   });
 
-  app.put('/api/asa-focos/:id', async (request, reply) => {
+  app.put('/asa-focos/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const body = asaFocusSchema.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
@@ -611,14 +611,14 @@ export async function complianceRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/asa-focos/:id', async (request, reply) => {
+  app.delete('/asa-focos/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_asa_focus WHERE asa_focus_id=$1', [id]);
     return reply.code(204).send();
   });
 
   // Comunicações externas
-  app.get('/api/comunicados-externos', async (request) => {
+  app.get('/comunicados-externos', async (request) => {
     const filtros = z
       .object({
         airportId: z.coerce.number().optional(),
@@ -655,7 +655,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/comunicados-externos', async (request, reply) => {
+  app.post('/comunicados-externos', async (request, reply) => {
     const { body, attachment } = await parseNoticePayload(request, noticeSchema);
     const criado = await db.transaction(async (client) => {
       const { rows } = await client.query(
@@ -687,7 +687,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: criado });
   });
 
-  app.put('/api/comunicados-externos/:id', async (request, reply) => {
+  app.put('/comunicados-externos/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const { body, attachment } = await parseNoticePayload(request, noticeSchema.partial());
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
@@ -725,13 +725,13 @@ export async function complianceRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/comunicados-externos/:id', async (request, reply) => {
+  app.delete('/comunicados-externos/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_external_notice WHERE notice_id=$1', [id]);
     return reply.code(204).send();
   });
 
-  app.get('/api/comunicados-externos/:id/anexo', async (request, reply) => {
+  app.get('/comunicados-externos/:id/anexo', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const { rows } = await db.query(
       `SELECT filename, mime_type, file_data
@@ -751,7 +751,7 @@ export async function complianceRoutes(app: FastifyInstance) {
   });
 
   // Treinamentos
-  app.get('/api/treinamentos-fauna', async (request) => {
+  app.get('/treinamentos-fauna', async (request) => {
     const filtros = z
       .object({
         airportId: z.coerce.number().optional()
@@ -776,7 +776,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/treinamentos-fauna', async (request, reply) => {
+  app.post('/treinamentos-fauna', async (request, reply) => {
     const body = trainingSchema.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.fact_training_session (
@@ -803,7 +803,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: rows[0].id });
   });
 
-  app.put('/api/treinamentos-fauna/:id', async (request, reply) => {
+  app.put('/treinamentos-fauna/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const body = trainingSchema.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
@@ -834,14 +834,14 @@ export async function complianceRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/treinamentos-fauna/:id', async (request, reply) => {
+  app.delete('/treinamentos-fauna/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_training_session WHERE training_id=$1', [id]);
     return reply.code(204).send();
   });
 
   // Equipe e matrículas de treinamento
-  app.get('/api/pessoal', async (request) => {
+  app.get('/pessoal', async (request) => {
     const filtros = z.object({ airportId: z.coerce.number().optional() }).parse(request.query ?? {});
     const condicoes: string[] = [];
     const valores: any[] = [];
@@ -861,7 +861,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/pessoal', async (request, reply) => {
+  app.post('/pessoal', async (request, reply) => {
     const body = personnelSchema.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.dim_personnel (
@@ -883,7 +883,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: rows[0].id });
   });
 
-  app.put('/api/pessoal/:id', async (request, reply) => {
+  app.put('/pessoal/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const body = personnelSchema.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
@@ -903,13 +903,13 @@ export async function complianceRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/pessoal/:id', async (request, reply) => {
+  app.delete('/pessoal/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     await db.query('DELETE FROM wildlife.dim_personnel WHERE personnel_id=$1', [id]);
     return reply.code(204).send();
   });
 
-  app.get('/api/treinamentos-conclusoes', async (request) => {
+  app.get('/treinamentos-conclusoes', async (request) => {
     const filtros = z
       .object({
         airportId: z.coerce.number().optional(),
@@ -939,7 +939,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/treinamentos-conclusoes', async (request, reply) => {
+  app.post('/treinamentos-conclusoes', async (request, reply) => {
     const body = trainingCompletionSchema.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.fact_training_completion (
@@ -961,7 +961,7 @@ export async function complianceRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: rows[0].id });
   });
 
-  app.put('/api/treinamentos-conclusoes/:id', async (request, reply) => {
+  app.put('/treinamentos-conclusoes/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const body = trainingCompletionSchema.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
@@ -982,13 +982,13 @@ export async function complianceRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/treinamentos-conclusoes/:id', async (request, reply) => {
+  app.delete('/treinamentos-conclusoes/:id', async (request, reply) => {
     const { id } = idParams.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_training_completion WHERE completion_id=$1', [id]);
     return reply.code(204).send();
   });
 
-  app.get('/api/treinamentos/status', async (request) => {
+  app.get('/treinamentos/status', async (request) => {
     const filtros = z.object({ airportId: z.coerce.number().optional() }).parse(request.query ?? {});
     const params = [filtros.airportId ?? null];
     const { rows } = await db.query(

@@ -17,7 +17,7 @@ const aeroportoSchema = z.object({
 const paramsSchema = z.object({ id: z.coerce.number() });
 
 export async function airportsRoutes(app: FastifyInstance) {
-  app.get('/api/aeroportos', async (request) => {
+  app.get('/aeroportos', async (request) => {
     const userAirportId = (request as any).user.airport_id as number;
     const { rows } = await db.query(
       `SELECT airport_id AS id, icao_code, iata_code, name, city, state, country, latitude_dec, longitude_dec, elevation_ft
@@ -28,7 +28,7 @@ export async function airportsRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.get('/api/aeroportos/:id', async (request, reply) => {
+  app.get('/aeroportos/:id', async (request, reply) => {
     const { id } = paramsSchema.parse(request.params);
     const userAirportId = (request as any).user.airport_id as number;
     if (id !== userAirportId) {
@@ -41,7 +41,7 @@ export async function airportsRoutes(app: FastifyInstance) {
     return ensureEncontrado(rows[0], reply);
   });
 
-  app.post('/api/aeroportos', async (request, reply) => {
+  app.post('/aeroportos', async (request, reply) => {
     const body = aeroportoSchema.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.airport (icao_code, iata_code, name, city, state, country, latitude_dec, longitude_dec, elevation_ft)
@@ -62,7 +62,7 @@ export async function airportsRoutes(app: FastifyInstance) {
     return reply.code(201).send(rows[0]);
   });
 
-  app.put('/api/aeroportos/:id', async (request, reply) => {
+  app.put('/aeroportos/:id', async (request, reply) => {
     const { id } = paramsSchema.parse(request.params);
     const body = aeroportoSchema.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
@@ -80,7 +80,7 @@ export async function airportsRoutes(app: FastifyInstance) {
     return ensureEncontrado(rows[0], reply);
   });
 
-  app.delete('/api/aeroportos/:id', async (request, reply) => {
+  app.delete('/aeroportos/:id', async (request, reply) => {
     const { id } = paramsSchema.parse(request.params);
     await db.query('DELETE FROM wildlife.airport WHERE airport_id=$1', [id]);
     return reply.code(204).send();

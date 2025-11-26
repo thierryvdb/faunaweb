@@ -30,7 +30,7 @@ function extrairGrid(code: string) {
 }
 
 export async function quadrantsRoutes(app: FastifyInstance) {
-  app.get('/api/quadrantes', async () => {
+  app.get('/quadrantes', async () => {
     const { rows } = await db.query(
       `SELECT quadrant_id AS id,
               code,
@@ -45,7 +45,7 @@ export async function quadrantsRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/quadrantes', async (request, reply) => {
+  app.post('/quadrantes', async (request, reply) => {
     const body = quadranteSchema.parse(request.body);
     const code = body.code.trim().toUpperCase();
     const description = body.description?.trim() || null;
@@ -64,7 +64,7 @@ export async function quadrantsRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: rows[0].id });
   });
 
-  app.post('/api/quadrantes/reset-grade', async (request, reply) => {
+  app.post('/quadrantes/reset-grade', async (request, reply) => {
     const body = resetSchema.parse(request.body ?? {});
     if (body.confirm !== 'matriz-33x14') {
       return reply.code(400).send({ mensagem: 'Confirme enviando confirm=matriz-33x14' });
@@ -86,7 +86,7 @@ export async function quadrantsRoutes(app: FastifyInstance) {
     return reply.send({ mensagem: 'Grade 33x14 regenerada com sucesso' });
   });
 
-  app.put('/api/quadrantes/:id', async (request, reply) => {
+  app.put('/quadrantes/:id', async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     const body = parcialSchema.parse(request.body ?? {});
     const sets: string[] = [];
@@ -121,7 +121,7 @@ export async function quadrantsRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/quadrantes/:id', async (request, reply) => {
+  app.delete('/quadrantes/:id', async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     await db.query('DELETE FROM wildlife.lu_quadrant WHERE quadrant_id=$1', [id]);
     return reply.code(204).send();

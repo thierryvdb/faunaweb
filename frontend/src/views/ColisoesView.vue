@@ -572,9 +572,9 @@ async function salvar() {
     }
     const corpo = montarCorpoComArquivo(payload);
     if (editandoId.value) {
-      await api.put(`/api/colisoes/${editandoId.value}`, corpo);
+      await api.put(`/colisoes/${editandoId.value}`, corpo);
     } else {
-      await api.post('/api/colisoes', corpo);
+      await api.post('/colisoes', corpo);
     }
     await carregar();
     resetarFormulario();

@@ -109,7 +109,7 @@ function formatarData(valor?: string | null) {
 
 async function salvar() {
   try {
-    await api.post('/api/movimentos', novo.value);
+    await api.post('/movimentos', novo.value);
     carregar();
     novo.value = { airport_id: '' as any, date_utc: '', movement_type: 'Pouso', runway: '10/28', movements_in_day: 0 };
   } catch (e: any) {

@@ -171,9 +171,9 @@ async function carregar() {
 async function salvar() {
   try {
     if (editandoId.value) {
-      await api.put(`/api/atrativos/${editandoId.value}`, novo.value);
+      await api.put(`/atrativos/${editandoId.value}`, novo.value);
     } else {
-      await api.post('/api/atrativos', novo.value);
+      await api.post('/atrativos', novo.value);
     }
     await carregar();
     cancelarEdicao();

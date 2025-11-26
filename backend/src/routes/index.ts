@@ -30,7 +30,7 @@ async function routes(app: FastifyInstance) {
   await app.register(fp(authRoutes, { name: "authRoutes" }));
 
   app.addHook("onRequest", async (request, reply) => {
-    if (request.url.startsWith("/api/auth") || request.url === "/status") {
+    if (request.url.startsWith("/auth") || request.url === "/status") {
       return;
     }
     await app.authenticate(request, reply);

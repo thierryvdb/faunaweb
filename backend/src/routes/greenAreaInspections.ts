@@ -37,7 +37,7 @@ const greenAreaInspectionSchema = z.object({
 
 export async function greenAreaInspectionsRoutes(app: FastifyInstance) {
   // Listar inspeções F2
-  app.get('/api/inspecoes-areas-verdes', async (request) => {
+  app.get('/inspecoes-areas-verdes', async (request) => {
     const qs = request.query as any;
     const airportId = qs.airportId ? parseInt(qs.airportId) : undefined;
     const inicio = qs.inicio;
@@ -74,7 +74,7 @@ export async function greenAreaInspectionsRoutes(app: FastifyInstance) {
   });
 
   // Criar nova inspeção F2
-  app.post('/api/inspecoes-areas-verdes', async (request, reply) => {
+  app.post('/inspecoes-areas-verdes', async (request, reply) => {
     const validated = greenAreaInspectionSchema.parse(request.body);
 
     const result = await db.query(`
@@ -97,7 +97,7 @@ export async function greenAreaInspectionsRoutes(app: FastifyInstance) {
   });
 
   // Atualizar inspeção F2
-  app.put('/api/inspecoes-areas-verdes/:id', async (request, reply) => {
+  app.put('/inspecoes-areas-verdes/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const maintenanceId = parseInt(id);
     const validated = greenAreaInspectionSchema.parse(request.body);
@@ -133,7 +133,7 @@ export async function greenAreaInspectionsRoutes(app: FastifyInstance) {
   });
 
   // Remover inspeção F2
-  app.delete('/api/inspecoes-areas-verdes/:id', async (request, reply) => {
+  app.delete('/inspecoes-areas-verdes/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const maintenanceId = parseInt(id);
 

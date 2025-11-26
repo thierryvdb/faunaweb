@@ -23,7 +23,7 @@ const incinerationWasteSchema = z.object({
 
 export async function incinerationWasteRoutes(app: FastifyInstance) {
   // GET /api/residuos-incineracao - Listar resíduos
-  app.get('/api/residuos-incineracao', async (request, reply) => {
+  app.get('/residuos-incineracao', async (request, reply) => {
     const qs = request.query as any;
     const airportId = qs.airportId ? parseInt(qs.airportId) : undefined;
     const inicio = qs.inicio;
@@ -94,7 +94,7 @@ export async function incinerationWasteRoutes(app: FastifyInstance) {
   });
 
   // GET /api/residuos-incineracao/:id - Buscar um resíduo específico
-  app.get('/api/residuos-incineracao/:id', async (request, reply) => {
+  app.get('/residuos-incineracao/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const wasteId = parseInt(id);
 
@@ -121,7 +121,7 @@ export async function incinerationWasteRoutes(app: FastifyInstance) {
   });
 
   // POST /api/residuos-incineracao - Criar novo registro
-  app.post('/api/residuos-incineracao', async (request, reply) => {
+  app.post('/residuos-incineracao', async (request, reply) => {
     const validated = incinerationWasteSchema.parse(request.body);
 
     const result = await db.query(`
@@ -155,7 +155,7 @@ export async function incinerationWasteRoutes(app: FastifyInstance) {
   });
 
   // PUT /api/residuos-incineracao/:id - Atualizar registro
-  app.put('/api/residuos-incineracao/:id', async (request, reply) => {
+  app.put('/residuos-incineracao/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const wasteId = parseInt(id);
     const validated = incinerationWasteSchema.parse(request.body);
@@ -190,7 +190,7 @@ export async function incinerationWasteRoutes(app: FastifyInstance) {
   });
 
   // DELETE /api/residuos-incineracao/:id - Remover registro
-  app.delete('/api/residuos-incineracao/:id', async (request, reply) => {
+  app.delete('/residuos-incineracao/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const wasteId = parseInt(id);
 

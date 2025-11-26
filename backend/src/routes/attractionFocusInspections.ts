@@ -113,7 +113,7 @@ const attractionFocusInspectionSchema = z.object({
 
 export async function attractionFocusInspectionsRoutes(app: FastifyInstance) {
   // Listar inspeções F3
-  app.get('/api/inspecoes-focos-atracao', async (request) => {
+  app.get('/inspecoes-focos-atracao', async (request) => {
     const qs = request.query as any;
     const airportId = qs.airportId ? parseInt(qs.airportId) : undefined;
     const inicio = qs.inicio;
@@ -150,7 +150,7 @@ export async function attractionFocusInspectionsRoutes(app: FastifyInstance) {
   });
 
   // Criar nova inspeção F3
-  app.post('/api/inspecoes-focos-atracao', async (request, reply) => {
+  app.post('/inspecoes-focos-atracao', async (request, reply) => {
     const validated = attractionFocusInspectionSchema.parse(request.body);
 
     const result = await db.query(`
@@ -173,7 +173,7 @@ export async function attractionFocusInspectionsRoutes(app: FastifyInstance) {
   });
 
   // Atualizar inspeção F3
-  app.put('/api/inspecoes-focos-atracao/:id', async (request, reply) => {
+  app.put('/inspecoes-focos-atracao/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const validated = attractionFocusInspectionSchema.parse(request.body);
 
@@ -194,7 +194,7 @@ export async function attractionFocusInspectionsRoutes(app: FastifyInstance) {
   });
 
   // Remover inspeção F3
-  app.delete('/api/inspecoes-focos-atracao/:id', async (request, reply) => {
+  app.delete('/inspecoes-focos-atracao/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     await db.query('DELETE FROM wildlife.fact_attraction_focus_inspection WHERE focus_inspection_id = $1', [parseInt(id)]);
     return { message: 'Registro removido com sucesso' };

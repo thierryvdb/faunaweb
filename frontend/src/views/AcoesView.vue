@@ -403,9 +403,9 @@ async function salvar() {
   try {
     const payload = montarPayload();
     if (editandoId.value) {
-      await api.put(`/api/acoes-controle/${editandoId.value}`, payload);
+      await api.put(`/acoes-controle/${editandoId.value}`, payload);
     } else {
-      await api.post('/api/acoes-controle', payload);
+      await api.post('/acoes-controle', payload);
     }
     await carregar();
     cancelarEdicao();
@@ -469,7 +469,7 @@ function aplicarTemplate(tipo: 'infra' | 'fauna' | 'saneamento') {
 
 async function rodarBa() {
   try {
-    const { data } = await api.post('/api/kpis/ba-espacial', metrica.value);
+    const { data } = await api.post('/kpis/ba-espacial', metrica.value);
     resultadoBa.value = data;
   } catch (e: any) {
     alert(e?.message ?? 'Falha ao calcular');

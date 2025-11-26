@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { db } from '../services/db';
 
 export async function lookupsRoutes(app: FastifyInstance) {
-  app.get('/api/lookups', async () => {
+  app.get('/lookups', async () => {
     const queries = [
       { chave: 'fases_voo', sql: "SELECT phase_id AS id, name FROM wildlife.lu_phase_of_flight ORDER BY name" },
       { chave: 'classes_dano', sql: "SELECT damage_id AS id, name, severity_weight FROM wildlife.lu_damage_class ORDER BY severity_weight" },

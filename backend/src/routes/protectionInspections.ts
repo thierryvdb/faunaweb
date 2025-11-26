@@ -40,7 +40,7 @@ const protectionInspectionSchema = z.object({
 export async function protectionInspectionsRoutes(app: FastifyInstance) {
 
   // GET /api/inspecoes-protecao - Listar inspeções de proteção (F4)
-  app.get('/api/inspecoes-protecao', async (request, reply) => {
+  app.get('/inspecoes-protecao', async (request, reply) => {
     const qs = request.query as any;
     const airportId = qs.airportId ? parseInt(qs.airportId) : undefined;
     const inicio = qs.inicio;
@@ -113,7 +113,7 @@ export async function protectionInspectionsRoutes(app: FastifyInstance) {
   });
 
   // GET /api/inspecoes-protecao/:id - Buscar uma inspeção específica
-  app.get('/api/inspecoes-protecao/:id', async (request, reply) => {
+  app.get('/inspecoes-protecao/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const inspectionId = parseInt(id);
 
@@ -188,7 +188,7 @@ export async function protectionInspectionsRoutes(app: FastifyInstance) {
   });
 
   // POST /api/inspecoes-protecao - Criar nova inspeção (multipart for photos)
-  app.post('/api/inspecoes-protecao', async (request, reply) => {
+  app.post('/inspecoes-protecao', async (request, reply) => {
     const data = await request.file();
 
     if (!data) {
@@ -377,7 +377,7 @@ export async function protectionInspectionsRoutes(app: FastifyInstance) {
   });
 
   // DELETE /api/inspecoes-protecao/:id - Remover inspeção
-  app.delete('/api/inspecoes-protecao/:id', async (request, reply) => {
+  app.delete('/inspecoes-protecao/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const inspectionId = parseInt(id);
 

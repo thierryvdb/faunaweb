@@ -22,7 +22,7 @@ const carcassCollectionSchema = z.object({
 
 export async function carcassCollectionRoutes(app: FastifyInstance) {
   // GET /api/coletas-carcaca - Listar coletas
-  app.get('/api/coletas-carcaca', async (request, reply) => {
+  app.get('/coletas-carcaca', async (request, reply) => {
     const qs = request.query as any;
     const airportId = qs.airportId ? parseInt(qs.airportId) : undefined;
     const inicio = qs.inicio;
@@ -92,7 +92,7 @@ export async function carcassCollectionRoutes(app: FastifyInstance) {
   });
 
   // GET /api/coletas-carcaca/:id - Buscar uma coleta específica
-  app.get('/api/coletas-carcaca/:id', async (request, reply) => {
+  app.get('/coletas-carcaca/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const collectionId = parseInt(id);
 
@@ -118,7 +118,7 @@ export async function carcassCollectionRoutes(app: FastifyInstance) {
   });
 
   // POST /api/coletas-carcaca - Criar nova coleta (com fotos)
-  app.post('/api/coletas-carcaca', async (request, reply) => {
+  app.post('/coletas-carcaca', async (request, reply) => {
     const data = await request.file();
     if (!data) {
       return reply.status(400).send({ error: 'Nenhum dado recebido' });
@@ -189,7 +189,7 @@ export async function carcassCollectionRoutes(app: FastifyInstance) {
   });
 
   // DELETE /api/coletas-carcaca/:id - Remover coleta
-  app.delete('/api/coletas-carcaca/:id', async (request, reply) => {
+  app.delete('/coletas-carcaca/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const collectionId = parseInt(id);
 

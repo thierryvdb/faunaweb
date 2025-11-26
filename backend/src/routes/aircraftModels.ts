@@ -54,7 +54,7 @@ function serialize(row: any) {
 }
 
 export async function aircraftModelsRoutes(app: FastifyInstance) {
-  app.get('/api/aeronaves', async () => {
+  app.get('/aeronaves', async () => {
     const { rows } = await db.query(
       `SELECT aircraft_model_id, manufacturer, model, nickname, category, engine_type_id,
               wingspan_m, length_m, height_m, seating_capacity, mtow_kg, notes
@@ -64,7 +64,7 @@ export async function aircraftModelsRoutes(app: FastifyInstance) {
     return rows.map(serialize);
   });
 
-  app.post('/api/aeronaves', async (request, reply) => {
+  app.post('/aeronaves', async (request, reply) => {
     const body = baseSchema.parse(request.body ?? {});
     const { rows } = await db.query(
       `INSERT INTO wildlife.lu_aircraft_model
@@ -89,7 +89,7 @@ export async function aircraftModelsRoutes(app: FastifyInstance) {
     return reply.code(201).send(serialize(rows[0]));
   });
 
-  app.put('/api/aeronaves/:id', async (request, reply) => {
+  app.put('/aeronaves/:id', async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     const body = baseSchema.partial().refine((dados) => Object.keys(dados).length > 0, {
       message: 'Informe campos para atualizar'
@@ -115,7 +115,7 @@ export async function aircraftModelsRoutes(app: FastifyInstance) {
     return serialize(rows[0]);
   });
 
-  app.delete('/api/aeronaves/:id', async (request, reply) => {
+  app.delete('/aeronaves/:id', async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     await db.query('DELETE FROM wildlife.lu_aircraft_model WHERE aircraft_model_id=$1', [id]);
     return reply.code(204).send();

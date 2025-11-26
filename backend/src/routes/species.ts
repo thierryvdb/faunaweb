@@ -13,7 +13,7 @@ const corpo = z.object({
 });
 
 export async function speciesRoutes(app: FastifyInstance) {
-  app.get('/api/especies', async (request) => {
+  app.get('/especies', async (request) => {
     const querySchema = z.object({ busca: z.string().optional(), grupo: z.coerce.number().optional() });
     const filtros = querySchema.parse(request.query ?? {});
     const condicoes: string[] = [];
@@ -36,7 +36,7 @@ export async function speciesRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/especies', async (request, reply) => {
+  app.post('/especies', async (request, reply) => {
     const body = corpo.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.dim_species (common_name, scientific_name, group_id, mass_id, mass_grams, notes)
@@ -47,7 +47,7 @@ export async function speciesRoutes(app: FastifyInstance) {
     return reply.code(201).send(rows[0]);
   });
 
-  app.put('/api/especies/:id', async (request, reply) => {
+  app.put('/especies/:id', async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     const body = corpo.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
@@ -69,7 +69,7 @@ export async function speciesRoutes(app: FastifyInstance) {
     return rows[0];
   });
 
-  app.delete('/api/especies/:id', async (request, reply) => {
+  app.delete('/especies/:id', async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     await db.query('DELETE FROM wildlife.dim_species WHERE species_id=$1', [id]);
     return reply.code(204).send();

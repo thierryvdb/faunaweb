@@ -29,7 +29,7 @@ export async function usersRoutes(app: FastifyInstance) {
   };
 
   app.get(
-    '/api/usuarios',
+    '/usuarios',
     { preHandler: ensureAdmin },
     async () => {
       const { rows } = await db.query(
@@ -52,7 +52,7 @@ export async function usersRoutes(app: FastifyInstance) {
   );
 
 app.post(
-  '/api/usuarios',
+  '/usuarios',
   { preHandler: ensureAdmin },
   async (request, reply) => {
       const body = baseUserSchema.parse(request.body);
@@ -81,7 +81,7 @@ app.post(
   );
 
 app.put(
-  '/api/usuarios/:id',
+  '/usuarios/:id',
   { preHandler: ensureAdmin },
   async (request, reply) => {
     const id = Number((request.params as any).id);
@@ -143,7 +143,7 @@ app.put(
   );
 
   app.delete(
-    '/api/usuarios/:id',
+    '/usuarios/:id',
     { preHandler: ensureAdmin },
     async (request, reply) => {
       const id = Number((request.params as any).id);
@@ -153,7 +153,7 @@ app.put(
   );
 
   app.post(
-    '/api/usuarios/:id/reset-senha',
+    '/usuarios/:id/reset-senha',
     { preHandler: ensureAdmin },
     async (request, reply) => {
       const id = Number((request.params as any).id);
@@ -170,7 +170,7 @@ app.put(
   );
 
   app.post(
-    '/api/usuarios/reset-senha',
+    '/usuarios/reset-senha',
     { preHandler: ensureAdmin },
     async (request, reply) => {
       const { user_ids } = bulkResetSchema.parse(request.body ?? {});

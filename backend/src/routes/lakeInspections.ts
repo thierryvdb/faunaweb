@@ -24,7 +24,7 @@ const lakeInspectionSchema = z.object({
 
 export async function lakeInspectionsRoutes(app: FastifyInstance) {
   // GET /api/inspecoes-lagos - Listar inspeções
-  app.get('/api/inspecoes-lagos', async (request, reply) => {
+  app.get('/inspecoes-lagos', async (request, reply) => {
     const qs = request.query as any;
     const airportId = qs.airportId ? parseInt(qs.airportId) : undefined;
     const inicio = qs.inicio;
@@ -66,7 +66,7 @@ export async function lakeInspectionsRoutes(app: FastifyInstance) {
   });
 
   // POST /api/inspecoes-lagos - Criar nova inspeção
-  app.post('/api/inspecoes-lagos', async (request, reply) => {
+  app.post('/inspecoes-lagos', async (request, reply) => {
     const data = await request.file();
     if (!data) {
       return reply.status(400).send({ error: 'Nenhum dado recebido' });
@@ -121,7 +121,7 @@ export async function lakeInspectionsRoutes(app: FastifyInstance) {
   });
 
   // DELETE /api/inspecoes-lagos/:id - Remover inspeção
-  app.delete('/api/inspecoes-lagos/:id', async (request, reply) => {
+  app.delete('/inspecoes-lagos/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const inspectionId = parseInt(id);
 

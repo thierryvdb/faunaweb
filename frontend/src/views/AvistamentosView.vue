@@ -250,9 +250,9 @@ async function salvar() {
       novo.value.observer_team = '';
     }
     if (editandoId.value) {
-      await api.put(`/api/avistamentos/${editandoId.value}`, novo.value);
+      await api.put(`/avistamentos/${editandoId.value}`, novo.value);
     } else {
-      await api.post('/api/avistamentos', novo.value);
+      await api.post('/avistamentos', novo.value);
     }
     carregar();
     cancelarEdicao();

@@ -18,7 +18,7 @@ function periodosComDefaults(filtros: { inicio?: string; fim?: string }) {
 }
 
 export async function analyticsRoutes(app: FastifyInstance) {
-  app.get('/api/analytics/painel-resumo', async (request) => {
+  app.get('/analytics/painel-resumo', async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const userAirportId = (request as any).user?.airport_id as number | undefined;
@@ -272,7 +272,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get('/api/analytics/financeiro', async (request) => {
+  app.get('/analytics/financeiro', async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const dataset = await gerarFinanceiroDataset({
@@ -283,7 +283,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
     return { periodo: { inicio, fim }, ...dataset };
   });
 
-  app.get('/api/analytics/incidentes', async (request) => {
+  app.get('/analytics/incidentes', async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const params = [filtros.airportId ?? null, inicio, fim];

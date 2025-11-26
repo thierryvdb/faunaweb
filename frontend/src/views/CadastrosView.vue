@@ -271,13 +271,13 @@ async function carregar() {
 }
 
 async function salvarAeroporto() {
-  await api.post('/api/aeroportos', { ...novoAero.value });
+  await api.post('/aeroportos', { ...novoAero.value });
   novoAero.value = { icao_code: '', name: '', city: '' };
   carregar();
 }
 
 async function salvarEspecie() {
-  await api.post('/api/especies', { ...novaEspecie.value });
+  await api.post('/especies', { ...novaEspecie.value });
   novaEspecie.value = { common_name: '', group_id: lookups.value.grupos_taxonomicos?.[0]?.id };
   carregar();
 }
@@ -317,7 +317,7 @@ async function carregarEquipesDoAeroporto(id?: number) {
 
 async function salvarEquipe() {
   if (!formEquipe.value.airport_id) return;
-  await api.post(`/api/aeroportos/${formEquipe.value.airport_id}/equipes`, {
+  await api.post(`/aeroportos/${formEquipe.value.airport_id}/equipes`, {
     name: formEquipe.value.name,
     description: formEquipe.value.description || undefined
   });
@@ -327,7 +327,7 @@ async function salvarEquipe() {
 
 async function removerEquipe(teamId: number) {
   if (!formEquipe.value.airport_id) return;
-  await api.delete(`/api/aeroportos/${formEquipe.value.airport_id}/equipes/${teamId}`);
+  await api.delete(`/aeroportos/${formEquipe.value.airport_id}/equipes/${teamId}`);
   await carregarEquipesDoAeroporto(formEquipe.value.airport_id);
 }
 

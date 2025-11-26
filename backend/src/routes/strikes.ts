@@ -246,7 +246,7 @@ async function normalizarFoto(foto: FotoUpload): Promise<FotoUpload> {
 }
 
 export async function strikesRoutes(app: FastifyInstance) {
-  app.get('/api/colisoes', { preHandler: [app.authenticate, requireRead] }, async (request) => {
+  app.get('/colisoes', { preHandler: [app.authenticate, requireRead] }, async (request) => {
     const querySchema = z.object({
       airportId: z.coerce.number().optional(),
       inicio: z.string().optional(),
@@ -331,7 +331,7 @@ export async function strikesRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/colisoes', { preHandler: [app.authenticate, requireCreate] }, async (request, reply) => {
+  app.post('/colisoes', { preHandler: [app.authenticate, requireCreate] }, async (request, reply) => {
     const { body, fotos } = await parseStrikePayload(request, corpo);
     const created = await db.transaction(async (client) => {
       const fotosNormalizadas = await Promise.all(fotos.map(normalizarFoto));
@@ -492,7 +492,7 @@ export async function strikesRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: created });
   });
 
-  app.put('/api/colisoes/:id', { preHandler: [app.authenticate, requireUpdate] }, async (request, reply) => {
+  app.put('/colisoes/:id', { preHandler: [app.authenticate, requireUpdate] }, async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     const { body, fotos } = await parseStrikePayload(request, corpo.partial(), { allowEmpty: true });
     const pares = Object.entries(body)
@@ -589,7 +589,7 @@ export async function strikesRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/colisoes/:id', { preHandler: [app.authenticate, requireDelete] }, async (request, reply) => {
+  app.delete('/colisoes/:id', { preHandler: [app.authenticate, requireDelete] }, async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_strike WHERE strike_id=$1', [id]);
     return reply.code(204).send();

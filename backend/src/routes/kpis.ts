@@ -9,7 +9,7 @@ const rangeSchema = z.object({
 });
 
 export async function kpisRoutes(app: FastifyInstance) {
-  app.get('/api/kpis/resumo', async (request) => {
+  app.get('/kpis/resumo', async (request) => {
     const filtros = rangeSchema.parse(request.query ?? {});
     const agora = new Date();
     const inicioPadrao = new Date(agora.getFullYear(), 0, 1).toISOString().slice(0, 10);
@@ -107,7 +107,7 @@ export async function kpisRoutes(app: FastifyInstance) {
     return { periodo: { inicio, fim }, aeroportos };
   });
 
-  app.post('/api/kpis/did', async (request) => {
+  app.post('/kpis/did', async (request) => {
     const schema = z.object({
       action_id: z.coerce.number(),
       control_locations: z.array(z.coerce.number()).min(1),
@@ -121,7 +121,7 @@ export async function kpisRoutes(app: FastifyInstance) {
     return rows[0] ?? null;
   });
 
-  app.post('/api/kpis/ba-espacial', async (request) => {
+  app.post('/kpis/ba-espacial', async (request) => {
     const schema = z.object({
       action_id: z.coerce.number(),
       raio_m: z.number().min(10),
@@ -135,7 +135,7 @@ export async function kpisRoutes(app: FastifyInstance) {
   return rows[0] ?? null;
   });
 
-  app.get('/api/kpis/baist', async (request) => {
+  app.get('/kpis/baist', async (request) => {
     const filtros = rangeSchema.parse(request.query ?? {});
     const agora = new Date();
     const inicioPadrao = new Date(agora.getFullYear(), 0, 1).toISOString().slice(0, 10);

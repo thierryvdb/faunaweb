@@ -10,7 +10,7 @@ const bodySchema = z.object({
 });
 
 export async function teamsRoutes(app: FastifyInstance) {
-  app.get('/api/aeroportos/:airportId/equipes', async (request) => {
+  app.get('/aeroportos/:airportId/equipes', async (request) => {
     const { airportId } = params.parse(request.params);
     const userAirportId = (request as any).user.airport_id as number;
     if (airportId !== userAirportId) {
@@ -24,7 +24,7 @@ export async function teamsRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/aeroportos/:airportId/equipes', async (request, reply) => {
+  app.post('/aeroportos/:airportId/equipes', async (request, reply) => {
     const { airportId } = params.parse(request.params);
     const userAirportId = (request as any).user.airport_id as number;
     if (airportId !== userAirportId) {
@@ -40,7 +40,7 @@ export async function teamsRoutes(app: FastifyInstance) {
     return reply.code(201).send(rows[0]);
   });
 
-  app.put('/api/aeroportos/:airportId/equipes/:teamId', async (request, reply) => {
+  app.put('/aeroportos/:airportId/equipes/:teamId', async (request, reply) => {
     const { airportId, teamId } = paramsWithTeam.parse(request.params);
     const userAirportId = (request as any).user.airport_id as number;
     if (airportId !== userAirportId) {
@@ -59,7 +59,7 @@ export async function teamsRoutes(app: FastifyInstance) {
     return rows[0];
   });
 
-  app.delete('/api/aeroportos/:airportId/equipes/:teamId', async (request, reply) => {
+  app.delete('/aeroportos/:airportId/equipes/:teamId', async (request, reply) => {
     const { airportId, teamId } = paramsWithTeam.parse(request.params);
     const userAirportId = (request as any).user.airport_id as number;
     if (airportId !== userAirportId) {

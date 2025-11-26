@@ -73,7 +73,7 @@ const dailyInspectionSchema = z.object({
 export async function dailyInspectionsRoutes(app: FastifyInstance) {
 
   // GET /api/inspecoes-diarias - Listar inspeções diárias
-  app.get('/api/inspecoes-diarias', async (request, reply) => {
+  app.get('/inspecoes-diarias', async (request, reply) => {
     const qs = request.query as any;
     const airportId = qs.airportId ? parseInt(qs.airportId) : undefined;
     const inicio = qs.inicio;
@@ -237,7 +237,7 @@ export async function dailyInspectionsRoutes(app: FastifyInstance) {
   });
 
   // GET /api/inspecoes-diarias/:id - Buscar uma inspeção específica
-  app.get('/api/inspecoes-diarias/:id', async (request, reply) => {
+  app.get('/inspecoes-diarias/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const inspectionId = parseInt(id);
 
@@ -359,7 +359,7 @@ export async function dailyInspectionsRoutes(app: FastifyInstance) {
   });
 
   // POST /api/inspecoes-diarias - Criar nova inspeção
-  app.post('/api/inspecoes-diarias', async (request, reply) => {
+  app.post('/inspecoes-diarias', async (request, reply) => {
     const validated = dailyInspectionSchema.parse(request.body);
 
     const result = await db.transaction(async (client) => {
@@ -512,7 +512,7 @@ export async function dailyInspectionsRoutes(app: FastifyInstance) {
   });
 
   // PUT /api/inspecoes-diarias/:id - Atualizar inspeção
-  app.put('/api/inspecoes-diarias/:id', async (request, reply) => {
+  app.put('/inspecoes-diarias/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const inspectionId = parseInt(id);
     const validated = dailyInspectionSchema.parse(request.body);
@@ -674,7 +674,7 @@ export async function dailyInspectionsRoutes(app: FastifyInstance) {
   });
 
   // DELETE /api/inspecoes-diarias/:id - Remover inspeção
-  app.delete('/api/inspecoes-diarias/:id', async (request, reply) => {
+  app.delete('/inspecoes-diarias/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const inspectionId = parseInt(id);
 

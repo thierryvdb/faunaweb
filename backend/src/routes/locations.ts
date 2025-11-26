@@ -11,7 +11,7 @@ const corpo = z.object({
 });
 
 export async function locationsRoutes(app: FastifyInstance) {
-  app.get('/api/aeroportos/:airportId/locais', async (request, reply) => {
+  app.get('/aeroportos/:airportId/locais', async (request, reply) => {
     const { airportId } = paramsAero.parse(request.params);
     const user = (request as any).user as { sub: number; airport_id: number };
     // Permite acessar se o aeroporto for o do token OU se o usuário tiver permissão explícita em app_user_airport
@@ -34,7 +34,7 @@ export async function locationsRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/aeroportos/:airportId/locais', async (request, reply) => {
+  app.post('/aeroportos/:airportId/locais', async (request, reply) => {
     const { airportId } = paramsAero.parse(request.params);
     const userAirportId = (request as any).user.airport_id as number;
     if (airportId !== userAirportId) {
@@ -50,7 +50,7 @@ export async function locationsRoutes(app: FastifyInstance) {
     return reply.code(201).send(rows[0]);
   });
 
-  app.put('/api/aeroportos/:airportId/locais/:locationId', async (request, reply) => {
+  app.put('/aeroportos/:airportId/locais/:locationId', async (request, reply) => {
     const { airportId, locationId } = paramsLoc.parse(request.params);
     const userAirportId = (request as any).user.airport_id as number;
     if (airportId !== userAirportId) {
@@ -76,7 +76,7 @@ export async function locationsRoutes(app: FastifyInstance) {
     return rows[0];
   });
 
-  app.delete('/api/aeroportos/:airportId/locais/:locationId', async (request, reply) => {
+  app.delete('/aeroportos/:airportId/locais/:locationId', async (request, reply) => {
     const { airportId, locationId } = paramsLoc.parse(request.params);
     const userAirportId = (request as any).user.airport_id as number;
     if (airportId !== userAirportId) {

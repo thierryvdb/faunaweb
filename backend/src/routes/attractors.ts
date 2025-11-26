@@ -20,7 +20,7 @@ const corpo = z.object({
 const paramsId = z.object({ id: z.coerce.number() });
 
 export async function attractorsRoutes(app: FastifyInstance) {
-  app.get('/api/atrativos', { preHandler: [app.authenticate, requireRead] }, async (request) => {
+  app.get('/atrativos', { preHandler: [app.authenticate, requireRead] }, async (request) => {
     const querySchema = z.object({
       airportId: z.coerce.number().optional(),
       status: z.string().optional(),
@@ -55,7 +55,7 @@ export async function attractorsRoutes(app: FastifyInstance) {
     return rows;
   });
 
-  app.post('/api/atrativos', { preHandler: [app.authenticate, requireCreate] }, async (request, reply) => {
+  app.post('/atrativos', { preHandler: [app.authenticate, requireCreate] }, async (request, reply) => {
     const body = corpo.parse(request.body);
     const { rows } = await db.query(
       `INSERT INTO wildlife.fact_attractor (airport_id, date_utc, latitude_dec, longitude_dec, attractor_type_id,
@@ -79,7 +79,7 @@ export async function attractorsRoutes(app: FastifyInstance) {
     return reply.code(201).send(rows[0]);
   });
 
-  app.put('/api/atrativos/:id', { preHandler: [app.authenticate, requireUpdate] }, async (request, reply) => {
+  app.put('/atrativos/:id', { preHandler: [app.authenticate, requireUpdate] }, async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     const body = corpo.partial().parse(request.body ?? {});
     const pares = Object.entries(body).filter(([, valor]) => valor !== undefined);
@@ -99,7 +99,7 @@ export async function attractorsRoutes(app: FastifyInstance) {
     return { id };
   });
 
-  app.delete('/api/atrativos/:id', { preHandler: [app.authenticate, requireDelete] }, async (request, reply) => {
+  app.delete('/atrativos/:id', { preHandler: [app.authenticate, requireDelete] }, async (request, reply) => {
     const { id } = paramsId.parse(request.params);
     await db.query('DELETE FROM wildlife.fact_attractor WHERE attractor_id=$1', [id]);
     return reply.code(204).send();

@@ -35,7 +35,7 @@ const NOMES_MESES = [
 ];
 
 export async function reportsRoutes(app: FastifyInstance) {
-  app.get('/api/relatorios/pareto-especies', async (request) => {
+  app.get('/relatorios/pareto-especies', async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const { rows } = await db.query(
@@ -50,7 +50,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { periodo: { inicio, fim }, dados: rows };
   });
 
-  app.get('/api/relatorios/fases-voo', async (request) => {
+  app.get('/relatorios/fases-voo', async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const { rows } = await db.query(
@@ -65,7 +65,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { periodo: { inicio, fim }, dados: rows };
   });
 
-  app.get('/api/relatorios/partes-dano', async (request) => {
+  app.get('/relatorios/partes-dano', async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const { rows } = await db.query(
@@ -91,7 +91,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { periodo: { inicio, fim }, dados };
   });
 
-  app.get('/api/relatorios/ba-janela', async (request) => {
+  app.get('/relatorios/ba-janela', async (request) => {
     const filtros = z.object({ airportId: z.coerce.number().optional() }).parse(request.query ?? {});
     const { rows } = await db.query(
       `SELECT * FROM wildlife_kpi.kpi_ba_sr_tah WHERE $1::bigint IS NULL OR airport_id=$1 ORDER BY action_id DESC`,
@@ -100,7 +100,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { janela_padrao_dias: 30, dados: rows };
   });
 
-  app.get('/api/relatorios/movimentos-periodo', async (request) => {
+  app.get('/relatorios/movimentos-periodo', async (request) => {
     const filtros = z
       .object({
         airportId: z.coerce.number().optional(),
@@ -191,7 +191,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get('/api/relatorios/financeiro/export', async (request, reply) => {
+  app.get('/relatorios/financeiro/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -219,7 +219,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return reply.send(buffer);
   });
 
-  app.get('/api/relatorios/colisoes-imagens', async (request) => {
+  app.get('/relatorios/colisoes-imagens', async (request) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
     const dados = await buscarColisoesComImagens(filtros.airportId ?? null, inicio, fim);
@@ -239,7 +239,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get('/api/relatorios/colisoes-imagens/export', async (request, reply) => {
+  app.get('/relatorios/colisoes-imagens/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -267,7 +267,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   // TODO: Implement incident export functions (obterAnaliseIncidentes, gerarDocxIncidentes, gerarPdfIncidentes)
-  // app.get('/api/relatorios/incidentes/export', async (request, reply) => {
+  // app.get('/relatorios/incidentes/export', async (request, reply) => {
   //   const filtros = periodoSchema
   //     .extend({
   //       formato: z.enum(['pdf', 'docx'])
@@ -296,7 +296,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   // });
 
   // Exportação PDF de Inspeções Diárias
-  app.get('/api/relatorios/inspecoes-diarias/export', async (request, reply) => {
+  app.get('/relatorios/inspecoes-diarias/export', async (request, reply) => {
     const filtros = periodoSchema.parse(request.query ?? {});
     const { inicio, fim } = periodosComDefaults(filtros);
 
@@ -399,7 +399,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   // Exportação PDF/DOCX de Inspeções de Proteção (F4)
-  app.get('/api/relatorios/inspecoes-protecao/export', async (request, reply) => {
+  app.get('/relatorios/inspecoes-protecao/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -487,7 +487,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   // Exportação PDF/DOCX de Coletas de Carcaça (F5)
-  app.get('/api/relatorios/coletas-carcaca/export', async (request, reply) => {
+  app.get('/relatorios/coletas-carcaca/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -540,7 +540,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   // Exportação PDF/DOCX de Inspeções de Lagos
-  app.get('/api/relatorios/inspecoes-lagos/export', async (request, reply) => {
+  app.get('/relatorios/inspecoes-lagos/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -596,7 +596,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   // Exportação PDF/DOCX de Manutenção de Áreas Verdes (F2)
-  app.get('/api/relatorios/inspecoes-areas-verdes/export', async (request, reply) => {
+  app.get('/relatorios/inspecoes-areas-verdes/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
@@ -649,7 +649,7 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   // Exportação PDF/DOCX de Resíduos para Incineração
-  app.get('/api/relatorios/residuos-incineracao/export', async (request, reply) => {
+  app.get('/relatorios/residuos-incineracao/export', async (request, reply) => {
     const filtros = periodoSchema
       .extend({
         formato: z.enum(['pdf', 'docx'])
