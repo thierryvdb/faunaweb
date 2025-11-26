@@ -75,14 +75,14 @@ api.interceptors.response.use(
 export const ApiService = {
   // Auth & session
   async switchAirport(airportId: number) {
-    const { data } = await api.post('/api/auth/switch-airport', { airport_id: airportId });
+    const { data } = await api.post('/auth/switch-airport', { airport_id: airportId });
     if (data?.token) setToken(data.token);
     const user = getUser<any>() || {};
     setUser({ ...user, aeroporto: data?.aeroporto?.name, aeroporto_id: data?.aeroporto?.id });
     return data;
   },
   async login(username: string, password: string) {
-    const { data } = await api.post('/api/auth/login', { username, password });
+    const { data } = await api.post('/auth/login', { username, password });
     if (data?.token) setToken(data.token);
     if (data?.usuario) {
       const user = { ...data.usuario, aeroportos_permitidos: data?.aeroportos_permitidos ?? [] };
@@ -136,429 +136,429 @@ export const ApiService = {
     return user?.role_name === 'viewer';
   },
   async getKpisResumo(params?: Record<string, any>) {
-    const { data } = await api.get('/api/kpis/resumo', { params });
+    const { data } = await api.get('/kpis/resumo', { params });
     return data;
   },
   async getPareto(params?: Record<string, any>) {
-    const { data } = await api.get('/api/relatorios/pareto-especies', { params });
+    const { data } = await api.get('/relatorios/pareto-especies', { params });
     return data;
   },
   async getPainelResumo(params?: Record<string, any>) {
-    const { data } = await api.get('/api/analytics/painel-resumo', { params });
+    const { data } = await api.get('/analytics/painel-resumo', { params });
     return data;
   },
   async getFases(params?: Record<string, any>) {
-    const { data } = await api.get('/api/relatorios/fases-voo', { params });
+    const { data } = await api.get('/relatorios/fases-voo', { params });
     return data;
   },
   async getPartes(params?: Record<string, any>) {
-    const { data } = await api.get('/api/relatorios/partes-dano', { params });
+    const { data } = await api.get('/relatorios/partes-dano', { params });
     return data;
   },
   async getMovimentos(params?: Record<string, any>) {
-    const { data } = await api.get('/api/movimentos', { params });
+    const { data } = await api.get('/movimentos', { params });
     return data;
   },
   async getRelatorioMovimentos(params?: Record<string, any>) {
-    const { data } = await api.get('/api/relatorios/movimentos-periodo', { params });
+    const { data } = await api.get('/relatorios/movimentos-periodo', { params });
     return data;
   },
   async getRelatorioColisoesImagens(params?: Record<string, any>) {
-    const { data } = await api.get('/api/relatorios/colisoes-imagens', { params });
+    const { data } = await api.get('/relatorios/colisoes-imagens', { params });
     return data;
   },
   async exportarRelatorioColisoesImagens(params: Record<string, any>) {
-    return api.get('/api/relatorios/colisoes-imagens/export', {
+    return api.get('/relatorios/colisoes-imagens/export', {
       params,
       responseType: 'blob'
     });
   },
   async getAvistamentos(params?: Record<string, any>) {
-    const { data } = await api.get('/api/avistamentos', { params });
+    const { data } = await api.get('/avistamentos', { params });
     return data;
   },
   async getColisoes(params?: Record<string, any>) {
-    const { data } = await api.get('/api/colisoes', { params });
+    const { data } = await api.get('/colisoes', { params });
     return data;
   },
   async getAcoes(params?: Record<string, any>) {
-    const { data } = await api.get('/api/acoes-controle', { params });
+    const { data } = await api.get('/acoes-controle', { params });
     return data;
   },
   async getAtrativos(params?: Record<string, any>) {
-    const { data } = await api.get('/api/atrativos', { params });
+    const { data } = await api.get('/atrativos', { params });
     return data;
   },
   async getAtrativosPorAeroporto(airportId: number) {
-    const { data } = await api.get('/api/atrativos', { params: { airportId } });
+    const { data } = await api.get('/atrativos', { params: { airportId } });
     return data;
   },
   async getAeroportos() {
-    const { data } = await api.get('/api/aeroportos');
+    const { data } = await api.get('/aeroportos');
     return data;
   },
   async getEspecies() {
-    const { data } = await api.get('/api/especies');
+    const { data } = await api.get('/especies');
     return data;
   },
   async getLookups() {
-    const { data } = await api.get('/api/lookups');
+    const { data } = await api.get('/lookups');
     return data;
   },
   async getInspecoes(params?: Record<string, any>) {
-    const { data } = await api.get('/api/inspecoes', { params });
+    const { data } = await api.get('/inspecoes', { params });
     return data;
   },
   async criarInspecao(payload: Record<string, any>) {
-    const { data } = await api.post('/api/inspecoes', payload);
+    const { data } = await api.post('/inspecoes', payload);
     return data;
   },
   // Inspeções Diárias (Monitoramento Diário de Fauna - F1)
   async getInspecoesDiarias(params?: Record<string, any>) {
-    const { data } = await api.get('/api/inspecoes-diarias', { params });
+    const { data } = await api.get('/inspecoes-diarias', { params });
     return data;
   },
   async getInspecaoDiaria(id: number) {
-    const { data } = await api.get(`/api/inspecoes-diarias/${id}`);
+    const { data } = await api.get(`/inspecoes-diarias/${id}`);
     return data;
   },
   async criarInspecaoDiaria(payload: Record<string, any>) {
-    const { data } = await api.post('/api/inspecoes-diarias', payload);
+    const { data } = await api.post('/inspecoes-diarias', payload);
     return data;
   },
   async atualizarInspecaoDiaria(id: number, payload: Record<string, any>) {
-    const { data } = await api.put(`/api/inspecoes-diarias/${id}`, payload);
+    const { data } = await api.put(`/inspecoes-diarias/${id}`, payload);
     return data;
   },
   async removerInspecaoDiaria(id: number) {
-    await api.delete(`/api/inspecoes-diarias/${id}`);
+    await api.delete(`/inspecoes-diarias/${id}`);
   },
   async exportarInspecoesDiarias(params?: Record<string, any>) {
-    return api.get('/api/relatorios/inspecoes-diarias/export', {
+    return api.get('/relatorios/inspecoes-diarias/export', {
       params,
       responseType: 'blob'
     });
   },
   // Inspeções de Proteção F4 (Sistema de Proteção)
   async getInspecoesProtecao(params?: Record<string, any>) {
-    const { data } = await api.get('/api/inspecoes-protecao', { params });
+    const { data } = await api.get('/inspecoes-protecao', { params });
     return data;
   },
   async getInspecaoProtecao(id: number) {
-    const { data } = await api.get(`/api/inspecoes-protecao/${id}`);
+    const { data } = await api.get(`/inspecoes-protecao/${id}`);
     return data;
   },
   async criarInspecaoProtecao(formData: FormData) {
-    const { data } = await api.post('/api/inspecoes-protecao', formData, {
+    const { data } = await api.post('/inspecoes-protecao', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return data;
   },
   async removerInspecaoProtecao(id: number) {
-    await api.delete(`/api/inspecoes-protecao/${id}`);
+    await api.delete(`/inspecoes-protecao/${id}`);
   },
   async exportarInspecoesProtecao(params?: Record<string, any>) {
-    return api.get('/api/relatorios/inspecoes-protecao/export', {
+    return api.get('/relatorios/inspecoes-protecao/export', {
       params,
       responseType: 'blob'
     });
   },
   // Coletas de Carcaça (F5)
   async getColetasCarcaca(params?: Record<string, any>) {
-    const { data } = await api.get('/api/coletas-carcaca', { params });
+    const { data } = await api.get('/coletas-carcaca', { params });
     return data;
   },
   async getColetaCarcaca(id: number) {
-    const { data } = await api.get(`/api/coletas-carcaca/${id}`);
+    const { data } = await api.get(`/coletas-carcaca/${id}`);
     return data;
   },
   async criarColetaCarcaca(formData: FormData) {
-    const { data } = await api.post('/api/coletas-carcaca', formData, {
+    const { data } = await api.post('/coletas-carcaca', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return data;
   },
   async removerColetaCarcaca(id: number) {
-    await api.delete(`/api/coletas-carcaca/${id}`);
+    await api.delete(`/coletas-carcaca/${id}`);
   },
   async exportarColetasCarcaca(params?: Record<string, any>) {
-    return api.get('/api/relatorios/coletas-carcaca/export', {
+    return api.get('/relatorios/coletas-carcaca/export', {
       params,
       responseType: 'blob'
     });
   },
   // Inspeções de Lagos e Áreas Alagadiças
   async getInspecoesLagos(params?: Record<string, any>) {
-    const { data } = await api.get('/api/inspecoes-lagos', { params });
+    const { data } = await api.get('/inspecoes-lagos', { params });
     return data;
   },
   async criarInspecaoLago(formData: FormData) {
-    const { data } = await api.post('/api/inspecoes-lagos', formData, {
+    const { data } = await api.post('/inspecoes-lagos', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return data;
   },
   async removerInspecaoLago(id: number) {
-    await api.delete(`/api/inspecoes-lagos/${id}`);
+    await api.delete(`/inspecoes-lagos/${id}`);
   },
   async exportarInspecoesLagos(params?: Record<string, any>) {
-    return api.get('/api/relatorios/inspecoes-lagos/export', {
+    return api.get('/relatorios/inspecoes-lagos/export', {
       params,
       responseType: 'blob'
     });
   },
   // Manutenção de Áreas Verdes (F2)
   async getInspecoesAreasVerdes(params?: Record<string, any>) {
-    const { data } = await api.get('/api/inspecoes-areas-verdes', { params });
+    const { data } = await api.get('/inspecoes-areas-verdes', { params });
     return data;
   },
   async criarInspecaoAreaVerde(payload: Record<string, any>) {
-    const { data } = await api.post('/api/inspecoes-areas-verdes', payload);
+    const { data } = await api.post('/inspecoes-areas-verdes', payload);
     return data;
   },
   async atualizarInspecaoAreaVerde(id: number, payload: Record<string, any>) {
-    const { data } = await api.put(`/api/inspecoes-areas-verdes/${id}`, payload);
+    const { data } = await api.put(`/inspecoes-areas-verdes/${id}`, payload);
     return data;
   },
   async removerInspecaoAreaVerde(id: number) {
-    await api.delete(`/api/inspecoes-areas-verdes/${id}`);
+    await api.delete(`/inspecoes-areas-verdes/${id}`);
   },
   async exportarInspecoesAreasVerdes(params?: Record<string, any>) {
-    return api.get('/api/relatorios/inspecoes-areas-verdes/export', {
+    return api.get('/relatorios/inspecoes-areas-verdes/export', {
       params,
       responseType: 'blob'
     });
   },
   // Resíduos para Incineração
   async getResiduosIncineracao(params?: Record<string, any>) {
-    const { data } = await api.get('/api/residuos-incineracao', { params });
+    const { data } = await api.get('/residuos-incineracao', { params });
     return data;
   },
   async getResiduoIncineracao(id: number) {
-    const { data } = await api.get(`/api/residuos-incineracao/${id}`);
+    const { data } = await api.get(`/residuos-incineracao/${id}`);
     return data;
   },
   async criarResiduoIncineracao(payload: Record<string, any>) {
-    const { data } = await api.post('/api/residuos-incineracao', payload);
+    const { data } = await api.post('/residuos-incineracao', payload);
     return data;
   },
   async atualizarResiduoIncineracao(id: number, payload: Record<string, any>) {
-    const { data } = await api.put(`/api/residuos-incineracao/${id}`, payload);
+    const { data } = await api.put(`/residuos-incineracao/${id}`, payload);
     return data;
   },
   async removerResiduoIncineracao(id: number) {
-    await api.delete(`/api/residuos-incineracao/${id}`);
+    await api.delete(`/residuos-incineracao/${id}`);
   },
   async exportarResiduosIncineracao(params?: Record<string, any>) {
-    return api.get('/api/relatorios/residuos-incineracao/export', {
+    return api.get('/relatorios/residuos-incineracao/export', {
       params,
       responseType: 'blob'
     });
   },
   // Monitoramento de Focos de Atração (F3)
   async getInspecoesFocosAtracao(params?: Record<string, any>) {
-    const { data } = await api.get('/api/inspecoes-focos-atracao', { params });
+    const { data } = await api.get('/inspecoes-focos-atracao', { params });
     return data;
   },
   async criarInspecaoFocoAtracao(payload: Record<string, any>) {
-    const { data } = await api.post('/api/inspecoes-focos-atracao', payload);
+    const { data } = await api.post('/inspecoes-focos-atracao', payload);
     return data;
   },
   async atualizarInspecaoFocoAtracao(id: number, payload: Record<string, any>) {
-    const { data } = await api.put(`/api/inspecoes-focos-atracao/${id}`, payload);
+    const { data } = await api.put(`/inspecoes-focos-atracao/${id}`, payload);
     return data;
   },
   async removerInspecaoFocoAtracao(id: number) {
-    await api.delete(`/api/inspecoes-focos-atracao/${id}`);
+    await api.delete(`/inspecoes-focos-atracao/${id}`);
   },
   async exportarInspecoesFocosAtracao(params?: Record<string, any>) {
-    return api.get('/api/relatorios/inspecoes-focos-atracao/export', {
+    return api.get('/relatorios/inspecoes-focos-atracao/export', {
       params,
       responseType: 'blob'
     });
   },
   async getCarcacas(params?: Record<string, any>) {
-    const { data } = await api.get('/api/carcacas', { params });
+    const { data } = await api.get('/carcacas', { params });
     return data;
   },
   async criarCarcaca(payload: Record<string, any>) {
-    const { data } = await api.post('/api/carcacas', payload);
+    const { data } = await api.post('/carcacas', payload);
     return data;
   },
   async getAuditoriasAmbientais(params?: Record<string, any>) {
-    const { data } = await api.get('/api/auditorias-ambientais', { params });
+    const { data } = await api.get('/auditorias-ambientais', { params });
     return data;
   },
   async criarAuditoriaAmbiental(payload: Record<string, any>) {
-    const { data } = await api.post('/api/auditorias-ambientais', payload);
+    const { data } = await api.post('/auditorias-ambientais', payload);
     return data;
   },
   async getAsaFocos(params?: Record<string, any>) {
-    const { data } = await api.get('/api/asa-focos', { params });
+    const { data } = await api.get('/asa-focos', { params });
     return data;
   },
   async criarAsaFoco(payload: Record<string, any>) {
-    const { data } = await api.post('/api/asa-focos', payload);
+    const { data } = await api.post('/asa-focos', payload);
     return data;
   },
   async atualizarAsaFoco(id: number, payload: Record<string, any>) {
-    const { data } = await api.put(`/api/asa-focos/${id}`, payload);
+    const { data } = await api.put(`/asa-focos/${id}`, payload);
     return data;
   },
   async removerAsaFoco(id: number) {
-    const { data } = await api.delete(`/api/asa-focos/${id}`);
+    const { data } = await api.delete(`/asa-focos/${id}`);
     return data;
   },
   async getComunicadosExternos(params?: Record<string, any>) {
-    const { data } = await api.get('/api/comunicados-externos', { params });
+    const { data } = await api.get('/comunicados-externos', { params });
     return data;
   },
   async criarComunicadoExterno(payload: Record<string, any> | FormData) {
     const config = payload instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined;
-    const { data } = await api.post('/api/comunicados-externos', payload, config);
+    const { data } = await api.post('/comunicados-externos', payload, config);
     return data;
   },
   async baixarAnexoComunicado(id: number) {
-    return api.get(`/api/comunicados-externos/${id}/anexo`, { responseType: 'blob' });
+    return api.get(`/comunicados-externos/${id}/anexo`, { responseType: 'blob' });
   },
   async getTreinamentos(params?: Record<string, any>) {
-    const { data } = await api.get('/api/treinamentos-fauna', { params });
+    const { data } = await api.get('/treinamentos-fauna', { params });
     return data;
   },
   async criarTreinamento(payload: Record<string, any>) {
-    const { data } = await api.post('/api/treinamentos-fauna', payload);
+    const { data } = await api.post('/treinamentos-fauna', payload);
     return data;
   },
   async getUsuarios() {
-    const { data } = await api.get('/api/usuarios');
+    const { data } = await api.get('/usuarios');
     return data;
   },
   async criarUsuario(payload: Record<string, any>) {
-    const { data } = await api.post('/api/usuarios', payload);
+    const { data } = await api.post('/usuarios', payload);
     return data;
   },
   async atualizarUsuario(id: number, payload: Record<string, any>) {
-    const { data } = await api.put(`/api/usuarios/${id}`, payload);
+    const { data } = await api.put(`/usuarios/${id}`, payload);
     return data;
   },
   async removerUsuario(id: number) {
-    await api.delete(`/api/usuarios/${id}`);
+    await api.delete(`/usuarios/${id}`);
   },
   async resetSenhaUsuario(id: number) {
-    const { data } = await api.post(`/api/usuarios/${id}/reset-senha`, {});
+    const { data } = await api.post(`/usuarios/${id}/reset-senha`, {});
     return data;
   },
   async resetSenhaUsuarioLote(ids: number[]) {
-    const { data } = await api.post('/api/usuarios/reset-senha', { user_ids: ids });
+    const { data } = await api.post('/usuarios/reset-senha', { user_ids: ids });
     return data;
   },
   async changePassword(payload: { current_password: string; new_password: string }) {
-    const { data } = await api.post('/api/auth/change-password', payload);
+    const { data } = await api.post('/auth/change-password', payload);
     if (data?.token) setToken(data.token);
     return data;
   },
   async getPessoal(params?: Record<string, any>) {
-    const { data } = await api.get('/api/pessoal', { params });
+    const { data } = await api.get('/pessoal', { params });
     return data;
   },
   async criarPessoa(payload: Record<string, any>) {
-    const { data } = await api.post('/api/pessoal', payload);
+    const { data } = await api.post('/pessoal', payload);
     return data;
   },
   async atualizarPessoa(id: number, payload: Record<string, any>) {
-    const { data } = await api.put(`/api/pessoal/${id}`, payload);
+    const { data } = await api.put(`/pessoal/${id}`, payload);
     return data;
   },
   async removerPessoa(id: number) {
-    await api.delete(`/api/pessoal/${id}`);
+    await api.delete(`/pessoal/${id}`);
   },
   async getTreinamentoConclusoes(params?: Record<string, any>) {
-    const { data } = await api.get('/api/treinamentos-conclusoes', { params });
+    const { data } = await api.get('/treinamentos-conclusoes', { params });
     return data;
   },
   async criarTreinamentoConclusao(payload: Record<string, any>) {
-    const { data } = await api.post('/api/treinamentos-conclusoes', payload);
+    const { data } = await api.post('/treinamentos-conclusoes', payload);
     return data;
   },
   async atualizarTreinamentoConclusao(id: number, payload: Record<string, any>) {
-    const { data } = await api.put(`/api/treinamentos-conclusoes/${id}`, payload);
+    const { data } = await api.put(`/treinamentos-conclusoes/${id}`, payload);
     return data;
   },
   async removerTreinamentoConclusao(id: number) {
-    await api.delete(`/api/treinamentos-conclusoes/${id}`);
+    await api.delete(`/treinamentos-conclusoes/${id}`);
   },
   async getStatusTreinamentos(params?: Record<string, any>) {
-    const { data } = await api.get('/api/treinamentos/status', { params });
+    const { data } = await api.get('/treinamentos/status', { params });
     return data;
   },
   async getFinanceiro(params?: Record<string, any>) {
-    const { data } = await api.get('/api/analytics/financeiro', { params });
+    const { data } = await api.get('/analytics/financeiro', { params });
     return data;
   },
   async getAnaliseIncidentes(params?: Record<string, any>) {
-    const { data } = await api.get('/api/analytics/incidentes', { params });
+    const { data } = await api.get('/analytics/incidentes', { params });
     return data;
   },
   async getQuadrantes() {
-    const { data } = await api.get('/api/quadrantes');
+    const { data } = await api.get('/quadrantes');
     return data;
   },
   async getAeronaves() {
-    const { data } = await api.get('/api/aeronaves');
+    const { data } = await api.get('/aeronaves');
     return data;
   },
   async criarAeronave(payload: Record<string, any>) {
-    const { data } = await api.post('/api/aeronaves', payload);
+    const { data } = await api.post('/aeronaves', payload);
     return data;
   },
   async atualizarAeronave(id: number, payload: Record<string, any>) {
-    const { data } = await api.put(`/api/aeronaves/${id}`, payload);
+    const { data } = await api.put(`/aeronaves/${id}`, payload);
     return data;
   },
   async removerAeronave(id: number) {
-    await api.delete(`/api/aeronaves/${id}`);
+    await api.delete(`/aeronaves/${id}`);
   },
   async criarQuadrante(payload: { code: string; description?: string }) {
-    const { data } = await api.post('/api/quadrantes', payload);
+    const { data } = await api.post('/quadrantes', payload);
     return data;
   },
   async atualizarQuadrante(id: number, payload: { code?: string; description?: string }) {
-    const { data } = await api.put(`/api/quadrantes/${id}`, payload);
+    const { data } = await api.put(`/quadrantes/${id}`, payload);
     return data;
   },
   async removerQuadrante(id: number) {
-    await api.delete(`/api/quadrantes/${id}`);
+    await api.delete(`/quadrantes/${id}`);
   },
   async resetQuadrantes() {
-    const { data } = await api.post('/api/quadrantes/reset-grade', { confirm: 'matriz-33x14' });
+    const { data } = await api.post('/quadrantes/reset-grade', { confirm: 'matriz-33x14' });
     return data;
   },
   async getLocaisPorAeroporto(airportId: number) {
-    const { data } = await api.get(`/api/aeroportos/${airportId}/locais`);
+    const { data } = await api.get(`/aeroportos/${airportId}/locais`);
     return data;
   },
   async getEquipesPorAeroporto(airportId: number) {
-    const { data } = await api.get(`/api/aeroportos/${airportId}/equipes`);
+    const { data } = await api.get(`/aeroportos/${airportId}/equipes`);
     return data;
   },
   async criarLocal(airportId: number, payload: { code: string; runway_ref?: string; description?: string }) {
-    const { data } = await api.post(`/api/aeroportos/${airportId}/locais`, payload);
+    const { data } = await api.post(`/aeroportos/${airportId}/locais`, payload);
     return data;
   },
   async removerLocal(airportId: number, locationId: number) {
-    await api.delete(`/api/aeroportos/${airportId}/locais/${locationId}`);
+    await api.delete(`/aeroportos/${airportId}/locais/${locationId}`);
   },
   async getKpisBaist(params?: Record<string, any>) {
-    const { data } = await api.get('/api/kpis/baist', { params });
+    const { data } = await api.get('/kpis/baist', { params });
     return data;
   },
   async getCadastros() {
     const [aeroportos, especies, lookups, quadrantes, aeronaves] = await Promise.all([
-      api.get('/api/aeroportos'),
-      api.get('/api/especies'),
-      api.get('/api/lookups'),
-      api.get('/api/quadrantes'),
-      api.get('/api/aeronaves')
+      api.get('/aeroportos'),
+      api.get('/especies'),
+      api.get('/lookups'),
+      api.get('/quadrantes'),
+      api.get('/aeronaves')
     ]);
     return {
       aeroportos: aeroportos.data,
